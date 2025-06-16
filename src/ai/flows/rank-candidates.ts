@@ -73,6 +73,9 @@ const rankCandidatePrompt = ai.definePrompt({
     "keySkills": "List of key skills",
     "feedback": "AI-driven feedback"
   }`,
+  config: {
+    temperature: 0,
+  },
 });
 
 const rankCandidatesFlow = ai.defineFlow(
