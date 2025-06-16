@@ -22,6 +22,7 @@ const JobDescriptionInputSchema = z.object({
       "The job description as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
 });
+type JobDescriptionInput = z.infer<typeof JobDescriptionInputSchema>;
 
 const ResumeInputSchema = z.object({
   name: z.string().describe("The file name or identifier of the resume."),
@@ -72,7 +73,7 @@ export type RankCandidatesOutput = z.infer<typeof RankCandidatesOutputSchema>;
 // New schema for a single, segmented job description
 const SegmentedJobDescriptionSchema = z.object({
   title: z.string().describe("The concise job title of this individual job description (e.g., 'Software Engineer', 'Product Manager')."),
-  content: z.string().describe("The full text content of this individual job description."),
+  content: z.string().describe("The full text content of this individual job description, including all requirements, responsibilities, and qualifications."),
 });
 export type SegmentedJobDescription = z.infer<typeof SegmentedJobDescriptionSchema>;
 
@@ -112,6 +113,8 @@ export async function rankCandidates(input: RankCandidatesInput): Promise<RankCa
   } catch (flowError) {
     console.error('Error in rankCandidates flow execution:', flowError);
     const message = flowError instanceof Error ? flowError.message : String(flowError);
+    // It's generally better to let Next.js handle the serialization of errors for server actions
+    // Re-throwing the original error or a new error with a clear message is often preferred.
     throw new Error(`Candidate ranking process failed: ${message}`);
   }
 }
@@ -145,7 +148,7 @@ const rankCandidatePrompt = ai.definePrompt({
 
   Ensure the output is structured as a JSON object.`,
   config: {
-    temperature: 0,
+    temperature: 0, // Low temperature for more deterministic scoring
   },
 });
 
@@ -157,92 +160,127 @@ const rankCandidatesFlow = ai.defineFlow(
   },
   async (input): Promise<RankCandidatesOutput> => {
     const { jobDescriptions: uploadedJobDescriptionFiles, resumes } = input;
-    const allScreeningResults: RankCandidatesOutput = [];
-
-    for (const uploadedJdFile of uploadedJobDescriptionFiles) {
-      let individualJdsToProcess: Array<{ name: string; dataUri: string; originalFileName: string }> = [];
-
+    
+    // Step 1: Segment all uploaded JD files in parallel
+    const segmentationTasks = uploadedJobDescriptionFiles.map(async (uploadedJdFile) => {
       try {
         const segmentationInput = {
           documentDataUri: uploadedJdFile.dataUri,
           originalFileName: uploadedJdFile.name,
         };
-        // console.log(`Attempting segmentation for: ${uploadedJdFile.name}`);
         const { output: segmentedJdsOutput } = await segmentJobDescriptionsPrompt(segmentationInput);
-        // console.log(`Segmentation output for ${uploadedJdFile.name}:`, segmentedJdsOutput);
-
-        if (segmentedJdsOutput && segmentedJdsOutput.length > 0) {
-          segmentedJdsOutput.forEach((segmentedJd, index) => {
-            const safeTitle = (segmentedJd.title || `Job ${index + 1}`).replace(/[^\w\s.-]/gi, '').trim();
-            const jobName = `${uploadedJdFile.name} - ${safeTitle}`;
-            const contentDataUri = `data:text/plain;charset=utf-8;base64,${Buffer.from(segmentedJd.content).toString('base64')}`;
-            
-            individualJdsToProcess.push({
-              name: jobName,
-              dataUri: contentDataUri,
-              originalFileName: uploadedJdFile.name,
-            });
-          });
-        } else {
-          console.warn(`Segmentation of ${uploadedJdFile.name} returned no JDs or failed. Processing as a single JD.`);
-          individualJdsToProcess.push({
-            name: uploadedJdFile.name,
-            dataUri: uploadedJdFile.dataUri,
-            originalFileName: uploadedJdFile.name,
-          });
-        }
+        return { originalFile: uploadedJdFile, segmentedJdsOutput, error: null };
       } catch (segmentationError) {
         console.error(`Error during segmentation of JD file ${uploadedJdFile.name}:`, segmentationError);
-        individualJdsToProcess.push({
-          name: uploadedJdFile.name,
-          dataUri: uploadedJdFile.dataUri,
-          originalFileName: uploadedJdFile.name,
-        });
+        return { originalFile: uploadedJdFile, segmentedJdsOutput: null, error: segmentationError };
       }
-      
-      if (individualJdsToProcess.length === 0 && uploadedJobDescriptionFiles.length === 1) {
-         console.warn(`No processable JDs found for ${uploadedJdFile.name} after attempting segmentation. Using original.`);
-         individualJdsToProcess.push({
-            name: uploadedJdFile.name,
-            dataUri: uploadedJdFile.dataUri,
-            originalFileName: uploadedJdFile.name,
-          });
-      }
+    });
 
+    const allSegmentationResults = await Promise.all(segmentationTasks);
 
-      for (const jdToProcess of individualJdsToProcess) {
-        const candidatesForThisJD: z.infer<typeof FullRankedCandidateSchema>[] = [];
-        for (const resume of resumes) {
-          try {
-            const promptInput = {
-              jobDescriptionDataUri: jdToProcess.dataUri,
-              resumeDataUri: resume.dataUri,
-              originalResumeName: resume.name,
-            };
-            const { output: aiCandidateOutput } = await rankCandidatePrompt(promptInput);
-            
-            if (aiCandidateOutput) {
-              candidatesForThisJD.push({
-                ...aiCandidateOutput,
-                id: crypto.randomUUID(),
-                resumeDataUri: resume.dataUri,
-                originalResumeName: resume.name,
-              });
-            }
-          } catch (error) {
-            console.error(`Error ranking resume ${resume.name} for JD ${jdToProcess.name}:`, error);
-          }
-        }
+    // Step 2: Flatten all JDs to process
+    const jdsToProcessPromises: Promise<{ name: string; dataUri: string; originalFileName: string }[]>[] = [];
 
-        candidatesForThisJD.sort((a, b) => b.score - a.score);
+    for (const segResult of allSegmentationResults) {
+      const { originalFile, segmentedJdsOutput, error } = segResult;
+      const individualJdsForThisFile: { name: string; dataUri: string; originalFileName: string }[] = [];
+
+      if (error || !segmentedJdsOutput || segmentedJdsOutput.length === 0) {
+        if (error) console.warn(`Segmentation of ${originalFile.name} failed. Processing as a single JD. Error: ${error}`);
+        else console.warn(`Segmentation of ${originalFile.name} returned no JDs. Processing as a single JD.`);
         
-        allScreeningResults.push({
-          jobDescriptionName: jdToProcess.name,
-          jobDescriptionDataUri: jdToProcess.dataUri,
-          candidates: candidatesForThisJD,
+        individualJdsForThisFile.push({
+          name: originalFile.name,
+          dataUri: originalFile.dataUri,
+          originalFileName: originalFile.name,
+        });
+      } else {
+        segmentedJdsOutput.forEach((segmentedJd, index) => {
+          const safeTitle = (segmentedJd.title || `Job ${index + 1}`).replace(/[^\w\s.-]/gi, '').trim();
+          const jobName = `${originalFile.name} - ${safeTitle}`;
+          // Ensure content is not empty before creating data URI
+          const content = segmentedJd.content || "No content extracted for this job description.";
+          const contentDataUri = `data:text/plain;charset=utf-8;base64,${Buffer.from(content).toString('base64')}`;
+          
+          individualJdsForThisFile.push({
+            name: jobName,
+            dataUri: contentDataUri,
+            originalFileName: originalFile.name, 
+          });
         });
       }
+      jdsToProcessPromises.push(Promise.resolve(individualJdsForThisFile));
     }
-    return allScreeningResults;
+    
+    const nestedJdsToProcess = await Promise.all(jdsToProcessPromises);
+    const flatJdsToProcess = nestedJdsToProcess.flat();
+
+
+    if (flatJdsToProcess.length === 0 && uploadedJobDescriptionFiles.length > 0) {
+        console.warn("No processable JDs found after attempting segmentation for all files. Defaulting to original uploaded files.");
+        uploadedJobDescriptionFiles.forEach(originalFile => {
+            flatJdsToProcess.push({
+                name: originalFile.name,
+                dataUri: originalFile.dataUri,
+                originalFileName: originalFile.name,
+            });
+        });
+    }
+    
+    // Step 3: Process each JD in parallel (includes parallel resume ranking within each)
+    const screeningResultPromises = flatJdsToProcess.map(async (jdToProcess) => {
+      const resumeRankingPromises = resumes.map(async (resume) => {
+        try {
+          const promptInput = {
+            jobDescriptionDataUri: jdToProcess.dataUri,
+            resumeDataUri: resume.dataUri,
+            originalResumeName: resume.name,
+          };
+          const { output: aiCandidateOutput } = await rankCandidatePrompt(promptInput);
+          
+          if (aiCandidateOutput) {
+            return {
+              ...aiCandidateOutput,
+              id: crypto.randomUUID(),
+              resumeDataUri: resume.dataUri, // ensure this is passed through
+              originalResumeName: resume.name, // ensure this is passed through
+            } satisfies z.infer<typeof FullRankedCandidateSchema>; // Ensure type compatibility
+          }
+          return null; // Resume ranking failed or no output
+        } catch (error) {
+          console.error(`Error ranking resume ${resume.name} for JD ${jdToProcess.name}:`, error);
+          return null; // Indicate failure for this specific resume ranking
+        }
+      });
+
+      // Wait for all resumes to be ranked against the current JD
+      const rankedCandidatesWithNulls = await Promise.all(resumeRankingPromises);
+      // Filter out nulls (failed rankings) and assert type
+      const candidatesForThisJD = rankedCandidatesWithNulls.filter(c => c !== null) as z.infer<typeof FullRankedCandidateSchema>[];
+      
+      // Sort candidates for this JD by score
+      candidatesForThisJD.sort((a, b) => b.score - a.score);
+      
+      return {
+        jobDescriptionName: jdToProcess.name,
+        jobDescriptionDataUri: jdToProcess.dataUri,
+        candidates: candidatesForThisJD,
+      };
+    });
+
+    // Wait for all JDs to be processed
+    const settledScreeningResults = await Promise.allSettled(screeningResultPromises);
+    
+    const finalResults: RankCandidatesOutput = [];
+    settledScreeningResults.forEach(result => {
+      if (result.status === 'fulfilled') {
+        finalResults.push(result.value);
+      } else {
+        console.error("A job description screening task failed:", result.reason);
+        // Optionally, you could add a placeholder or error indicator in the results
+      }
+    });
+    
+    return finalResults;
   }
 );
