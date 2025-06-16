@@ -126,7 +126,6 @@ export default function HomePage() {
       };
       const output: RankCandidatesOutput = await rankCandidates(input);
       
-      // Output is already JobScreeningResult[], ensure candidates have unique IDs if needed by CandidateTable
       const processedOutput = output.map(jobResult => ({
         ...jobResult,
         candidates: jobResult.candidates.map(c => ({ ...c, id: c.id || crypto.randomUUID() }))
@@ -178,7 +177,7 @@ export default function HomePage() {
                 Job Descriptions
               </CardTitle>
               <CardDescription>
-                Upload job description files (PDF, TXT, or MD). You can upload multiple.
+                Upload job description files (PDF, TXT, MD, CSV, XLS, XLSX). You can upload multiple.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -187,10 +186,13 @@ export default function HomePage() {
                 acceptedFileTypes={{ 
                   "application/pdf": [".pdf"],
                   "text/plain": [".txt"],
-                  "text/markdown": [".md"]
+                  "text/markdown": [".md"],
+                  "text/csv": [".csv"],
+                  "application/vnd.ms-excel": [".xls"],
+                  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
                 }}
-                multiple={true} // Allow multiple JDs
-                label="PDF, TXT, or MD files up to 10MB each"
+                multiple={true}
+                label="PDF, TXT, MD, CSV, XLS, XLSX files up to 10MB each"
                 id="job-description-upload"
               />
             </CardContent>
