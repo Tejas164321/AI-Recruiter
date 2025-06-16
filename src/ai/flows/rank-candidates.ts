@@ -102,7 +102,7 @@ If the document contains multiple job descriptions, ensure each is extracted as 
 Pay close attention to formatting cues like headings, horizontal lines, page breaks, or significant spacing that might separate different job descriptions.
 The "content" field for each job description must be the full text for that specific job, not a summary.`,
   config: {
-    temperature: 0.1, 
+    temperature: 0.1,
   },
 });
 
@@ -111,8 +111,10 @@ export async function rankCandidates(input: RankCandidatesInput): Promise<RankCa
   try {
     return await rankCandidatesFlow(input);
   } catch (flowError) {
-    console.error('Error in rankCandidates flow execution:', flowError);
     const message = flowError instanceof Error ? flowError.message : String(flowError);
+    const stack = flowError instanceof Error ? flowError.stack : undefined;
+    console.error('Error in rankCandidates function (server action entry):', message, stack);
+    // Throw a new, simple error to the client
     throw new Error(`Candidate ranking process failed: ${message}`);
   }
 }
@@ -146,7 +148,7 @@ const rankCandidatePrompt = ai.definePrompt({
 
   Ensure the output is structured as a JSON object.`,
   config: {
-    temperature: 0, 
+    temperature: 0,
   },
 });
 
@@ -159,7 +161,7 @@ const rankCandidatesFlow = ai.defineFlow(
   async (input): Promise<RankCandidatesOutput> => {
     try {
       const { jobDescriptions: uploadedJobDescriptionFiles, resumes } = input;
-      
+
       const segmentationTasks = uploadedJobDescriptionFiles.map(async (uploadedJdFile) => {
         try {
           const segmentationInput = {
@@ -170,7 +172,7 @@ const rankCandidatesFlow = ai.defineFlow(
           return { originalFile: uploadedJdFile, segmentedJdsOutput, error: null };
         } catch (segmentationError) {
           console.error(`Error during segmentation of JD file ${uploadedJdFile.name}:`, segmentationError);
-          return { originalFile: uploadedJdFile, segmentedJdsOutput: null, error: segmentationError };
+          return { originalFile: uploadedJdFile, segmentedJdsOutput: null, error: segmentationError as Error };
         }
       });
 
@@ -183,9 +185,9 @@ const rankCandidatesFlow = ai.defineFlow(
         const individualJdsForThisFile: { name: string; dataUri: string; originalFileName: string }[] = [];
 
         if (error || !segmentedJdsOutput || segmentedJdsOutput.length === 0) {
-          if (error) console.warn(`Segmentation of ${originalFile.name} failed. Processing as a single JD. Error: ${error}`);
-          else console.warn(`Segmentation of ${originalFile.name} returned no JDs. Processing as a single JD.`);
-          
+          if (error) console.warn(`Segmentation of ${originalFile.name} failed. Processing as a single JD. Error: ${error.message}`);
+          else console.warn(`Segmentation of ${originalFile.name} returned no JDs or empty output. Processing as a single JD.`);
+
           individualJdsForThisFile.push({
             name: originalFile.name,
             dataUri: originalFile.dataUri,
@@ -197,17 +199,17 @@ const rankCandidatesFlow = ai.defineFlow(
             const jobName = `${originalFile.name} - ${safeTitle}`;
             const content = segmentedJd.content || "No content extracted for this job description.";
             const contentDataUri = `data:text/plain;charset=utf-8;base64,${Buffer.from(content).toString('base64')}`;
-            
+
             individualJdsForThisFile.push({
               name: jobName,
               dataUri: contentDataUri,
-              originalFileName: originalFile.name, 
+              originalFileName: originalFile.name,
             });
           });
         }
         jdsToProcessPromises.push(Promise.resolve(individualJdsForThisFile));
       }
-      
+
       const nestedJdsToProcess = await Promise.all(jdsToProcessPromises);
       const flatJdsToProcess = nestedJdsToProcess.flat();
 
@@ -221,7 +223,7 @@ const rankCandidatesFlow = ai.defineFlow(
               });
           });
       }
-      
+
       const screeningResultPromises = flatJdsToProcess.map(async (jdToProcess) => {
         const resumeRankingPromises = resumes.map(async (resume) => {
           try {
@@ -231,27 +233,29 @@ const rankCandidatesFlow = ai.defineFlow(
               originalResumeName: resume.name,
             };
             const { output: aiCandidateOutput } = await rankCandidatePrompt(promptInput);
-            
+
             if (aiCandidateOutput) {
               return {
                 ...aiCandidateOutput,
                 id: crypto.randomUUID(),
-                resumeDataUri: resume.dataUri, 
-                originalResumeName: resume.name, 
-              } satisfies z.infer<typeof FullRankedCandidateSchema>; 
+                resumeDataUri: resume.dataUri,
+                originalResumeName: resume.name,
+              } satisfies z.infer<typeof FullRankedCandidateSchema>;
             }
-            return null; 
+            console.warn(`AI returned no output for resume ${resume.name} against JD ${jdToProcess.name}.`);
+            return null;
           } catch (error) {
-            console.error(`Error ranking resume ${resume.name} for JD ${jdToProcess.name}:`, error);
-            return null; 
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error(`Error ranking resume ${resume.name} for JD ${jdToProcess.name}: ${errorMessage}`);
+            return null;
           }
         });
 
         const rankedCandidatesWithNulls = await Promise.all(resumeRankingPromises);
         const candidatesForThisJD = rankedCandidatesWithNulls.filter(c => c !== null) as z.infer<typeof FullRankedCandidateSchema>[];
-        
+
         candidatesForThisJD.sort((a, b) => b.score - a.score);
-        
+
         return {
           jobDescriptionName: jdToProcess.name,
           jobDescriptionDataUri: jdToProcess.dataUri,
@@ -260,24 +264,26 @@ const rankCandidatesFlow = ai.defineFlow(
       });
 
       const settledScreeningResults = await Promise.allSettled(screeningResultPromises);
-      
+
       const finalResults: RankCandidatesOutput = [];
       settledScreeningResults.forEach(result => {
         if (result.status === 'fulfilled') {
           finalResults.push(result.value);
         } else {
-          console.error("A job description screening task failed:", result.reason);
+          // Log the reason for rejection if a whole JD screening task fails
+          const reasonMessage = result.reason instanceof Error ? result.reason.message : String(result.reason);
+          console.error("A job description screening task failed:", reasonMessage, result.reason instanceof Error ? result.reason.stack : undefined);
         }
       });
-      
+
       return finalResults;
     } catch (error) {
-      console.error('[rankCandidatesFlow] Internal error caught within the flow itself:', error);
-      if (error instanceof Error) {
-        throw new Error(`rankCandidatesFlow failed: ${error.message}`);
-      }
-      throw new Error(`rankCandidatesFlow failed with an unknown error: ${String(error)}`);
+      const message = error instanceof Error ? error.message : String(error);
+      const stack = error instanceof Error ? error.stack : undefined;
+      console.error('[rankCandidatesFlow] Internal error caught within the flow itself:', message, stack);
+      // Always throw a new, simple error to ensure serializability
+      throw new Error(`RankCandidatesFlow failed: ${message}`);
     }
   }
 );
-
+    
