@@ -1,3 +1,4 @@
+
 export interface JobDescription {
   content: string; 
 }
@@ -15,6 +16,7 @@ export interface RankedCandidate {
   keySkills: string;
   feedback: string;
   originalResumeName: string; 
+  resumeDataUri: string;
 }
 
 export interface Filters {

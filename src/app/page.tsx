@@ -83,6 +83,7 @@ export default function HomePage() {
         ...rc,
         id: crypto.randomUUID(),
         originalResumeName: resumeFiles[index]?.file.name || 'N/A',
+        resumeDataUri: resumeFiles[index]?.dataUri || '',
       }));
 
       setRankedCandidates(newRankedCandidates);
@@ -221,6 +222,7 @@ export default function HomePage() {
         isOpen={isFeedbackModalOpen}
         onClose={() => setIsFeedbackModalOpen(false)}
         candidate={selectedCandidateForFeedback}
+        jobDescriptionDataUri={jobDescriptionDataUri}
       />
     </div>
   );
