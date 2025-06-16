@@ -74,7 +74,7 @@ export function FileUploadArea({
       {uploadedFiles.length > 0 && (
         <div className="space-y-2">
           <h4 className="text-sm font-medium text-foreground">Uploaded files:</h4>
-          <ScrollArea className="max-h-28 w-full pr-3"> {/* Adjusted max height for ~2-3 items */}
+          <ScrollArea className="max-h-28 w-full"> {/* Adjusted max height for ~2-3 items, removed pr-3 */}
             <ul className="space-y-1">
               {uploadedFiles.map((file) => (
                 <li
