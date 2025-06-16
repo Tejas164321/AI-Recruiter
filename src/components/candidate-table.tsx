@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ArrowUpDown, MessageSquareText, TrendingUp, Tags } from "lucide-react";
+import { ArrowUpDown, MessageSquareText, TrendingUp, Tags, Hash } from "lucide-react";
 import type { RankedCandidate } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 
@@ -34,6 +34,10 @@ export function CandidateTable({ candidates, onViewFeedback }: CandidateTablePro
         }
         if (a[sortConfig.key] > b[sortConfig.key]) {
           return sortConfig.direction === "ascending" ? 1 : -1;
+        }
+        // If scores are equal, maintain original relative order or sort by name as a secondary criterion
+        if (sortConfig.key === "score") {
+            return a.name.localeCompare(b.name);
         }
         return 0;
       });
@@ -75,7 +79,12 @@ export function CandidateTable({ candidates, onViewFeedback }: CandidateTablePro
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead onClick={() => requestSort("name")} className="cursor-pointer hover:bg-muted/50 w-[30%] transition-colors">
+            <TableHead className="w-[5%] text-center">
+                <div className="flex items-center justify-center">
+                    <Hash className="w-4 h-4 mr-1 text-muted-foreground" /> Rank
+                </div>
+            </TableHead>
+            <TableHead onClick={() => requestSort("name")} className="cursor-pointer hover:bg-muted/50 w-[25%] transition-colors">
               <div className="flex items-center">
                 Candidate Name {getSortIndicator("name")}
               </div>
@@ -94,16 +103,17 @@ export function CandidateTable({ candidates, onViewFeedback }: CandidateTablePro
           </TableRow>
         </TableHeader>
         <TableBody>
-          {sortedCandidates.map((candidate) => (
+          {sortedCandidates.map((candidate, index) => (
             <TableRow key={candidate.id} className="transition-colors hover:bg-muted/50">
+              <TableCell className="font-medium text-center">{index + 1}</TableCell>
               <TableCell className="font-medium">{candidate.name}</TableCell>
               <TableCell>
                 {getScoreBadge(candidate.score)}
               </TableCell>
               <TableCell>
                 <div className="flex flex-wrap gap-1">
-                  {candidate.keySkills.split(',').map(skill => skill.trim()).filter(skill => skill).slice(0,5).map((skill, index) => (
-                    <Badge key={`${skill}-${index}`} variant="outline" className="text-xs">{skill}</Badge>
+                  {candidate.keySkills.split(',').map(skill => skill.trim()).filter(skill => skill).slice(0,5).map((skill, skillIndex) => (
+                    <Badge key={`${skill.trim()}-${skillIndex}`} variant="outline" className="text-xs">{skill}</Badge>
                   ))}
                   {candidate.keySkills.split(',').length > 5 && <Badge variant="outline" className="text-xs">...</Badge>}
                 </div>
