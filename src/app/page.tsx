@@ -69,16 +69,12 @@ export default function HomePage() {
     }
 
     setIsLoadingAllScreenings(true);
-    // Do not reset allScreeningResults here if we want to show old results while new ones load,
-    // but for this app, clearing seems fine to indicate a fresh processing pass.
-    // setAllScreeningResults([]); 
+    // setAllScreeningResults([]); // Clear previous results before starting a new bulk process
 
     try {
       const input: PerformBulkScreeningInput = {
-        // Ensure jobRolesToScreen contains the full ExtractedJobRole objects
         jobRolesToScreen: extractedJobRoles,
-        // Ensure resumesToRank contains the ResumeFile like structure expected by the flow
-        resumesToRank: uploadedResumeFiles.map(rf => ({ name: rf.name, dataUri: rf.dataUri, id: rf.id, file: rf.file })),
+        resumesToRank: uploadedResumeFiles,
       };
       
       const output: PerformBulkScreeningOutput = await performBulkScreening(input);
@@ -88,14 +84,15 @@ export default function HomePage() {
         toast({ title: "Screening Complete", description: `All candidates processed for ${output.length} job role(s).` });
         
         const currentSelectionIsValid = selectedJobRoleId && output.some(res => res.jobDescriptionId === selectedJobRoleId);
-        if (!currentSelectionIsValid) {
+        if (!currentSelectionIsValid && output[0]) { // Ensure output[0] exists
           setSelectedJobRoleId(output[0].jobDescriptionId);
+        } else if (!selectedJobRoleId && output[0]) { // If no role was selected at all, select the first
+             setSelectedJobRoleId(output[0].jobDescriptionId);
         }
       } else {
         toast({ title: "Screening Complete", description: "No screening results were generated.", variant: "default"});
       }
     } catch (error) {
-      console.error("Error during bulk screening:", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred during bulk screening.";
       toast({ title: "Bulk Screening Failed", description: errorMessage, variant: "destructive" });
       setAllScreeningResults([]); // Clear results on failure
@@ -126,28 +123,22 @@ export default function HomePage() {
       if (output.length > 0) {
         const firstRoleId = output[0].id;
         setSelectedJobRoleId(firstRoleId); 
+        // Auto-trigger bulk screening if resumes are already present
         if (uploadedResumeFiles.length > 0) {
-          // Automatically trigger bulk screening if resumes are already present
-          // Need to pass the newly extracted roles to startBulkScreeningProcess
-          // However, startBulkScreeningProcess uses `extractedJobRoles` from state,
-          // which might not be updated yet. So, we rely on the effect or manual trigger.
-          // For now, let's ensure startBulkScreeningProcess is called after roles are set.
-          // This will be handled by the "Process All Candidates" button or if resumes are uploaded next.
-          // Or, we can directly call it if we pass the output:
-          // await startBulkScreeningProcess(output, uploadedResumeFiles); // if signature is changed
+           // Delay slightly to allow state updates to propagate before starting bulk screening
+           setTimeout(() => startBulkScreeningProcess(), 100);
         }
       } else {
         toast({ title: "No Job Roles Found", description: "Could not extract specific job roles. Ensure they are valid job descriptions.", variant: "default" });
       }
     } catch (error) {
-      console.error("Error extracting job roles:", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred during role extraction.";
       toast({ title: "Job Role Extraction Failed", description: errorMessage, variant: "destructive" });
       setExtractedJobRoles([]); 
     } finally {
       setIsLoadingRoles(false);
     }
-  }, [toast, uploadedResumeFiles, startBulkScreeningProcess]); // startBulkScreeningProcess dependency is for potential auto-trigger
+  }, [toast, uploadedResumeFiles, startBulkScreeningProcess]);
 
   const handleJobDescriptionUpload = useCallback(async (files: File[]) => {
     const newJdFilesPromises = files.map(async (file) => {
@@ -181,20 +172,21 @@ export default function HomePage() {
     try {
         const newResumeFiles = await Promise.all(newResumeFilesPromises);
         setUploadedResumeFiles(newResumeFiles);
-        // Don't auto-trigger screening here, let user click the button
-        // if (extractedJobRoles.length > 0) {
-        //     await startBulkScreeningProcess();
-        // }
+        // Auto-trigger bulk screening if job roles are already present
+        if (extractedJobRoles.length > 0) {
+            // Delay slightly to allow state updates to propagate
+            setTimeout(() => startBulkScreeningProcess(), 100);
+        }
     } catch (error) {
          toast({ title: "Error processing resumes", description: String(error), variant: "destructive"});
     }
-  }, [toast]); // Removed extractedJobRoles, startBulkScreeningProcess dependencies to avoid auto-trigger
+  }, [toast, extractedJobRoles, startBulkScreeningProcess]); 
 
 
   const handleJobRoleChange = useCallback((roleId: string | null) => {
     setSelectedJobRoleId(roleId);
     setFilters(initialFilters); // Reset filters when job role changes
-  }, []); // initialFilters is stable
+  }, []);
 
   const handleScreenAllButtonClick = async () => {
     await startBulkScreeningProcess();
@@ -211,14 +203,8 @@ export default function HomePage() {
     setFilters(prev => ({ ...prev, ...newFilters }));
   };
   
-  const resetFiltersAndRole = () => { // Renamed for clarity, though role isn't reset here
+  const resetFilters = () => {
     setFilters(initialFilters);
-    // Optionally, could reset selectedJobRoleId to the first available, or null
-    // if (extractedJobRoles.length > 0) {
-    //   setSelectedJobRoleId(extractedJobRoles[0].id);
-    // } else {
-    //   setSelectedJobRoleId(null);
-    // }
   };
 
   const filterCandidates = useCallback((candidates: RankedCandidate[] = [], currentFilters: Filters): RankedCandidate[] => {
@@ -332,18 +318,17 @@ export default function HomePage() {
             <FilterControls 
               filters={filters} 
               onFilterChange={handleFilterChange} 
-              onResetFilters={resetFiltersAndRole} // Use the renamed reset function
+              onResetFilters={resetFilters}
               extractedJobRoles={extractedJobRoles}
               selectedJobRoleId={selectedJobRoleId}
               onJobRoleChange={handleJobRoleChange}
-              isLoadingRoles={isLoadingRoles || isLoadingAllScreenings} // Pass combined loading state
+              isLoadingRoles={isLoadingRoles || isLoadingAllScreenings}
             />
           </>
         )}
         
         {!isLoadingAllScreenings && !isLoadingRoles && currentScreeningResult && (
             <>
-              {/* Separator was here, might be redundant if FilterControls is always shown when JDs are uploaded */}
               <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl mb-8">
                 <CardHeader>
                   <CardTitle className="text-2xl font-headline text-primary flex items-center">
@@ -370,7 +355,6 @@ export default function HomePage() {
 
         {!isLoadingAllScreenings && !isLoadingRoles && !currentScreeningResult && (
           <>
-            {/* Conditional messages based on application state */}
             {uploadedJobDescriptionFiles.length > 0 && extractedJobRoles.length === 0 && !isLoadingRoles && (
               <p className="text-center text-muted-foreground py-8">No specific job roles could be extracted. Check your JD files or try re-uploading.</p>
             )}
@@ -383,7 +367,6 @@ export default function HomePage() {
              {extractedJobRoles.length > 0 && allScreeningResults.length > 0 && !selectedJobRoleId && !isLoadingRoles && !isLoadingAllScreenings && (
               <p className="text-center text-muted-foreground py-8">Select a job role from the filters to view results.</p>
             )}
-            {/* Default initial message */}
             {uploadedJobDescriptionFiles.length === 0 && uploadedResumeFiles.length === 0 && !isLoadingRoles && !isLoadingAllScreenings && (
                <p className="text-center text-muted-foreground py-8">Upload job descriptions and resumes, then click "Process All Candidates".</p>
             )}

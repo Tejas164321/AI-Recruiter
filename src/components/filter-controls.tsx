@@ -29,7 +29,7 @@ interface FilterControlsProps {
 export function FilterControls({
   filters,
   onFilterChange,
-  onResetFilters,
+  onResetFilters, // Changed from onResetFiltersAndRole
   extractedJobRoles,
   selectedJobRoleId,
   onJobRoleChange,
@@ -138,3 +138,4 @@ export function FilterControls({
     </div>
   );
 }
+
