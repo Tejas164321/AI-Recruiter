@@ -7,7 +7,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
+  DialogDescription, // Keep import if used elsewhere or for a simple text description
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -41,8 +41,9 @@ export function AtsFeedbackModal({ isOpen, onClose, result }: AtsFeedbackModalPr
         <DialogHeader>
           <DialogTitle className="font-headline text-2xl text-primary flex items-center">
             <ShieldCheck className="w-6 h-6 mr-2" /> ATS Insights
-            </DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground space-y-1 pt-1">
+          </DialogTitle>
+          {/* Descriptive content moved here, out of DialogDescription */}
+          <div className="text-sm text-muted-foreground space-y-1 pt-1">
             <div className="flex items-center">
                 <FileText className="w-4 h-4 mr-2 text-muted-foreground" /> 
                 Resume: <span className="font-medium text-foreground ml-1">{result.resumeName}</span>
@@ -53,7 +54,12 @@ export function AtsFeedbackModal({ isOpen, onClose, result }: AtsFeedbackModalPr
                     Candidate: <span className="font-medium text-foreground ml-1">{result.candidateName}</span>
                 </div>
             )}
+          </div>
+          {/* If you need a simple text paragraph, you can still use DialogDescription here:
+          <DialogDescription>
+            Detailed analysis of the resume's compatibility with Applicant Tracking Systems.
           </DialogDescription>
+          */}
         </DialogHeader>
         <ScrollArea className="max-h-[65vh] pr-4">
           <div className="grid gap-6 py-4">
