@@ -54,3 +54,13 @@ export interface PerformBulkScreeningInput {
 
 // Output for the bulk screening flow
 export type PerformBulkScreeningOutput = JobScreeningResult[];
+
+// Result for a single resume's ATS score analysis
+export interface AtsScoreResult {
+  id: string; // Corresponds to ResumeFile.id
+  resumeName: string;
+  candidateName?: string; // Extracted by AI, if possible
+  atsScore: number;
+  atsFeedback: string;
+  resumeDataUri: string;
+}
