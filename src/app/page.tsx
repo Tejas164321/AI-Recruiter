@@ -55,7 +55,7 @@ export default function HomePage() {
     }
   }, [screeningResults, isLoading]);
 
-  const handleJobDescriptionUpload = useCallback(async (files: File[]) => { // `files` is the complete current list from FileUploadArea
+  const handleJobDescriptionUpload = useCallback(async (files: File[]) => {
     try {
       const processedJobDescriptionFilesPromises = files.map(async (file) => {
         const dataUri = await new Promise<string>((resolve, reject) => {
@@ -67,7 +67,7 @@ export default function HomePage() {
         return { id: crypto.randomUUID(), file, dataUri, name: file.name };
       });
       const processedJobDescriptionFiles = await Promise.all(processedJobDescriptionFilesPromises);
-      setJobDescriptionFiles(processedJobDescriptionFiles); // Set the new list directly
+      setJobDescriptionFiles(processedJobDescriptionFiles);
     } catch (error) {
       console.error("Error processing job description files:", error);
       toast({
@@ -78,7 +78,7 @@ export default function HomePage() {
     }
   }, [toast]);
 
-  const handleResumesUpload = useCallback(async (files: File[]) => { // `files` is the complete current list from FileUploadArea
+  const handleResumesUpload = useCallback(async (files: File[]) => {
     try {
       const processedResumeFilesPromises = files.map(async (file) => {
         const dataUri = await new Promise<string>((resolve, reject) => {
@@ -90,7 +90,7 @@ export default function HomePage() {
         return { id: crypto.randomUUID(), file, dataUri, name: file.name };
       });
       const processedResumeFiles = await Promise.all(processedResumeFilesPromises);
-      setResumeFiles(processedResumeFiles); // Set the new list directly
+      setResumeFiles(processedResumeFiles);
     } catch (error) {
       console.error("Error processing resume files:", error);
       toast({
@@ -165,6 +165,13 @@ export default function HomePage() {
       (result) => result.jobDescriptionName === filters.selectedJobDescriptionName
     );
   }, [screeningResults, filters.selectedJobDescriptionName]);
+
+  const derivedAvailableJobDescriptions = React.useMemo(() => {
+    const names = screeningResults.length > 0
+      ? screeningResults.map(result => result.jobDescriptionName)
+      : jobDescriptionFiles.map(jd => jd.name);
+    return Array.from(new Set(names)); // Ensure uniqueness and provide a stable list
+  }, [screeningResults, jobDescriptionFiles]);
 
 
   return (
@@ -268,7 +275,7 @@ export default function HomePage() {
             filters={filters} 
             onFilterChange={handleFilterChange} 
             onResetFilters={resetFilters}
-            availableJobDescriptions={jobDescriptionFiles.map(jd => jd.name)} 
+            availableJobDescriptions={derivedAvailableJobDescriptions} 
           />
            {screeningResults.length > 0 && <Separator className="my-8" />}
         </div>
