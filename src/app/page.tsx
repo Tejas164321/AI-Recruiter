@@ -11,7 +11,7 @@ import { FilterControls } from "@/components/filter-controls";
 import { useToast } from "@/hooks/use-toast";
 import { rankCandidates, type RankCandidatesInput, type RankCandidatesOutput } from "@/ai/flows/rank-candidates";
 import type { ResumeFile, RankedCandidate, Filters } from "@/lib/types";
-import { FileText, Users, ScanSearch, Loader2, UploadCloud } from "lucide-react";
+import { FileText, Users, ScanSearch, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 const initialFilters: Filters = {
@@ -70,7 +70,7 @@ export default function HomePage() {
     }
 
     setIsLoading(true);
-    setRankedCandidates([]); // Clear previous results
+    setRankedCandidates([]); 
 
     try {
       const input: RankCandidatesInput = {
@@ -82,7 +82,7 @@ export default function HomePage() {
       const newRankedCandidates = output.map((rc, index) => ({
         ...rc,
         id: crypto.randomUUID(),
-        originalResumeName: resumeFiles[index]?.file.name || 'N/A', // Ensure index safety
+        originalResumeName: resumeFiles[index]?.file.name || 'N/A',
       }));
 
       setRankedCandidates(newRankedCandidates);
@@ -166,23 +166,34 @@ export default function HomePage() {
         </CardContent>
       </Card>
 
-      <div className="flex justify-center">
-        <Button
-          onClick={handleScreenResumes}
-          disabled={isLoading || !jobDescriptionDataUri || resumeFiles.length === 0}
-          size="lg"
-          className="bg-accent hover:bg-accent/90 text-accent-foreground text-base px-8 py-6 shadow-md hover:shadow-lg transition-shadow"
-          aria-live="polite"
-          aria-busy={isLoading}
-        >
-          {isLoading ? (
-            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-          ) : (
-            <ScanSearch className="w-5 h-5 mr-2" />
-          )}
-          Screen & Rank Resumes
-        </Button>
-      </div>
+      <Card className="shadow-lg">
+        <CardHeader>
+            <CardTitle className="flex items-center text-2xl font-headline">
+                <ScanSearch className="w-7 h-7 mr-3 text-primary" />
+                Start Screening
+            </CardTitle>
+            <CardDescription>
+                Once you've uploaded the job description and resumes, click below to screen and rank them using AI.
+            </CardDescription>
+        </CardHeader>
+        <CardContent className="flex justify-center">
+            <Button
+            onClick={handleScreenResumes}
+            disabled={isLoading || !jobDescriptionDataUri || resumeFiles.length === 0}
+            size="lg"
+            className="bg-accent hover:bg-accent/90 text-accent-foreground text-base px-8 py-6 shadow-md hover:shadow-lg transition-shadow"
+            aria-live="polite"
+            aria-busy={isLoading}
+            >
+            {isLoading ? (
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+            ) : (
+                <ScanSearch className="w-5 h-5 mr-2" />
+            )}
+            Screen & Rank Resumes
+            </Button>
+        </CardContent>
+      </Card>
 
       {(isLoading || rankedCandidates.length > 0) && <Separator className="my-8" />}
       
