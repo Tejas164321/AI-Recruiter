@@ -113,8 +113,6 @@ export async function rankCandidates(input: RankCandidatesInput): Promise<RankCa
   } catch (flowError) {
     console.error('Error in rankCandidates flow execution:', flowError);
     const message = flowError instanceof Error ? flowError.message : String(flowError);
-    // It's generally better to let Next.js handle the serialization of errors for server actions
-    // Re-throwing the original error or a new error with a clear message is often preferred.
     throw new Error(`Candidate ranking process failed: ${message}`);
   }
 }
@@ -148,7 +146,7 @@ const rankCandidatePrompt = ai.definePrompt({
 
   Ensure the output is structured as a JSON object.`,
   config: {
-    temperature: 0, // Low temperature for more deterministic scoring
+    temperature: 0, 
   },
 });
 
@@ -159,128 +157,127 @@ const rankCandidatesFlow = ai.defineFlow(
     outputSchema: RankCandidatesOutputSchema,
   },
   async (input): Promise<RankCandidatesOutput> => {
-    const { jobDescriptions: uploadedJobDescriptionFiles, resumes } = input;
-    
-    // Step 1: Segment all uploaded JD files in parallel
-    const segmentationTasks = uploadedJobDescriptionFiles.map(async (uploadedJdFile) => {
-      try {
-        const segmentationInput = {
-          documentDataUri: uploadedJdFile.dataUri,
-          originalFileName: uploadedJdFile.name,
-        };
-        const { output: segmentedJdsOutput } = await segmentJobDescriptionsPrompt(segmentationInput);
-        return { originalFile: uploadedJdFile, segmentedJdsOutput, error: null };
-      } catch (segmentationError) {
-        console.error(`Error during segmentation of JD file ${uploadedJdFile.name}:`, segmentationError);
-        return { originalFile: uploadedJdFile, segmentedJdsOutput: null, error: segmentationError };
-      }
-    });
-
-    const allSegmentationResults = await Promise.all(segmentationTasks);
-
-    // Step 2: Flatten all JDs to process
-    const jdsToProcessPromises: Promise<{ name: string; dataUri: string; originalFileName: string }[]>[] = [];
-
-    for (const segResult of allSegmentationResults) {
-      const { originalFile, segmentedJdsOutput, error } = segResult;
-      const individualJdsForThisFile: { name: string; dataUri: string; originalFileName: string }[] = [];
-
-      if (error || !segmentedJdsOutput || segmentedJdsOutput.length === 0) {
-        if (error) console.warn(`Segmentation of ${originalFile.name} failed. Processing as a single JD. Error: ${error}`);
-        else console.warn(`Segmentation of ${originalFile.name} returned no JDs. Processing as a single JD.`);
-        
-        individualJdsForThisFile.push({
-          name: originalFile.name,
-          dataUri: originalFile.dataUri,
-          originalFileName: originalFile.name,
-        });
-      } else {
-        segmentedJdsOutput.forEach((segmentedJd, index) => {
-          const safeTitle = (segmentedJd.title || `Job ${index + 1}`).replace(/[^\w\s.-]/gi, '').trim();
-          const jobName = `${originalFile.name} - ${safeTitle}`;
-          // Ensure content is not empty before creating data URI
-          const content = segmentedJd.content || "No content extracted for this job description.";
-          const contentDataUri = `data:text/plain;charset=utf-8;base64,${Buffer.from(content).toString('base64')}`;
-          
-          individualJdsForThisFile.push({
-            name: jobName,
-            dataUri: contentDataUri,
-            originalFileName: originalFile.name, 
-          });
-        });
-      }
-      jdsToProcessPromises.push(Promise.resolve(individualJdsForThisFile));
-    }
-    
-    const nestedJdsToProcess = await Promise.all(jdsToProcessPromises);
-    const flatJdsToProcess = nestedJdsToProcess.flat();
-
-
-    if (flatJdsToProcess.length === 0 && uploadedJobDescriptionFiles.length > 0) {
-        console.warn("No processable JDs found after attempting segmentation for all files. Defaulting to original uploaded files.");
-        uploadedJobDescriptionFiles.forEach(originalFile => {
-            flatJdsToProcess.push({
-                name: originalFile.name,
-                dataUri: originalFile.dataUri,
-                originalFileName: originalFile.name,
-            });
-        });
-    }
-    
-    // Step 3: Process each JD in parallel (includes parallel resume ranking within each)
-    const screeningResultPromises = flatJdsToProcess.map(async (jdToProcess) => {
-      const resumeRankingPromises = resumes.map(async (resume) => {
+    try {
+      const { jobDescriptions: uploadedJobDescriptionFiles, resumes } = input;
+      
+      const segmentationTasks = uploadedJobDescriptionFiles.map(async (uploadedJdFile) => {
         try {
-          const promptInput = {
-            jobDescriptionDataUri: jdToProcess.dataUri,
-            resumeDataUri: resume.dataUri,
-            originalResumeName: resume.name,
+          const segmentationInput = {
+            documentDataUri: uploadedJdFile.dataUri,
+            originalFileName: uploadedJdFile.name,
           };
-          const { output: aiCandidateOutput } = await rankCandidatePrompt(promptInput);
-          
-          if (aiCandidateOutput) {
-            return {
-              ...aiCandidateOutput,
-              id: crypto.randomUUID(),
-              resumeDataUri: resume.dataUri, // ensure this is passed through
-              originalResumeName: resume.name, // ensure this is passed through
-            } satisfies z.infer<typeof FullRankedCandidateSchema>; // Ensure type compatibility
-          }
-          return null; // Resume ranking failed or no output
-        } catch (error) {
-          console.error(`Error ranking resume ${resume.name} for JD ${jdToProcess.name}:`, error);
-          return null; // Indicate failure for this specific resume ranking
+          const { output: segmentedJdsOutput } = await segmentJobDescriptionsPrompt(segmentationInput);
+          return { originalFile: uploadedJdFile, segmentedJdsOutput, error: null };
+        } catch (segmentationError) {
+          console.error(`Error during segmentation of JD file ${uploadedJdFile.name}:`, segmentationError);
+          return { originalFile: uploadedJdFile, segmentedJdsOutput: null, error: segmentationError };
         }
       });
 
-      // Wait for all resumes to be ranked against the current JD
-      const rankedCandidatesWithNulls = await Promise.all(resumeRankingPromises);
-      // Filter out nulls (failed rankings) and assert type
-      const candidatesForThisJD = rankedCandidatesWithNulls.filter(c => c !== null) as z.infer<typeof FullRankedCandidateSchema>[];
-      
-      // Sort candidates for this JD by score
-      candidatesForThisJD.sort((a, b) => b.score - a.score);
-      
-      return {
-        jobDescriptionName: jdToProcess.name,
-        jobDescriptionDataUri: jdToProcess.dataUri,
-        candidates: candidatesForThisJD,
-      };
-    });
+      const allSegmentationResults = await Promise.all(segmentationTasks);
 
-    // Wait for all JDs to be processed
-    const settledScreeningResults = await Promise.allSettled(screeningResultPromises);
-    
-    const finalResults: RankCandidatesOutput = [];
-    settledScreeningResults.forEach(result => {
-      if (result.status === 'fulfilled') {
-        finalResults.push(result.value);
-      } else {
-        console.error("A job description screening task failed:", result.reason);
-        // Optionally, you could add a placeholder or error indicator in the results
+      const jdsToProcessPromises: Promise<{ name: string; dataUri: string; originalFileName: string }[]>[] = [];
+
+      for (const segResult of allSegmentationResults) {
+        const { originalFile, segmentedJdsOutput, error } = segResult;
+        const individualJdsForThisFile: { name: string; dataUri: string; originalFileName: string }[] = [];
+
+        if (error || !segmentedJdsOutput || segmentedJdsOutput.length === 0) {
+          if (error) console.warn(`Segmentation of ${originalFile.name} failed. Processing as a single JD. Error: ${error}`);
+          else console.warn(`Segmentation of ${originalFile.name} returned no JDs. Processing as a single JD.`);
+          
+          individualJdsForThisFile.push({
+            name: originalFile.name,
+            dataUri: originalFile.dataUri,
+            originalFileName: originalFile.name,
+          });
+        } else {
+          segmentedJdsOutput.forEach((segmentedJd, index) => {
+            const safeTitle = (segmentedJd.title || `Job ${index + 1}`).replace(/[^\w\s.-]/gi, '').trim();
+            const jobName = `${originalFile.name} - ${safeTitle}`;
+            const content = segmentedJd.content || "No content extracted for this job description.";
+            const contentDataUri = `data:text/plain;charset=utf-8;base64,${Buffer.from(content).toString('base64')}`;
+            
+            individualJdsForThisFile.push({
+              name: jobName,
+              dataUri: contentDataUri,
+              originalFileName: originalFile.name, 
+            });
+          });
+        }
+        jdsToProcessPromises.push(Promise.resolve(individualJdsForThisFile));
       }
-    });
-    
-    return finalResults;
+      
+      const nestedJdsToProcess = await Promise.all(jdsToProcessPromises);
+      const flatJdsToProcess = nestedJdsToProcess.flat();
+
+      if (flatJdsToProcess.length === 0 && uploadedJobDescriptionFiles.length > 0) {
+          console.warn("No processable JDs found after attempting segmentation for all files. Defaulting to original uploaded files.");
+          uploadedJobDescriptionFiles.forEach(originalFile => {
+              flatJdsToProcess.push({
+                  name: originalFile.name,
+                  dataUri: originalFile.dataUri,
+                  originalFileName: originalFile.name,
+              });
+          });
+      }
+      
+      const screeningResultPromises = flatJdsToProcess.map(async (jdToProcess) => {
+        const resumeRankingPromises = resumes.map(async (resume) => {
+          try {
+            const promptInput = {
+              jobDescriptionDataUri: jdToProcess.dataUri,
+              resumeDataUri: resume.dataUri,
+              originalResumeName: resume.name,
+            };
+            const { output: aiCandidateOutput } = await rankCandidatePrompt(promptInput);
+            
+            if (aiCandidateOutput) {
+              return {
+                ...aiCandidateOutput,
+                id: crypto.randomUUID(),
+                resumeDataUri: resume.dataUri, 
+                originalResumeName: resume.name, 
+              } satisfies z.infer<typeof FullRankedCandidateSchema>; 
+            }
+            return null; 
+          } catch (error) {
+            console.error(`Error ranking resume ${resume.name} for JD ${jdToProcess.name}:`, error);
+            return null; 
+          }
+        });
+
+        const rankedCandidatesWithNulls = await Promise.all(resumeRankingPromises);
+        const candidatesForThisJD = rankedCandidatesWithNulls.filter(c => c !== null) as z.infer<typeof FullRankedCandidateSchema>[];
+        
+        candidatesForThisJD.sort((a, b) => b.score - a.score);
+        
+        return {
+          jobDescriptionName: jdToProcess.name,
+          jobDescriptionDataUri: jdToProcess.dataUri,
+          candidates: candidatesForThisJD,
+        };
+      });
+
+      const settledScreeningResults = await Promise.allSettled(screeningResultPromises);
+      
+      const finalResults: RankCandidatesOutput = [];
+      settledScreeningResults.forEach(result => {
+        if (result.status === 'fulfilled') {
+          finalResults.push(result.value);
+        } else {
+          console.error("A job description screening task failed:", result.reason);
+        }
+      });
+      
+      return finalResults;
+    } catch (error) {
+      console.error('[rankCandidatesFlow] Internal error caught within the flow itself:', error);
+      if (error instanceof Error) {
+        throw new Error(`rankCandidatesFlow failed: ${error.message}`);
+      }
+      throw new Error(`rankCandidatesFlow failed with an unknown error: ${String(error)}`);
+    }
   }
 );
+
