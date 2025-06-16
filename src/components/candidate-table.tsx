@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo } from "react";
@@ -59,17 +60,27 @@ export function CandidateTable({ candidates, onViewFeedback }: CandidateTablePro
     return <p className="text-center text-muted-foreground py-8">No candidates processed yet. Upload resumes and a job description to see results.</p>;
   }
 
+  const getScoreBadge = (score: number) => {
+    if (score > 75) {
+      return <Badge className="bg-accent text-accent-foreground hover:bg-accent/90">{score}/100</Badge>;
+    } else if (score > 50) {
+      return <Badge className="bg-yellow-500 text-black hover:bg-yellow-500/90">{score}/100</Badge>;
+    } else {
+      return <Badge variant="destructive">{score}/100</Badge>;
+    }
+  };
+
   return (
-    <div className="rounded-lg border shadow-sm bg-card">
+    <div className="rounded-lg border shadow-sm bg-card overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead onClick={() => requestSort("name")} className="cursor-pointer hover:bg-muted/50 w-[30%]">
+            <TableHead onClick={() => requestSort("name")} className="cursor-pointer hover:bg-muted/50 w-[30%] transition-colors">
               <div className="flex items-center">
                 Candidate Name {getSortIndicator("name")}
               </div>
             </TableHead>
-            <TableHead onClick={() => requestSort("score")} className="cursor-pointer hover:bg-muted/50 w-[15%]">
+            <TableHead onClick={() => requestSort("score")} className="cursor-pointer hover:bg-muted/50 w-[15%] transition-colors">
               <div className="flex items-center">
                 <TrendingUp className="w-4 h-4 mr-1 text-muted-foreground" /> Score {getSortIndicator("score")}
               </div>
@@ -84,14 +95,10 @@ export function CandidateTable({ candidates, onViewFeedback }: CandidateTablePro
         </TableHeader>
         <TableBody>
           {sortedCandidates.map((candidate) => (
-            <TableRow key={candidate.id}>
+            <TableRow key={candidate.id} className="transition-colors hover:bg-muted/50">
               <TableCell className="font-medium">{candidate.name}</TableCell>
               <TableCell>
-                <Badge variant={candidate.score > 75 ? "default" : candidate.score > 50 ? "secondary" : "destructive"} className={
-                    candidate.score > 75 ? `bg-accent text-accent-foreground` : candidate.score > 50 ? `bg-yellow-500 text-white` : `bg-red-500 text-white`
-                }>
-                  {candidate.score}/100
-                </Badge>
+                {getScoreBadge(candidate.score)}
               </TableCell>
               <TableCell>
                 <div className="flex flex-wrap gap-1">
@@ -107,6 +114,7 @@ export function CandidateTable({ candidates, onViewFeedback }: CandidateTablePro
                   size="sm"
                   onClick={() => onViewFeedback(candidate)}
                   aria-label={`View feedback for ${candidate.name}`}
+                  className="hover:text-primary transition-colors"
                 >
                   <MessageSquareText className="w-4 h-4 mr-2" />
                   Feedback

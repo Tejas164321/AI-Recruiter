@@ -15,9 +15,8 @@ import type { RankedCandidate } from "@/lib/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { generateInterviewQuestions, type GenerateInterviewQuestionsInput, type GenerateInterviewQuestionsOutput } from "@/ai/flows/generate-interview-questions";
-// Removed import for generateCandidateFeedback as it's no longer used here
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, HelpCircle, Lightbulb } from "lucide-react";
+import { Loader2, HelpCircle, Lightbulb, Star, Activity, ThumbsDown } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 
@@ -33,8 +32,6 @@ export function FeedbackModal({ isOpen, onClose, candidate, jobDescriptionDataUr
   const [interviewQuestions, setInterviewQuestions] = useState<string[]>([]);
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState<boolean>(false);
   const [questionError, setQuestionError] = useState<string | null>(null);
-
-  // Removed state for alternativeFeedback, isGeneratingAltFeedback, altFeedbackError
 
   const { toast } = useToast();
 
@@ -70,14 +67,12 @@ export function FeedbackModal({ isOpen, onClose, candidate, jobDescriptionDataUr
     }
   }, [candidate, jobDescriptionDataUri, toast]);
 
-  // Removed handleGenerateAlternativeFeedback callback
 
   React.useEffect(() => {
     if (!isOpen) {
       setInterviewQuestions([]);
       setIsGeneratingQuestions(false);
       setQuestionError(null);
-      // Removed cleanup for alternative feedback state
     }
   }, [isOpen]);
    
@@ -85,11 +80,20 @@ export function FeedbackModal({ isOpen, onClose, candidate, jobDescriptionDataUr
     setInterviewQuestions([]);
     setIsGeneratingQuestions(false);
     setQuestionError(null);
-    // Removed cleanup for alternative feedback state on candidate change
   },[candidate?.id]);
 
 
   if (!candidate) return null;
+
+  const getScoreBadge = (score: number) => {
+    if (score > 75) {
+      return <Badge className="bg-accent text-accent-foreground text-base px-3 py-1"><Star className="w-4 h-4 mr-1.5" /> {score}/100</Badge>;
+    } else if (score > 50) {
+      return <Badge className="bg-yellow-500 text-black text-base px-3 py-1"><Activity className="w-4 h-4 mr-1.5" /> {score}/100</Badge>;
+    } else {
+      return <Badge variant="destructive" className="text-base px-3 py-1"><ThumbsDown className="w-4 h-4 mr-1.5" /> {score}/100</Badge>;
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -97,39 +101,39 @@ export function FeedbackModal({ isOpen, onClose, candidate, jobDescriptionDataUr
         <DialogHeader>
           <DialogTitle className="font-headline text-2xl text-primary">Feedback for {candidate.name}</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            AI-generated insights for resume submitted: {candidate.originalResumeName}
+            AI-generated insights for resume: <span className="font-medium text-foreground">{candidate.originalResumeName}</span>
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[70vh] pr-4">
           <div className="grid gap-6 py-4">
             <div>
-              <h4 className="font-semibold text-foreground mb-1">Overall Score</h4>
-              <Badge variant={candidate.score > 75 ? "default" : candidate.score > 50 ? "secondary" : "destructive"} className={
-                    candidate.score > 75 ? `bg-accent text-accent-foreground` : candidate.score > 50 ? `bg-yellow-500 text-white` : `bg-red-500 text-white`
-                }>
-                  {candidate.score}/100
-              </Badge>
+              <h4 className="font-semibold text-foreground mb-2">Overall Score</h4>
+              {getScoreBadge(candidate.score)}
             </div>
+            <Separator />
             <div>
-              <h4 className="font-semibold text-foreground mb-1">Key Skills Matched</h4>
-              <div className="flex flex-wrap gap-1">
-                  {candidate.keySkills.split(',').map(skill => skill.trim()).filter(skill => skill).map(skill => (
-                    <Badge key={skill} variant="outline" className="text-xs">{skill}</Badge>
-                  ))}
+              <h4 className="font-semibold text-foreground mb-2">Key Skills Matched</h4>
+              {candidate.keySkills && candidate.keySkills.split(',').filter(skill => skill.trim()).length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                    {candidate.keySkills.split(',').map(skill => skill.trim()).filter(skill => skill).map(skill => (
+                      <Badge key={skill} variant="secondary" className="text-sm">{skill}</Badge>
+                    ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No specific key skills highlighted by AI.</p>
+              )}
+            </div>
+            <Separator />
+            <div>
+              <h4 className="font-semibold text-foreground mb-2">AI Generated Feedback</h4>
+              <div className="p-4 bg-muted/50 rounded-md ">
+                <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                  {candidate.feedback}
+                </p>
               </div>
-            </div>
-            <div>
-              <h4 className="font-semibold text-foreground mb-1">Initial Detailed Feedback</h4>
-              <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-                {candidate.feedback}
-              </p>
             </div>
 
             <Separator />
-
-            {/* Removed Alternative Feedback section */}
-
-            {/* <Separator /> // This separator might now be redundant if Alternative Feedback was the only thing between it and Questions */}
             
             <div>
               <h4 className="font-semibold text-foreground mb-2 flex items-center">
@@ -143,26 +147,28 @@ export function FeedbackModal({ isOpen, onClose, candidate, jobDescriptionDataUr
                 </Alert>
               )}
               {isGeneratingQuestions && (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="w-8 h-8 mr-2 animate-spin text-primary" />
+                <div className="flex items-center justify-center py-4 space-x-2">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
                   <p className="text-muted-foreground">Generating questions...</p>
                 </div>
               )}
               {!isGeneratingQuestions && interviewQuestions.length > 0 && (
-                <ul className="space-y-2 list-disc list-inside pl-2 text-sm text-foreground">
-                  {interviewQuestions.map((question, index) => (
-                    <li key={index}>{question}</li>
-                  ))}
-                </ul>
+                <div className="p-4 bg-muted/50 rounded-md">
+                  <ul className="space-y-3 list-decimal list-inside pl-2 text-sm text-foreground">
+                    {interviewQuestions.map((question, index) => (
+                      <li key={index} className="leading-relaxed">{question}</li>
+                    ))}
+                  </ul>
+                </div>
               )}
               {!isGeneratingQuestions && interviewQuestions.length === 0 && !questionError && (
-                 <p className="text-sm text-muted-foreground">Click the button below to generate questions.</p>
+                 <p className="text-sm text-muted-foreground italic">Click the button below to generate tailored interview questions.</p>
               )}
               <Button 
                 onClick={handleGenerateQuestions} 
                 disabled={isGeneratingQuestions || !jobDescriptionDataUri || !candidate.resumeDataUri}
-                className="mt-4 w-full sm:w-auto"
-                variant="outline"
+                className="mt-4 w-full sm:w-auto bg-primary hover:bg-primary/90"
+                variant="default"
               >
                 {isGeneratingQuestions ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -174,7 +180,7 @@ export function FeedbackModal({ isOpen, onClose, candidate, jobDescriptionDataUr
             </div>
           </div>
         </ScrollArea>
-        <DialogFooter>
+        <DialogFooter className="mt-2">
           <Button onClick={onClose} variant="outline">Close</Button>
         </DialogFooter>
       </DialogContent>

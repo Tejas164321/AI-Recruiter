@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileUploadArea } from "@/components/file-upload-area";
@@ -11,13 +11,20 @@ import { FilterControls } from "@/components/filter-controls";
 import { useToast } from "@/hooks/use-toast";
 import { rankCandidates, type RankCandidatesInput, type RankCandidatesOutput } from "@/ai/flows/rank-candidates";
 import type { ResumeFile, RankedCandidate, Filters } from "@/lib/types";
-import { FileText, Users, ScanSearch, Loader2 } from "lucide-react";
+import { FileText, Users, ScanSearch, Loader2, BrainCircuit } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 const initialFilters: Filters = {
   scoreRange: [0, 100],
   skillKeyword: "",
 };
+
+const loadingSteps = [
+  { icon: FileText, text: "Reading Job Description..." },
+  { icon: Users, text: "Processing Resumes..." },
+  { icon: ScanSearch, text: "Cross-Referencing Skills..." },
+  { icon: BrainCircuit, text: "Generating AI Insights..." },
+];
 
 export default function HomePage() {
   const [jobDescriptionDataUri, setJobDescriptionDataUri] = useState<string | null>(null);
@@ -27,8 +34,28 @@ export default function HomePage() {
   const [selectedCandidateForFeedback, setSelectedCandidateForFeedback] = useState<RankedCandidate | null>(null);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState<boolean>(false);
   const [filters, setFilters] = useState<Filters>(initialFilters);
+  const [currentLoadingStep, setCurrentLoadingStep] = useState(0);
 
   const { toast } = useToast();
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isLoading) {
+      setCurrentLoadingStep(0); 
+      interval = setInterval(() => {
+        setCurrentLoadingStep((prevStep) => {
+          if (prevStep === loadingSteps.length -1) {
+            return prevStep; // Stay on last step if already there
+          }
+          return (prevStep + 1);
+        });
+      }, 2000); // Change step every 2 seconds
+    } else {
+      setCurrentLoadingStep(0);
+    }
+    return () => clearInterval(interval);
+  }, [isLoading]);
+
 
   const handleJobDescriptionUpload = useCallback(async (files: File[]) => {
     if (files.length === 0) {
@@ -119,9 +146,12 @@ export default function HomePage() {
     });
   }, [rankedCandidates, filters]);
 
+  const LoadingIcon = loadingSteps[currentLoadingStep % loadingSteps.length].icon;
+
+
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-8">
-      <Card className="shadow-lg">
+      <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
         <CardHeader>
           <CardTitle className="flex items-center text-2xl font-headline">
             <FileText className="w-7 h-7 mr-3 text-primary" />
@@ -146,7 +176,7 @@ export default function HomePage() {
         </CardContent>
       </Card>
 
-      <Card className="shadow-lg">
+      <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
         <CardHeader>
           <CardTitle className="flex items-center text-2xl font-headline">
             <Users className="w-7 h-7 mr-3 text-primary" />
@@ -167,7 +197,7 @@ export default function HomePage() {
         </CardContent>
       </Card>
 
-      <Card className="shadow-lg">
+      <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
         <CardHeader>
             <CardTitle className="flex items-center text-2xl font-headline">
                 <ScanSearch className="w-7 h-7 mr-3 text-primary" />
@@ -182,7 +212,7 @@ export default function HomePage() {
             onClick={handleScreenResumes}
             disabled={isLoading || !jobDescriptionDataUri || resumeFiles.length === 0}
             size="lg"
-            className="bg-accent hover:bg-accent/90 text-accent-foreground text-base px-8 py-6 shadow-md hover:shadow-lg transition-shadow"
+            className="bg-accent hover:bg-accent/90 text-accent-foreground text-base px-8 py-6 shadow-md hover:shadow-lg transition-all duration-150 hover:scale-105 active:scale-95"
             aria-live="polite"
             aria-busy={isLoading}
             >
@@ -195,27 +225,52 @@ export default function HomePage() {
             </Button>
         </CardContent>
       </Card>
-
-      {(isLoading || rankedCandidates.length > 0) && <Separator className="my-8" />}
       
       {isLoading && (
-        <div className="text-center py-8">
-          <Loader2 className="w-12 h-12 mx-auto animate-spin text-primary" />
-          <p className="mt-4 text-lg text-muted-foreground">Screening resumes... This may take a moment.</p>
-        </div>
+        <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
+          <CardContent className="pt-6">
+            <div className="text-center py-8 space-y-4">
+              <div className="relative w-16 h-16 mx-auto">
+                {loadingSteps.map((step, index) => (
+                  <div
+                    key={index}
+                    className={`absolute inset-0 flex items-center justify-center transition-opacity duration-500 ease-in-out ${
+                      currentLoadingStep % loadingSteps.length === index ? "opacity-100" : "opacity-0"
+                    }`}
+                  >
+                    <step.icon className="w-10 h-10 text-primary animate-pulse" />
+                  </div>
+                ))}
+              </div>
+              <p className="text-xl font-semibold text-primary h-6">
+                {loadingSteps[currentLoadingStep % loadingSteps.length].text}
+              </p>
+              <div className="w-full max-w-md mx-auto bg-muted rounded-full h-3 overflow-hidden">
+                <div
+                  className="bg-primary h-3 rounded-full transition-all duration-1000 ease-out"
+                  style={{ width: `${((currentLoadingStep % loadingSteps.length + 1) / loadingSteps.length) * 100}%` }}
+                ></div>
+              </div>
+              <p className="text-sm text-muted-foreground">AI is analyzing... Please be patient.</p>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {!isLoading && rankedCandidates.length > 0 && (
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-2xl font-headline">Screening Results</CardTitle>
-            <CardDescription>Ranked candidates based on the provided job description.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <FilterControls filters={filters} onFilterChange={handleFilterChange} onResetFilters={resetFilters} />
-            <CandidateTable candidates={filteredCandidates} onViewFeedback={handleViewFeedback} />
-          </CardContent>
-        </Card>
+        <>
+          <Separator className="my-8" />
+          <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
+            <CardHeader>
+              <CardTitle className="text-2xl font-headline">Screening Results</CardTitle>
+              <CardDescription>Ranked candidates based on the provided job description.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <FilterControls filters={filters} onFilterChange={handleFilterChange} onResetFilters={resetFilters} />
+              <CandidateTable candidates={filteredCandidates} onViewFeedback={handleViewFeedback} />
+            </CardContent>
+          </Card>
+        </>
       )}
 
       <FeedbackModal
