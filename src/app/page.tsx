@@ -1,8 +1,8 @@
+
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileUploadArea } from "@/components/file-upload-area";
 import { CandidateTable } from "@/components/candidate-table";
@@ -11,7 +11,7 @@ import { FilterControls } from "@/components/filter-controls";
 import { useToast } from "@/hooks/use-toast";
 import { rankCandidates, type RankCandidatesInput, type RankCandidatesOutput } from "@/ai/flows/rank-candidates";
 import type { ResumeFile, RankedCandidate, Filters } from "@/lib/types";
-import { FileText, Users, ScanSearch, Loader2 } from "lucide-react";
+import { FileText, Users, ScanSearch, Loader2, UploadCloud } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 const initialFilters: Filters = {
@@ -20,7 +20,7 @@ const initialFilters: Filters = {
 };
 
 export default function HomePage() {
-  const [jobDescription, setJobDescription] = useState<string>("");
+  const [jobDescriptionDataUri, setJobDescriptionDataUri] = useState<string | null>(null);
   const [resumeFiles, setResumeFiles] = useState<ResumeFile[]>([]);
   const [rankedCandidates, setRankedCandidates] = useState<RankedCandidate[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -30,9 +30,20 @@ export default function HomePage() {
 
   const { toast } = useToast();
 
-  const handleJobDescriptionChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setJobDescription(event.target.value);
-  };
+  const handleJobDescriptionUpload = useCallback(async (files: File[]) => {
+    if (files.length === 0) {
+      setJobDescriptionDataUri(null);
+      return;
+    }
+    const file = files[0];
+    const dataUri = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+      reader.readAsDataURL(file);
+    });
+    setJobDescriptionDataUri(dataUri);
+  }, []);
 
   const handleResumesUpload = useCallback(async (files: File[]) => {
     const newResumeFilesPromises = files.map(async (file) => {
@@ -49,8 +60,8 @@ export default function HomePage() {
   }, []);
 
   const handleScreenResumes = async () => {
-    if (!jobDescription.trim()) {
-      toast({ title: "Error", description: "Job description cannot be empty.", variant: "destructive" });
+    if (!jobDescriptionDataUri) {
+      toast({ title: "Error", description: "Job description file cannot be empty.", variant: "destructive" });
       return;
     }
     if (resumeFiles.length === 0) {
@@ -63,7 +74,7 @@ export default function HomePage() {
 
     try {
       const input: RankCandidatesInput = {
-        jobDescription,
+        jobDescriptionDataUri,
         resumes: resumeFiles.map((rf) => rf.dataUri),
       };
       const output: RankCandidatesOutput = await rankCandidates(input);
@@ -116,17 +127,20 @@ export default function HomePage() {
             Job Description
           </CardTitle>
           <CardDescription>
-            Paste the job description below. The AI will use this to rank candidate resumes.
+            Upload the job description file (PDF, TXT, or MD). The AI will use this to rank candidate resumes.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Textarea
-            placeholder="Paste job description here..."
-            value={jobDescription}
-            onChange={handleJobDescriptionChange}
-            rows={8}
-            className="text-sm leading-relaxed border-input focus:border-primary"
-            aria-label="Job Description Input"
+          <FileUploadArea
+            onFilesUpload={handleJobDescriptionUpload}
+            acceptedFileTypes={{ 
+              "application/pdf": [".pdf"],
+              "text/plain": [".txt"],
+              "text/markdown": [".md"]
+            }}
+            multiple={false}
+            label="PDF, TXT, or MD file up to 10MB"
+            id="job-description-upload"
           />
         </CardContent>
       </Card>
@@ -155,7 +169,7 @@ export default function HomePage() {
       <div className="flex justify-center">
         <Button
           onClick={handleScreenResumes}
-          disabled={isLoading || !jobDescription.trim() || resumeFiles.length === 0}
+          disabled={isLoading || !jobDescriptionDataUri || resumeFiles.length === 0}
           size="lg"
           className="bg-accent hover:bg-accent/90 text-accent-foreground text-base px-8 py-6 shadow-md hover:shadow-lg transition-shadow"
           aria-live="polite"

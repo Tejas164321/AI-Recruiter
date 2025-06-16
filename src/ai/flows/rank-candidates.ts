@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -12,13 +13,15 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const RankCandidatesInputSchema = z.object({
-  jobDescription: z
+  jobDescriptionDataUri: z
     .string()
-    .describe('The job description to match resumes against.'),
+    .describe(
+      'The job description as a data URI that must include a MIME type and use Base64 encoding. Expected format: \'data:<mimetype>;base64,<encoded_data>\'.'
+    ),
   resumes: z
     .array(z.string())
     .describe(
-      'An array of candidate resumes, each as a data URI that must include a MIME type and use Base64 encoding. Expected format: \'data:<mimetype>;base64,<encoded_data>\'.' 
+      'An array of candidate resumes, each as a data URI that must include a MIME type and use Base64 encoding. Expected format: \'data:<mimetype>;base64,<encoded_data>\'.'
     ),
 });
 
@@ -43,8 +46,8 @@ const rankCandidatePrompt = ai.definePrompt({
   name: 'rankCandidatePrompt',
   input: {
     schema: z.object({
-      jobDescription: z.string(),
-      resume: z.string(),
+      jobDescriptionDataUri: z.string().describe("The job description as a data URI."),
+      resume: z.string().describe("A candidate resume as a data URI."),
     }),
   },
   output: {
@@ -52,7 +55,7 @@ const rankCandidatePrompt = ai.definePrompt({
   },
   prompt: `You are an expert HR assistant tasked with ranking candidate resumes against a job description.
 
-  Job Description: {{{jobDescription}}}
+  Job Description: {{media url=jobDescriptionDataUri}}
   Resume: {{media url=resume}}
 
   Analyze the resume and provide the following:
@@ -77,14 +80,14 @@ const rankCandidatesFlow = ai.defineFlow(
   },
   async input => {
     const {
-      jobDescription,
+      jobDescriptionDataUri,
       resumes
     } = input;
 
     const rankedCandidates = await Promise.all(
       resumes.map(async resume => {
         const {output} = await rankCandidatePrompt({
-          jobDescription: jobDescription,
+          jobDescriptionDataUri: jobDescriptionDataUri,
           resume: resume,
         });
         return output!;
