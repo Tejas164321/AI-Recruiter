@@ -1,7 +1,7 @@
 
 "use client";
 
-import { BrainCircuit, Users, Briefcase, BarChartBig, Loader2 } from "lucide-react";
+import { BrainCircuit, Users, Briefcase, BarChartBig } from "lucide-react";
 
 interface LoadingIndicatorProps {
   stage: "roles" | "screening" | "general";
@@ -18,9 +18,11 @@ export function LoadingIndicator({ stage }: LoadingIndicatorProps) {
   return (
     <div className="flex flex-col items-center justify-center space-y-8 py-10 text-center">
       <div className="relative">
-        <BrainCircuit className="w-20 h-20 text-primary opacity-70 animate-spin [animation-duration:4s] [animation-timing-function:linear]" />
+        {/* Adjusted BrainCircuit size */}
+        <BrainCircuit className="w-16 h-16 text-primary opacity-70 animate-spin [animation-duration:4s] [animation-timing-function:linear]" />
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-28 h-28 border-2 border-primary/30 rounded-full animate-pulse [animation-duration:2s]"></div>
+          {/* Adjusted pulsing border size to fit the new icon size */}
+          <div className="w-20 h-20 border-2 border-primary/30 rounded-full animate-pulse [animation-duration:2s]"></div>
         </div>
       </div>
 
