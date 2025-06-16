@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileUploadArea } from "@/components/file-upload-area";
@@ -10,133 +10,197 @@ import { FeedbackModal } from "@/components/feedback-modal";
 import { FilterControls } from "@/components/filter-controls";
 import { useToast } from "@/hooks/use-toast";
 import { rankCandidates, type RankCandidatesInput, type RankCandidatesOutput } from "@/ai/flows/rank-candidates";
-import type { ResumeFile, RankedCandidate, Filters, JobDescriptionFile, JobScreeningResult } from "@/lib/types";
+import { extractJobRoles, type ExtractJobRolesInput, type ExtractJobRolesOutput } from "@/ai/flows/extract-job-roles";
+import type { ResumeFile, RankedCandidate, Filters, JobDescriptionFile, JobScreeningResult, ExtractedJobRole } from "@/lib/types";
 import { Users, ScanSearch, Loader2, Briefcase } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 const initialFilters: Filters = {
   scoreRange: [0, 100],
   skillKeyword: "",
-  selectedJobDescriptionName: null,
 };
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
 export default function HomePage() {
-  const [jobDescriptionFiles, setJobDescriptionFiles] = useState<JobDescriptionFile[]>([]);
-  const [resumeFiles, setResumeFiles] = useState<ResumeFile[]>([]);
-  const [screeningResults, setScreeningResults] = useState<JobScreeningResult[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [uploadedJobDescriptionFiles, setUploadedJobDescriptionFiles] = useState<JobDescriptionFile[]>([]);
+  const [uploadedResumeFiles, setUploadedResumeFiles] = useState<ResumeFile[]>([]);
+  
+  const [extractedJobRoles, setExtractedJobRoles]   = useState<ExtractedJobRole[]>([]);
+  const [selectedJobRoleId, setSelectedJobRoleId] = useState<string | null>(null);
+  
+  const [currentScreeningResult, setCurrentScreeningResult] = useState<JobScreeningResult | null>(null);
+  
+  const [isLoadingRoles, setIsLoadingRoles] = useState<boolean>(false);
+  const [isLoadingCandidates, setIsLoadingCandidates] = useState<boolean>(false);
+  
   const [selectedCandidateForFeedback, setSelectedCandidateForFeedback] = useState<RankedCandidate | null>(null);
-  const [jobDescriptionDataUriForFeedback, setJobDescriptionDataUriForFeedback] = useState<string | null>(null);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState<boolean>(false);
   const [filters, setFilters] = useState<Filters>(initialFilters);
 
   const { toast } = useToast();
-
-  const loadingSectionRef = useRef<HTMLDivElement | null>(null);
   const resultsSectionRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    if (isLoading) {
-      const timer = setTimeout(() => {
-        loadingSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 0);
-      return () => clearTimeout(timer);
-    }
-  }, [isLoading]);
-
-  useEffect(() => {
-    if (!isLoading && screeningResults.length > 0) {
+  const scrollToResults = useCallback(() => {
+    if (!isLoadingCandidates && currentScreeningResult) {
       const timer = setTimeout(() => {
         resultsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [screeningResults, isLoading]);
+  }, [isLoadingCandidates, currentScreeningResult]);
 
-  const handleJobDescriptionUpload = useCallback(async (files: File[]) => {
-    try {
-      const processedJobDescriptionFilesPromises = files.map(async (file) => {
-        const dataUri = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = (error) => reject(error);
-          reader.readAsDataURL(file);
-        });
-        return { id: crypto.randomUUID(), file, dataUri, name: file.name };
-      });
-      const processedJobDescriptionFiles = await Promise.all(processedJobDescriptionFilesPromises);
-      setJobDescriptionFiles(processedJobDescriptionFiles);
-    } catch (error) {
-      console.error("Error processing job description files:", error);
-      toast({
-        title: "File Upload Error",
-        description: `Could not process one or more job description files. ${error instanceof Error ? error.message : "Please check the file type and try again."}`,
-        variant: "destructive",
-      });
-    }
-  }, [toast]);
+  useEffect(scrollToResults, [scrollToResults]);
 
-  const handleResumesUpload = useCallback(async (files: File[]) => {
-    try {
-      const processedResumeFilesPromises = files.map(async (file) => {
-        const dataUri = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = (error) => reject(error);
-          reader.readAsDataURL(file);
-        });
-        return { id: crypto.randomUUID(), file, dataUri, name: file.name };
-      });
-      const processedResumeFiles = await Promise.all(processedResumeFilesPromises);
-      setResumeFiles(processedResumeFiles);
-    } catch (error) {
-      console.error("Error processing resume files:", error);
-      toast({
-        title: "File Upload Error",
-        description: `Could not process one or more resume files. ${error instanceof Error ? error.message : "Please check the file type and try again."}`,
-        variant: "destructive",
-      });
-    }
-  }, [toast]);
 
-  const handleScreenResumes = async () => {
-    if (jobDescriptionFiles.length === 0) {
-      toast({ title: "Error", description: "At least one job description file is required.", variant: "destructive" });
-      return;
-    }
-    if (resumeFiles.length === 0) {
-      toast({ title: "Error", description: "Please upload at least one resume.", variant: "destructive" });
+  const triggerCandidateRanking = useCallback(async (roleIdToRank?: string | null) => {
+    const targetRoleId = roleIdToRank ?? selectedJobRoleId;
+
+    if (!targetRoleId || uploadedResumeFiles.length === 0) {
+      if (uploadedResumeFiles.length === 0 && targetRoleId) {
+         // Clear previous results if no resumes but a role is selected
+        setCurrentScreeningResult(null);
+      }
       return;
     }
 
-    setIsLoading(true);
-    setScreeningResults([]); 
+    const roleToRank = extractedJobRoles.find(role => role.id === targetRoleId);
+    if (!roleToRank) {
+      toast({ title: "Error", description: "Selected job role not found.", variant: "destructive" });
+      return;
+    }
+
+    setIsLoadingCandidates(true);
+    setCurrentScreeningResult(null); // Clear previous results before new ranking
 
     try {
       const input: RankCandidatesInput = {
-        jobDescriptions: jobDescriptionFiles.map(jd => ({ name: jd.name, dataUri: jd.dataUri })),
-        resumes: resumeFiles.map(rf => ({ name: rf.name, dataUri: rf.dataUri })),
+        targetJobDescription: { name: roleToRank.name, dataUri: roleToRank.contentDataUri },
+        resumes: uploadedResumeFiles.map(rf => ({ name: rf.name, dataUri: rf.dataUri })),
       };
       
       const output: RankCandidatesOutput = await rankCandidates(input);
-      
-      setScreeningResults(output); 
-      toast({ title: "Success", description: "Resumes screened and ranked successfully." });
+      setCurrentScreeningResult(output);
+      toast({ title: "Success", description: `Resumes ranked for "${output.jobDescriptionName}".` });
     } catch (error) {
       console.error("Error screening resumes:", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-      toast({ title: "Screening Failed", description: `An error occurred while screening resumes: ${errorMessage}. Please try again.`, variant: "destructive" });
+      toast({ title: "Ranking Failed", description: `Error ranking for "${roleToRank.name}": ${errorMessage}.`, variant: "destructive" });
+      setCurrentScreeningResult(null);
     } finally {
-      setIsLoading(false);
+      setIsLoadingCandidates(false);
+    }
+  }, [selectedJobRoleId, uploadedResumeFiles, extractedJobRoles, toast]);
+
+
+  const fetchExtractedJobRoles = useCallback(async (jdFiles: JobDescriptionFile[]) => {
+    if (jdFiles.length === 0) {
+      setExtractedJobRoles([]);
+      setSelectedJobRoleId(null);
+      setCurrentScreeningResult(null); // Clear results if no JDs
+      return;
+    }
+    setIsLoadingRoles(true);
+    setCurrentScreeningResult(null); // Clear previous results
+
+    try {
+      const input: ExtractJobRolesInput = {
+        jobDescriptionDocuments: jdFiles.map(jd => ({ name: jd.name, dataUri: jd.dataUri })),
+      };
+      const output: ExtractJobRolesOutput = await extractJobRoles(input);
+      setExtractedJobRoles(output);
+
+      if (output.length > 0) {
+        const firstRoleId = output[0].id;
+        setSelectedJobRoleId(firstRoleId);
+        // Automatically trigger ranking for the first role if resumes are already present
+        if (uploadedResumeFiles.length > 0) {
+          triggerCandidateRanking(firstRoleId);
+        } else {
+          // If no resumes, ensure no stale results are shown for the new default role
+          setCurrentScreeningResult(null);
+        }
+      } else {
+        setSelectedJobRoleId(null);
+        toast({ title: "No Job Roles Found", description: "Could not extract specific job roles from the uploaded documents. Ensure they are valid job descriptions.", variant: "default" });
+      }
+    } catch (error) {
+      console.error("Error extracting job roles:", error);
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      toast({ title: "Job Role Extraction Failed", description: errorMessage, variant: "destructive" });
+      setExtractedJobRoles([]);
+      setSelectedJobRoleId(null);
+    } finally {
+      setIsLoadingRoles(false);
+    }
+  }, [toast, uploadedResumeFiles, triggerCandidateRanking]);
+
+  const handleJobDescriptionUpload = useCallback(async (files: File[]) => {
+    // This function is called by FileUploadArea with the full list of current files
+    const newJdFilesPromises = files.map(async (file) => {
+      const dataUri = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = (error) => reject(error);
+        reader.readAsDataURL(file);
+      });
+      return { id: crypto.randomUUID(), file, dataUri, name: file.name };
+    });
+    try {
+        const newJdFiles = await Promise.all(newJdFilesPromises);
+        setUploadedJobDescriptionFiles(newJdFiles);
+        fetchExtractedJobRoles(newJdFiles);
+    } catch (error) {
+        toast({ title: "Error processing JDs", description: String(error), variant: "destructive"});
+    }
+  }, [fetchExtractedJobRoles, toast]);
+
+  const handleResumesUpload = useCallback(async (files: File[]) => {
+    // This function is called by FileUploadArea with the full list of current files
+     const newResumeFilesPromises = files.map(async (file) => {
+      const dataUri = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = (error) => reject(error);
+        reader.readAsDataURL(file);
+      });
+      return { id: crypto.randomUUID(), file, dataUri, name: file.name };
+    });
+    try {
+        const newResumeFiles = await Promise.all(newResumeFilesPromises);
+        setUploadedResumeFiles(newResumeFiles);
+        if (selectedJobRoleId) {
+            triggerCandidateRanking(selectedJobRoleId);
+        }
+    } catch (error) {
+         toast({ title: "Error processing resumes", description: String(error), variant: "destructive"});
+    }
+  }, [selectedJobRoleId, triggerCandidateRanking, toast]);
+
+
+  const handleJobRoleChange = useCallback((roleId: string | null) => {
+    setSelectedJobRoleId(roleId);
+    if (roleId) {
+      triggerCandidateRanking(roleId);
+    } else {
+      setCurrentScreeningResult(null); // Clear results if no role is selected
+    }
+  }, [triggerCandidateRanking]);
+
+  const handleScreenResumesButtonClick = () => {
+    if (selectedJobRoleId) {
+      triggerCandidateRanking(selectedJobRoleId);
+    } else {
+      toast({ title: "No Job Role Selected", description: "Please select a job role to rank candidates against.", variant: "destructive" });
     }
   };
 
-  const handleViewFeedback = (candidate: RankedCandidate, jdDataUri: string) => {
-    setSelectedCandidateForFeedback(candidate);
-    setJobDescriptionDataUriForFeedback(jdDataUri);
-    setIsFeedbackModalOpen(true);
+  const handleViewFeedback = (candidate: RankedCandidate) => {
+    if (currentScreeningResult) {
+      setSelectedCandidateForFeedback(candidate);
+      // jobDescriptionDataUriForFeedback is now part of currentScreeningResult
+      setIsFeedbackModalOpen(true);
+    }
   };
 
   const handleFilterChange = (newFilters: Partial<Filters>) => {
@@ -147,7 +211,7 @@ export default function HomePage() {
     setFilters(initialFilters);
   };
 
-  const filterCandidatesForJob = useCallback((candidates: RankedCandidate[], currentFilters: Filters): RankedCandidate[] => {
+  const filterCandidates = useCallback((candidates: RankedCandidate[] = [], currentFilters: Filters): RankedCandidate[] => {
     return candidates.filter(candidate => {
       const scoreMatch = candidate.score >= currentFilters.scoreRange[0] && candidate.score <= currentFilters.scoreRange[1];
       const keywordMatch = currentFilters.skillKeyword.trim() === "" || 
@@ -156,22 +220,10 @@ export default function HomePage() {
       return scoreMatch && keywordMatch;
     });
   }, []);
-
-  const displayedScreeningResults = React.useMemo(() => {
-    if (!filters.selectedJobDescriptionName) {
-      return screeningResults;
-    }
-    return screeningResults.filter(
-      (result) => result.jobDescriptionName === filters.selectedJobDescriptionName
-    );
-  }, [screeningResults, filters.selectedJobDescriptionName]);
-
-  const derivedAvailableJobDescriptions = React.useMemo(() => {
-    const names = screeningResults.length > 0
-      ? screeningResults.map(result => result.jobDescriptionName)
-      : jobDescriptionFiles.map(jd => jd.name);
-    return Array.from(new Set(names)); // Ensure uniqueness and provide a stable list
-  }, [screeningResults, jobDescriptionFiles]);
+  
+  const displayedCandidates = useMemo(() => {
+    return filterCandidates(currentScreeningResult?.candidates, filters);
+  }, [currentScreeningResult, filters, filterCandidates]);
 
 
   return (
@@ -185,22 +237,18 @@ export default function HomePage() {
                 Job Descriptions
               </CardTitle>
               <CardDescription>
-                Upload job description files (PDF, TXT, MD, CSV, XLS, XLSX). Max 5MB each.
+                Upload job description files (PDF, TXT, MD, etc.). Max 5MB each. Roles will be extracted.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <FileUploadArea
                 onFilesUpload={handleJobDescriptionUpload}
                 acceptedFileTypes={{ 
-                  "application/pdf": [".pdf"],
-                  "text/plain": [".txt"],
-                  "text/markdown": [".md"],
-                  "text/csv": [".csv"],
-                  "application/vnd.ms-excel": [".xls"],
-                  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+                  "application/pdf": [".pdf"], "text/plain": [".txt"], "text/markdown": [".md"],
+                  "application/msword": [".doc"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"]
                 }}
                 multiple={true}
-                label="PDF, TXT, MD, CSV, XLS, XLSX files up to 5MB each"
+                label="PDF, TXT, DOC, DOCX, MD files up to 5MB each"
                 id="job-description-upload"
                 maxSizeInBytes={MAX_FILE_SIZE_BYTES}
               />
@@ -215,15 +263,18 @@ export default function HomePage() {
                 Upload Resumes
               </CardTitle>
               <CardDescription>
-                Upload candidate resumes in PDF format. Max 5MB each.
+                Upload candidate resumes (PDF, DOC, DOCX, TXT). Max 5MB each.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <FileUploadArea
                 onFilesUpload={handleResumesUpload}
-                acceptedFileTypes={{ "application/pdf": [".pdf"] }}
+                acceptedFileTypes={{ 
+                    "application/pdf": [".pdf"], "text/plain": [".txt"],
+                    "application/msword": [".doc"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"]
+                }}
                 multiple
-                label="PDF files up to 5MB each"
+                label="PDF, TXT, DOC, DOCX files up to 5MB each"
                 id="resume-upload"
                 maxSizeInBytes={MAX_FILE_SIZE_BYTES}
               />
@@ -231,101 +282,102 @@ export default function HomePage() {
           </Card>
         </div>
       </div>
-
+      
       <div className="flex justify-center pt-4">
         <Button
-          onClick={handleScreenResumes}
-          disabled={isLoading || jobDescriptionFiles.length === 0 || resumeFiles.length === 0}
+          onClick={handleScreenResumesButtonClick}
+          disabled={isLoadingCandidates || isLoadingRoles || !selectedJobRoleId || uploadedResumeFiles.length === 0}
           size="lg"
           className="bg-accent hover:bg-accent/90 text-accent-foreground text-base px-8 py-6 shadow-md hover:shadow-lg transition-all duration-150 hover:scale-105 active:scale-95"
-          aria-live="polite"
-          aria-busy={isLoading}
         >
-          {isLoading ? (
+          {(isLoadingCandidates) ? (
             <Loader2 className="w-5 h-5 mr-2 animate-spin" />
           ) : (
             <ScanSearch className="w-5 h-5 mr-2" />
           )}
-          Screen & Rank Resumes
+          Rank for Selected Job Role
         </Button>
       </div>
       
-      {isLoading && (
-        <div ref={loadingSectionRef}>
-          <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
-            <CardContent className="pt-6">
-              <div className="text-center py-8 space-y-6">
-                <Loader2 className="w-16 h-16 mx-auto text-primary animate-spin" />
-                <p className="text-xl font-semibold text-primary">
-                  AI is analyzing your files...
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  This may take a few moments, especially with many or large files. Please be patient.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      {(isLoadingRoles || isLoadingCandidates) &&  (
+         <div ref={resultsSectionRef}> {/* Ensure scroll target exists during loading */}
+            <Card className="shadow-lg">
+                <CardContent className="pt-6">
+                <div className="text-center py-8 space-y-6">
+                    <Loader2 className="w-16 h-16 mx-auto text-primary animate-spin" />
+                    <p className="text-xl font-semibold text-primary">
+                    {isLoadingRoles ? "Extracting job roles..." : "AI is analyzing resumes..."}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                    This may take a few moments. Please be patient.
+                    </p>
+                </div>
+                </CardContent>
+            </Card>
+         </div>
       )}
 
-      {!isLoading && (screeningResults.length > 0 || jobDescriptionFiles.length > 0) && (
+      {(!isLoadingRoles && uploadedJobDescriptionFiles.length > 0) && (
         <div ref={resultsSectionRef}>
           <Separator className="my-8" />
           <FilterControls 
             filters={filters} 
             onFilterChange={handleFilterChange} 
             onResetFilters={resetFilters}
-            availableJobDescriptions={derivedAvailableJobDescriptions} 
+            extractedJobRoles={extractedJobRoles}
+            selectedJobRoleId={selectedJobRoleId}
+            onJobRoleChange={handleJobRoleChange}
+            isLoadingRoles={isLoadingRoles}
           />
-           {screeningResults.length > 0 && <Separator className="my-8" />}
         </div>
       )}
 
-      {!isLoading && displayedScreeningResults.length > 0 && (
+      {!isLoadingCandidates && currentScreeningResult && (
           <>
-            {displayedScreeningResults.map((result, index) => (
-              <Card key={result.jobDescriptionName + index} className="shadow-lg transition-shadow duration-300 hover:shadow-xl mb-8">
-                <CardHeader>
-                  <CardTitle className="text-2xl font-headline text-primary flex items-center">
-                    <Briefcase className="w-6 h-6 mr-2" />
-                    Results for: {result.jobDescriptionName}
-                  </CardTitle>
-                  <CardDescription>
-                    Candidates ranked based on the job description "{result.jobDescriptionName}".
-                    {filters.selectedJobDescriptionName && filters.selectedJobDescriptionName !== result.jobDescriptionName && 
-                      ` Currently filtered to: ${filters.selectedJobDescriptionName}.`}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <CandidateTable 
-                    candidates={filterCandidatesForJob(result.candidates, filters)} 
-                    onViewFeedback={(candidate) => handleViewFeedback(candidate, result.jobDescriptionDataUri)} 
-                  />
-                  {filterCandidatesForJob(result.candidates, filters).length === 0 && (
-                      <p className="text-center text-muted-foreground py-4">No candidates match the current filter criteria for this job description.</p>
-                    )}
-                </CardContent>
-              </Card>
-            ))}
+            <Separator className="my-8" />
+            <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl mb-8">
+              <CardHeader>
+                <CardTitle className="text-2xl font-headline text-primary flex items-center">
+                  <Briefcase className="w-6 h-6 mr-2" />
+                  Results for: {currentScreeningResult.jobDescriptionName}
+                </CardTitle>
+                <CardDescription>
+                  Candidates ranked for the job role "{currentScreeningResult.jobDescriptionName}".
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <CandidateTable 
+                  candidates={displayedCandidates} 
+                  onViewFeedback={handleViewFeedback} 
+                />
+                {displayedCandidates.length === 0 && currentScreeningResult.candidates.length > 0 && (
+                    <p className="text-center text-muted-foreground py-4">No candidates match the current filter criteria for this job role.</p>
+                )}
+                 {currentScreeningResult.candidates.length === 0 && (
+                    <p className="text-center text-muted-foreground py-4">No candidates were found or processed for this job role. Try uploading resumes.</p>
+                )}
+              </CardContent>
+            </Card>
           </>
         )}
 
-       {!isLoading && screeningResults.length === 0 && resumeFiles.length > 0 && jobDescriptionFiles.length > 0 && (
-         <p className="text-center text-muted-foreground py-8">Click "Screen & Rank Resumes" to see results.</p>
+       {!isLoadingCandidates && !isLoadingRoles && !currentScreeningResult && uploadedJobDescriptionFiles.length > 0 && uploadedResumeFiles.length > 0 && selectedJobRoleId && (
+         <p className="text-center text-muted-foreground py-8">Click "Rank for Selected Job Role" or change the job role to see results.</p>
        )}
-
-       {!isLoading && displayedScreeningResults.length === 0 && screeningResults.length > 0 && filters.selectedJobDescriptionName && (
-         <p className="text-center text-muted-foreground py-8">No results found for the selected job description: "{filters.selectedJobDescriptionName}". Try selecting "All Job Descriptions".</p>
-       )}
+        {!isLoadingCandidates && !isLoadingRoles && !currentScreeningResult && extractedJobRoles.length > 0 && uploadedResumeFiles.length === 0 && (
+            <p className="text-center text-muted-foreground py-8">Upload resumes to see candidates ranked for the selected job role.</p>
+        )}
+        {!isLoadingCandidates && !isLoadingRoles && extractedJobRoles.length === 0 && uploadedJobDescriptionFiles.length > 0 && (
+             <p className="text-center text-muted-foreground py-8">No specific job roles could be extracted. Check your JD files or try re-uploading.</p>
+        )}
 
 
       <FeedbackModal
         isOpen={isFeedbackModalOpen}
         onClose={() => setIsFeedbackModalOpen(false)}
         candidate={selectedCandidateForFeedback}
-        jobDescriptionDataUri={jobDescriptionDataUriForFeedback} 
+        jobDescriptionDataUri={currentScreeningResult?.jobDescriptionDataUri ?? null} 
       />
     </div>
   );
 }
-

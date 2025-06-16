@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
-import type { Filters } from "@/lib/types";
-import { SlidersHorizontal, Search, Briefcase } from "lucide-react";
+import type { Filters, ExtractedJobRole } from "@/lib/types";
+import { SlidersHorizontal, Search, Briefcase, Loader2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -20,14 +20,20 @@ interface FilterControlsProps {
   filters: Filters;
   onFilterChange: (newFilters: Partial<Filters>) => void;
   onResetFilters: () => void;
-  availableJobDescriptions: string[];
+  extractedJobRoles: ExtractedJobRole[];
+  selectedJobRoleId: string | null;
+  onJobRoleChange: (roleId: string | null) => void;
+  isLoadingRoles: boolean;
 }
 
 export function FilterControls({
   filters,
   onFilterChange,
   onResetFilters,
-  availableJobDescriptions,
+  extractedJobRoles,
+  selectedJobRoleId,
+  onJobRoleChange,
+  isLoadingRoles,
 }: FilterControlsProps) {
   const handleScoreChange = (value: number[]) => {
     onFilterChange({ scoreRange: [value[0], value[1]] });
@@ -37,8 +43,8 @@ export function FilterControls({
     onFilterChange({ skillKeyword: event.target.value });
   };
 
-  const handleJobDescriptionChange = (value: string) => {
-    onFilterChange({ selectedJobDescriptionName: value === "all" ? null : value });
+  const handleJobRoleSelectChange = (roleId: string) => {
+    onJobRoleChange(roleId === "none" ? null : roleId);
   };
 
   return (
@@ -48,35 +54,48 @@ export function FilterControls({
           <SlidersHorizontal className="w-5 h-5 mr-2 text-primary" />
           Filter Candidates
         </h3>
-        <Button variant="ghost" size="sm" onClick={onResetFilters}>
+        <Button variant="ghost" size="sm" onClick={onResetFilters} disabled={isLoadingRoles}>
           Reset Filters
         </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-1">
-          <Label htmlFor="jobDescriptionSelect" className="text-sm font-medium text-foreground">
-            Job Description
+          <Label htmlFor="jobRoleSelect" className="text-sm font-medium text-foreground">
+            Select Job Role
           </Label>
           <div className="relative mt-1">
-             <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Select
-              value={filters.selectedJobDescriptionName || "all"}
-              onValueChange={handleJobDescriptionChange}
-              disabled={availableJobDescriptions.length === 0}
-            >
-              <SelectTrigger id="jobDescriptionSelect" className="pl-10">
-                <SelectValue placeholder="Select Job Description" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Job Descriptions</SelectItem>
-                {availableJobDescriptions.map((name) => (
-                  <SelectItem key={name} value={name}>
-                    {name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+             {isLoadingRoles ? (
+                <div className="flex items-center justify-center h-10 border rounded-md bg-muted">
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin text-muted-foreground" />
+                    <span className="text-muted-foreground">Loading Roles...</span>
+                </div>
+             ) : (
+                <>
+                <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
+                <Select
+                    value={selectedJobRoleId || "none"}
+                    onValueChange={handleJobRoleSelectChange}
+                    disabled={extractedJobRoles.length === 0}
+                >
+                    <SelectTrigger id="jobRoleSelect" className="pl-10">
+                    <SelectValue placeholder="Select a Job Role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                    {extractedJobRoles.length === 0 && (
+                        <SelectItem value="none" disabled>
+                            No job roles extracted. Upload JDs.
+                        </SelectItem>
+                    )}
+                    {extractedJobRoles.map((role) => (
+                        <SelectItem key={role.id} value={role.id}>
+                        {role.name}
+                        </SelectItem>
+                    ))}
+                    </SelectContent>
+                </Select>
+                </>
+             )}
           </div>
         </div>
 
@@ -94,6 +113,7 @@ export function FilterControls({
               onChange={handleKeywordChange}
               className="pl-10"
               aria-label="Skill or name keyword filter"
+              disabled={isLoadingRoles}
             />
           </div>
         </div>
@@ -111,6 +131,7 @@ export function FilterControls({
             onValueChange={handleScoreChange}
             className="mt-3 pt-1"
             aria-label="Score range filter"
+            disabled={isLoadingRoles}
           />
         </div>
       </div>

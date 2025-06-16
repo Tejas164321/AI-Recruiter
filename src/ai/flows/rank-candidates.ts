@@ -2,28 +2,17 @@
 'use server';
 
 /**
- * @fileOverview Ranks candidate resumes based on their relevance to job descriptions using AI.
- * Handles multiple job descriptions and multiple resumes for many-to-many ranking.
- * If a single job description file contains multiple JDs, it attempts to segment them.
+ * @fileOverview Ranks candidate resumes against a single target job description using AI.
  *
- * - rankCandidates - A function that handles the ranking process.
+ * - rankCandidates - A function that handles the ranking process for a single JD.
  * - RankCandidatesInput - The input type for the rankCandidates function.
- * - RankCandidatesOutput - The return type for the rankCandidates function.
+ * - RankCandidatesOutput - The return type for the rankCandidates function (now for a single JD).
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-const JobDescriptionInputSchema = z.object({
-  name: z.string().describe("The file name or identifier of the job description."),
-  dataUri: z
-    .string()
-    .describe(
-      "The job description as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
-    ),
-});
-type JobDescriptionInput = z.infer<typeof JobDescriptionInputSchema>;
-
+// Schema for a single resume file input
 const ResumeInputSchema = z.object({
   name: z.string().describe("The file name or identifier of the resume."),
   dataUri: z
@@ -32,13 +21,19 @@ const ResumeInputSchema = z.object({
       "A candidate resume as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
 });
+type ResumeInput = z.infer<typeof ResumeInputSchema>;
 
+
+// Input schema for ranking candidates against a SINGLE target job description
 const RankCandidatesInputSchema = z.object({
-  jobDescriptions: z.array(JobDescriptionInputSchema),
+  targetJobDescription: z.object({
+    name: z.string().describe("The name/title of the target job description."),
+    dataUri: z.string().describe("The data URI of the target job description content."),
+  }),
   resumes: z.array(ResumeInputSchema),
 });
-
 export type RankCandidatesInput = z.infer<typeof RankCandidatesInputSchema>;
+
 
 // Schema for the AI's direct output when ranking a single resume against a single JD
 const AICandidateOutputSchema = z.object({
@@ -50,7 +45,6 @@ const AICandidateOutputSchema = z.object({
 });
 
 // Schema for the full candidate data structure, including fields added after AI processing (id, uris)
-// This aligns with src/lib/types.RankedCandidate
 const FullRankedCandidateSchema = AICandidateOutputSchema.extend({
   id: z.string().describe('Unique identifier for the candidate entry.'),
   originalResumeName: z.string().describe('The original file name of the uploaded resume.'),
@@ -58,53 +52,14 @@ const FullRankedCandidateSchema = AICandidateOutputSchema.extend({
 });
 
 
-// The overall output schema for the rankCandidatesFlow
-const RankCandidatesOutputSchema = z.array(
-  z.object({
-    jobDescriptionName: z.string().describe("The name/title of the job description (potentially from segmentation)."),
-    jobDescriptionDataUri: z.string().describe("The data URI of the job description content (potentially segmented)."),
+// The overall output schema for the rankCandidatesFlow, now for a SINGLE JobDescription
+// This aligns with src/lib/types.JobScreeningResult
+const RankCandidatesOutputSchema = z.object({
+    jobDescriptionName: z.string().describe("The name/title of the job description against which candidates were ranked."),
+    jobDescriptionDataUri: z.string().describe("The data URI of the job description content used for ranking."),
     candidates: z.array(FullRankedCandidateSchema),
-  })
-);
-
+  });
 export type RankCandidatesOutput = z.infer<typeof RankCandidatesOutputSchema>;
-
-
-// New schema for a single, segmented job description
-const SegmentedJobDescriptionSchema = z.object({
-  title: z.string().describe("The concise job title of this individual job description (e.g., 'Software Engineer', 'Product Manager')."),
-  content: z.string().describe("The full text content of this individual job description, including all requirements, responsibilities, and qualifications."),
-});
-export type SegmentedJobDescription = z.infer<typeof SegmentedJobDescriptionSchema>;
-
-// New prompt for segmenting job descriptions from a single document
-const segmentJobDescriptionsPrompt = ai.definePrompt({
-  name: 'segmentJobDescriptionsPrompt',
-  input: {
-    schema: z.object({
-      documentDataUri: z.string().describe("The document (e.g., PDF, TXT) as a data URI, potentially containing multiple job descriptions."),
-      originalFileName: z.string().describe("The original file name of the document, for context only."),
-    })
-  },
-  output: {
-    schema: z.array(SegmentedJobDescriptionSchema).describe("An array of individual job descriptions found in the document. If only one JD is present, it should be an array with a single element."),
-  },
-  prompt: `You are an expert HR document parser. Your task is to analyze the provided document and identify all distinct job descriptions contained within it.
-For each distinct job description you find, you must extract:
-1.  A concise and accurate job title (e.g., "Senior Software Engineer", "Marketing Manager"). Ensure the title is specific to the job described.
-2.  The complete text content of that specific job description, including all requirements, responsibilities, and qualifications.
-
-Document to analyze (from original file: {{{originalFileName}}}):
-{{media url=documentDataUri}}
-
-If the document clearly contains only one job description, return an array with that single job description.
-If the document contains multiple job descriptions, ensure each is extracted as a separate item in the output array.
-Pay close attention to formatting cues like headings, horizontal lines, page breaks, or significant spacing that might separate different job descriptions.
-The "content" field for each job description must be the full text for that specific job, not a summary.`,
-  config: {
-    temperature: 0.1,
-  },
-});
 
 
 export async function rankCandidates(input: RankCandidatesInput): Promise<RankCandidatesOutput> {
@@ -114,16 +69,15 @@ export async function rankCandidates(input: RankCandidatesInput): Promise<RankCa
     const message = flowError instanceof Error ? flowError.message : String(flowError);
     const stack = flowError instanceof Error ? flowError.stack : undefined;
     console.error('Error in rankCandidates function (server action entry):', message, stack);
-    // Throw a new, simple error to the client
     throw new Error(`Candidate ranking process failed: ${message}`);
   }
 }
 
 const rankCandidatePrompt = ai.definePrompt({
-  name: 'rankCandidatePrompt',
+  name: 'rankSingleCandidateAgainstSingleJDPrompt', // Renamed for clarity
   input: {
     schema: z.object({
-      jobDescriptionDataUri: z.string().describe("The job description (potentially segmented) as a data URI."),
+      jobDescriptionDataUri: z.string().describe("The target job description as a data URI."),
       resumeDataUri: z.string().describe("A candidate resume as a data URI."),
       originalResumeName: z.string().describe("The original file name of the resume, for context only.")
     }),
@@ -148,142 +102,74 @@ const rankCandidatePrompt = ai.definePrompt({
 
   Ensure the output is structured as a JSON object.`,
   config: {
-    temperature: 0,
+    temperature: 0, // Low temperature for consistent ranking
   },
 });
 
 const rankCandidatesFlow = ai.defineFlow(
   {
-    name: 'rankCandidatesFlow',
+    name: 'rankCandidatesAgainstSingleJDFlow', // Renamed for clarity
     inputSchema: RankCandidatesInputSchema,
     outputSchema: RankCandidatesOutputSchema,
   },
   async (input): Promise<RankCandidatesOutput> => {
     try {
-      const { jobDescriptions: uploadedJobDescriptionFiles, resumes } = input;
+      const { targetJobDescription, resumes } = input;
 
-      const segmentationTasks = uploadedJobDescriptionFiles.map(async (uploadedJdFile) => {
+      if (!targetJobDescription || !targetJobDescription.dataUri) {
+        throw new Error("Target job description is missing or invalid.");
+      }
+      if (!resumes || resumes.length === 0) {
+        return {
+          jobDescriptionName: targetJobDescription.name,
+          jobDescriptionDataUri: targetJobDescription.dataUri,
+          candidates: [], // No resumes to rank
+        };
+      }
+
+      const resumeRankingPromises = resumes.map(async (resume) => {
         try {
-          const segmentationInput = {
-            documentDataUri: uploadedJdFile.dataUri,
-            originalFileName: uploadedJdFile.name,
+          const promptInput = {
+            jobDescriptionDataUri: targetJobDescription.dataUri,
+            resumeDataUri: resume.dataUri,
+            originalResumeName: resume.name,
           };
-          const { output: segmentedJdsOutput } = await segmentJobDescriptionsPrompt(segmentationInput);
-          return { originalFile: uploadedJdFile, segmentedJdsOutput, error: null };
-        } catch (segmentationError) {
-          console.error(`Error during segmentation of JD file ${uploadedJdFile.name}:`, segmentationError);
-          return { originalFile: uploadedJdFile, segmentedJdsOutput: null, error: segmentationError as Error };
-        }
-      });
+          const { output: aiCandidateOutput } = await rankCandidatePrompt(promptInput);
 
-      const allSegmentationResults = await Promise.all(segmentationTasks);
-
-      const jdsToProcessPromises: Promise<{ name: string; dataUri: string; originalFileName: string }[]>[] = [];
-
-      for (const segResult of allSegmentationResults) {
-        const { originalFile, segmentedJdsOutput, error } = segResult;
-        const individualJdsForThisFile: { name: string; dataUri: string; originalFileName: string }[] = [];
-
-        if (error || !segmentedJdsOutput || segmentedJdsOutput.length === 0) {
-          if (error) console.warn(`Segmentation of ${originalFile.name} failed. Processing as a single JD. Error: ${error.message}`);
-          else console.warn(`Segmentation of ${originalFile.name} returned no JDs or empty output. Processing as a single JD.`);
-
-          individualJdsForThisFile.push({
-            name: originalFile.name,
-            dataUri: originalFile.dataUri,
-            originalFileName: originalFile.name,
-          });
-        } else {
-          segmentedJdsOutput.forEach((segmentedJd, index) => {
-            const safeTitle = (segmentedJd.title || `Job ${index + 1}`).replace(/[^\w\s.-]/gi, '').trim();
-            const jobName = `${originalFile.name} - ${safeTitle}`;
-            const content = segmentedJd.content || "No content extracted for this job description.";
-            const contentDataUri = `data:text/plain;charset=utf-8;base64,${Buffer.from(content).toString('base64')}`;
-
-            individualJdsForThisFile.push({
-              name: jobName,
-              dataUri: contentDataUri,
-              originalFileName: originalFile.name,
-            });
-          });
-        }
-        jdsToProcessPromises.push(Promise.resolve(individualJdsForThisFile));
-      }
-
-      const nestedJdsToProcess = await Promise.all(jdsToProcessPromises);
-      const flatJdsToProcess = nestedJdsToProcess.flat();
-
-      if (flatJdsToProcess.length === 0 && uploadedJobDescriptionFiles.length > 0) {
-          console.warn("No processable JDs found after attempting segmentation for all files. Defaulting to original uploaded files.");
-          uploadedJobDescriptionFiles.forEach(originalFile => {
-              flatJdsToProcess.push({
-                  name: originalFile.name,
-                  dataUri: originalFile.dataUri,
-                  originalFileName: originalFile.name,
-              });
-          });
-      }
-
-      const screeningResultPromises = flatJdsToProcess.map(async (jdToProcess) => {
-        const resumeRankingPromises = resumes.map(async (resume) => {
-          try {
-            const promptInput = {
-              jobDescriptionDataUri: jdToProcess.dataUri,
+          if (aiCandidateOutput) {
+            return {
+              ...aiCandidateOutput,
+              id: crypto.randomUUID(),
               resumeDataUri: resume.dataUri,
               originalResumeName: resume.name,
-            };
-            const { output: aiCandidateOutput } = await rankCandidatePrompt(promptInput);
-
-            if (aiCandidateOutput) {
-              return {
-                ...aiCandidateOutput,
-                id: crypto.randomUUID(),
-                resumeDataUri: resume.dataUri,
-                originalResumeName: resume.name,
-              } satisfies z.infer<typeof FullRankedCandidateSchema>;
-            }
-            console.warn(`AI returned no output for resume ${resume.name} against JD ${jdToProcess.name}.`);
-            return null;
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error(`Error ranking resume ${resume.name} for JD ${jdToProcess.name}: ${errorMessage}`);
-            return null;
+            } satisfies z.infer<typeof FullRankedCandidateSchema>;
           }
-        });
-
-        const rankedCandidatesWithNulls = await Promise.all(resumeRankingPromises);
-        const candidatesForThisJD = rankedCandidatesWithNulls.filter(c => c !== null) as z.infer<typeof FullRankedCandidateSchema>[];
-
-        candidatesForThisJD.sort((a, b) => b.score - a.score);
-
-        return {
-          jobDescriptionName: jdToProcess.name,
-          jobDescriptionDataUri: jdToProcess.dataUri,
-          candidates: candidatesForThisJD,
-        };
-      });
-
-      const settledScreeningResults = await Promise.allSettled(screeningResultPromises);
-
-      const finalResults: RankCandidatesOutput = [];
-      settledScreeningResults.forEach(result => {
-        if (result.status === 'fulfilled') {
-          finalResults.push(result.value);
-        } else {
-          // Log the reason for rejection if a whole JD screening task fails
-          const reasonMessage = result.reason instanceof Error ? result.reason.message : String(result.reason);
-          console.error("A job description screening task failed:", reasonMessage, result.reason instanceof Error ? result.reason.stack : undefined);
+          console.warn(`AI returned no output for resume ${resume.name} against JD ${targetJobDescription.name}.`);
+          return null;
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.error(`[rankCandidatesFlow] Error ranking resume ${resume.name} for JD ${targetJobDescription.name}: ${errorMessage}`, error instanceof Error ? error.stack : undefined);
+          return null; // Allow other rankings to proceed
         }
       });
 
-      return finalResults;
+      const rankedCandidatesWithNulls = await Promise.all(resumeRankingPromises);
+      const candidatesForThisJD = rankedCandidatesWithNulls.filter(c => c !== null) as z.infer<typeof FullRankedCandidateSchema>[];
+
+      // Sort candidates by score in descending order
+      candidatesForThisJD.sort((a, b) => b.score - a.score);
+
+      return {
+        jobDescriptionName: targetJobDescription.name,
+        jobDescriptionDataUri: targetJobDescription.dataUri,
+        candidates: candidatesForThisJD,
+      };
+
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       const stack = error instanceof Error ? error.stack : undefined;
       console.error('[rankCandidatesFlow] Internal error caught within the flow itself:', message, stack);
-      // Always throw a new, simple error to ensure serializability
       throw new Error(`RankCandidatesFlow failed: ${message}`);
     }
   }
 );
-    
