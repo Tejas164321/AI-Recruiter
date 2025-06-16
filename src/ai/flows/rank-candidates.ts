@@ -4,6 +4,7 @@
 /**
  * @fileOverview Ranks candidate resumes based on their relevance to job descriptions using AI.
  * Handles multiple job descriptions and multiple resumes for many-to-many ranking.
+ * If a single job description file contains multiple JDs, it attempts to segment them.
  *
  * - rankCandidates - A function that handles the ranking process.
  * - RankCandidatesInput - The input type for the rankCandidates function.
@@ -12,7 +13,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-// Ensure JobScreeningResult is imported if it's the intended structure, but RankCandidatesOutput is defined below.
 
 const JobDescriptionInputSchema = z.object({
   name: z.string().describe("The file name or identifier of the job description."),
@@ -39,7 +39,7 @@ const RankCandidatesInputSchema = z.object({
 
 export type RankCandidatesInput = z.infer<typeof RankCandidatesInputSchema>;
 
-// Schema for the data structure of a candidate as returned by the AI prompt
+// Schema for the AI's direct output when ranking a single resume against a single JD
 const AICandidateOutputSchema = z.object({
   name: z.string().describe('The name of the candidate, extracted from the resume.'),
   score: z.number().describe('The match score (0-100) of the resume to the job description.'),
@@ -60,13 +60,50 @@ const FullRankedCandidateSchema = AICandidateOutputSchema.extend({
 // The overall output schema for the rankCandidatesFlow
 const RankCandidatesOutputSchema = z.array(
   z.object({
-    jobDescriptionName: z.string(),
-    jobDescriptionDataUri: z.string(),
-    candidates: z.array(FullRankedCandidateSchema), 
+    jobDescriptionName: z.string().describe("The name/title of the job description (potentially from segmentation)."),
+    jobDescriptionDataUri: z.string().describe("The data URI of the job description content (potentially segmented)."),
+    candidates: z.array(FullRankedCandidateSchema),
   })
 );
 
 export type RankCandidatesOutput = z.infer<typeof RankCandidatesOutputSchema>;
+
+
+// New schema for a single, segmented job description
+const SegmentedJobDescriptionSchema = z.object({
+  title: z.string().describe("The concise job title of this individual job description (e.g., 'Software Engineer', 'Product Manager')."),
+  content: z.string().describe("The full text content of this individual job description."),
+});
+export type SegmentedJobDescription = z.infer<typeof SegmentedJobDescriptionSchema>;
+
+// New prompt for segmenting job descriptions from a single document
+const segmentJobDescriptionsPrompt = ai.definePrompt({
+  name: 'segmentJobDescriptionsPrompt',
+  input: {
+    schema: z.object({
+      documentDataUri: z.string().describe("The document (e.g., PDF, TXT) as a data URI, potentially containing multiple job descriptions."),
+      originalFileName: z.string().describe("The original file name of the document, for context only."),
+    })
+  },
+  output: {
+    schema: z.array(SegmentedJobDescriptionSchema).describe("An array of individual job descriptions found in the document. If only one JD is present, it should be an array with a single element."),
+  },
+  prompt: `You are an expert HR document parser. Your task is to analyze the provided document and identify all distinct job descriptions contained within it.
+For each distinct job description you find, you must extract:
+1.  A concise and accurate job title (e.g., "Senior Software Engineer", "Marketing Manager"). Ensure the title is specific to the job described.
+2.  The complete text content of that specific job description, including all requirements, responsibilities, and qualifications.
+
+Document to analyze (from original file: {{{originalFileName}}}):
+{{media url=documentDataUri}}
+
+If the document clearly contains only one job description, return an array with that single job description.
+If the document contains multiple job descriptions, ensure each is extracted as a separate item in the output array.
+Pay close attention to formatting cues like headings, horizontal lines, page breaks, or significant spacing that might separate different job descriptions.
+The "content" field for each job description must be the full text for that specific job, not a summary.`,
+  config: {
+    temperature: 0.1, 
+  },
+});
 
 
 export async function rankCandidates(input: RankCandidatesInput): Promise<RankCandidatesOutput> {
@@ -74,8 +111,6 @@ export async function rankCandidates(input: RankCandidatesInput): Promise<RankCa
     return await rankCandidatesFlow(input);
   } catch (flowError) {
     console.error('Error in rankCandidates flow execution:', flowError);
-    // Ensure a new Error object is thrown, which is generally safer for Server Actions.
-    // This helps Next.js properly serialize the error back to the client.
     const message = flowError instanceof Error ? flowError.message : String(flowError);
     throw new Error(`Candidate ranking process failed: ${message}`);
   }
@@ -85,26 +120,28 @@ const rankCandidatePrompt = ai.definePrompt({
   name: 'rankCandidatePrompt',
   input: {
     schema: z.object({
-      jobDescriptionDataUri: z.string().describe("The job description as a data URI."),
+      jobDescriptionDataUri: z.string().describe("The job description (potentially segmented) as a data URI."),
       resumeDataUri: z.string().describe("A candidate resume as a data URI."),
       originalResumeName: z.string().describe("The original file name of the resume, for context only.")
     }),
   },
   output: {
-     schema: AICandidateOutputSchema, 
+     schema: AICandidateOutputSchema,
   },
   prompt: `You are an expert HR assistant tasked with ranking a candidate resume against a specific job description.
 
-  Job Description: {{media url=jobDescriptionDataUri}}
-  Resume: {{media url=resumeDataUri}}
-  Original Resume File Name (for context only, do not include in extracted candidate name): {{{originalResumeName}}}
+  Job Description:
+  {{media url=jobDescriptionDataUri}}
 
-  Analyze the resume and provide the following:
+  Resume (original file name: {{{originalResumeName}}}):
+  {{media url=resumeDataUri}}
+
+  Analyze the resume and the job description, then provide the following:
   - Candidate's full name, as extracted from the resume content.
-  - A match score (0-100) indicating the resume's relevance to the job description.
+  - A match score (0-100) indicating the resume's relevance to THIS SPECIFIC job description.
   - An ATS (Applicant Tracking System) compatibility score (0-100). This score should reflect how well the resume is structured for automated parsing by ATS software, considering factors like formatting, keyword optimization, and clarity.
-  - Key skills from the resume that match the job description (comma-separated).
-  - Human-friendly feedback explaining the resume's strengths and weaknesses, and providing improvement suggestions. If the ATS score is low, briefly include suggestions to improve it in the feedback.
+  - Key skills from the resume that match THIS SPECIFIC job description (comma-separated).
+  - Human-friendly feedback explaining the resume's strengths and weaknesses against THIS SPECIFIC job description, and providing improvement suggestions. If the ATS score is low, briefly include suggestions to improve it in the feedback.
 
   Ensure the output is structured as a JSON object.`,
   config: {
@@ -116,49 +153,96 @@ const rankCandidatesFlow = ai.defineFlow(
   {
     name: 'rankCandidatesFlow',
     inputSchema: RankCandidatesInputSchema,
-    outputSchema: RankCandidatesOutputSchema, 
+    outputSchema: RankCandidatesOutputSchema,
   },
-  async (input): Promise<RankCandidatesOutput> => { 
-    const { jobDescriptions, resumes } = input;
-    const screeningResults: RankCandidatesOutput = [];
+  async (input): Promise<RankCandidatesOutput> => {
+    const { jobDescriptions: uploadedJobDescriptionFiles, resumes } = input;
+    const allScreeningResults: RankCandidatesOutput = [];
 
-    for (const jd of jobDescriptions) {
-      const candidatesForThisJD: z.infer<typeof FullRankedCandidateSchema>[] = [];
-      for (const resume of resumes) {
-        try {
-          const promptInput = {
-            jobDescriptionDataUri: jd.dataUri,
-            resumeDataUri: resume.dataUri,
-            originalResumeName: resume.name,
-          };
-          const { output: aiCandidateOutput } = await rankCandidatePrompt(promptInput);
-          
-          if (aiCandidateOutput) {
-            candidatesForThisJD.push({
-              ...aiCandidateOutput, 
-              id: crypto.randomUUID(), 
-              resumeDataUri: resume.dataUri,
-              originalResumeName: resume.name,
+    for (const uploadedJdFile of uploadedJobDescriptionFiles) {
+      let individualJdsToProcess: Array<{ name: string; dataUri: string; originalFileName: string }> = [];
+
+      try {
+        const segmentationInput = {
+          documentDataUri: uploadedJdFile.dataUri,
+          originalFileName: uploadedJdFile.name,
+        };
+        // console.log(`Attempting segmentation for: ${uploadedJdFile.name}`);
+        const { output: segmentedJdsOutput } = await segmentJobDescriptionsPrompt(segmentationInput);
+        // console.log(`Segmentation output for ${uploadedJdFile.name}:`, segmentedJdsOutput);
+
+        if (segmentedJdsOutput && segmentedJdsOutput.length > 0) {
+          segmentedJdsOutput.forEach((segmentedJd, index) => {
+            const safeTitle = (segmentedJd.title || `Job ${index + 1}`).replace(/[^\w\s.-]/gi, '').trim();
+            const jobName = `${uploadedJdFile.name} - ${safeTitle}`;
+            const contentDataUri = `data:text/plain;charset=utf-8;base64,${Buffer.from(segmentedJd.content).toString('base64')}`;
+            
+            individualJdsToProcess.push({
+              name: jobName,
+              dataUri: contentDataUri,
+              originalFileName: uploadedJdFile.name,
             });
-          }
-        } catch (error) {
-          console.error(`Error ranking resume ${resume.name} for JD ${jd.name}:`, error);
-          // This allows the flow to continue with other resumes/JDs,
-          // which is desirable if one file is problematic but others are okay.
-          // However, if this error is due to exceeding token limits with a large JD,
-          // it might repeatedly happen for all resumes against that JD.
+          });
+        } else {
+          console.warn(`Segmentation of ${uploadedJdFile.name} returned no JDs or failed. Processing as a single JD.`);
+          individualJdsToProcess.push({
+            name: uploadedJdFile.name,
+            dataUri: uploadedJdFile.dataUri,
+            originalFileName: uploadedJdFile.name,
+          });
         }
+      } catch (segmentationError) {
+        console.error(`Error during segmentation of JD file ${uploadedJdFile.name}:`, segmentationError);
+        individualJdsToProcess.push({
+          name: uploadedJdFile.name,
+          dataUri: uploadedJdFile.dataUri,
+          originalFileName: uploadedJdFile.name,
+        });
+      }
+      
+      if (individualJdsToProcess.length === 0 && uploadedJobDescriptionFiles.length === 1) {
+         console.warn(`No processable JDs found for ${uploadedJdFile.name} after attempting segmentation. Using original.`);
+         individualJdsToProcess.push({
+            name: uploadedJdFile.name,
+            dataUri: uploadedJdFile.dataUri,
+            originalFileName: uploadedJdFile.name,
+          });
       }
 
-      candidatesForThisJD.sort((a, b) => b.score - a.score);
-      
-      screeningResults.push({
-        jobDescriptionName: jd.name,
-        jobDescriptionDataUri: jd.dataUri,
-        candidates: candidatesForThisJD, 
-      });
+
+      for (const jdToProcess of individualJdsToProcess) {
+        const candidatesForThisJD: z.infer<typeof FullRankedCandidateSchema>[] = [];
+        for (const resume of resumes) {
+          try {
+            const promptInput = {
+              jobDescriptionDataUri: jdToProcess.dataUri,
+              resumeDataUri: resume.dataUri,
+              originalResumeName: resume.name,
+            };
+            const { output: aiCandidateOutput } = await rankCandidatePrompt(promptInput);
+            
+            if (aiCandidateOutput) {
+              candidatesForThisJD.push({
+                ...aiCandidateOutput,
+                id: crypto.randomUUID(),
+                resumeDataUri: resume.dataUri,
+                originalResumeName: resume.name,
+              });
+            }
+          } catch (error) {
+            console.error(`Error ranking resume ${resume.name} for JD ${jdToProcess.name}:`, error);
+          }
+        }
+
+        candidatesForThisJD.sort((a, b) => b.score - a.score);
+        
+        allScreeningResults.push({
+          jobDescriptionName: jdToProcess.name,
+          jobDescriptionDataUri: jdToProcess.dataUri,
+          candidates: candidatesForThisJD,
+        });
+      }
     }
-    return screeningResults;
+    return allScreeningResults;
   }
 );
-
