@@ -27,6 +27,7 @@ export interface RankedCandidate {
 export interface Filters {
   scoreRange: [number, number];
   skillKeyword: string;
+  selectedJobDescriptionName?: string | null; // New filter for selecting a JD
 }
 
 // New type for the output of the rankCandidates flow
@@ -35,3 +36,4 @@ export interface JobScreeningResult {
   jobDescriptionDataUri: string;
   candidates: RankedCandidate[]; // Candidates ranked against this specific job description
 }
+

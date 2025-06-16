@@ -17,6 +17,7 @@ import { Separator } from "@/components/ui/separator";
 const initialFilters: Filters = {
   scoreRange: [0, 100],
   skillKeyword: "",
+  selectedJobDescriptionName: null,
 };
 
 const loadingSteps = [
@@ -183,6 +184,15 @@ export default function HomePage() {
     });
   }, []);
 
+  const displayedScreeningResults = React.useMemo(() => {
+    if (!filters.selectedJobDescriptionName) {
+      return screeningResults;
+    }
+    return screeningResults.filter(
+      (result) => result.jobDescriptionName === filters.selectedJobDescriptionName
+    );
+  }, [screeningResults, filters.selectedJobDescriptionName]);
+
 
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-8">
@@ -293,41 +303,54 @@ export default function HomePage() {
         </div>
       )}
 
-      {!isLoading && screeningResults.length > 0 && (
+      {!isLoading && (screeningResults.length > 0 || jobDescriptionFiles.length > 0) && (
         <div ref={resultsSectionRef}>
           <Separator className="my-8" />
           <FilterControls 
             filters={filters} 
             onFilterChange={handleFilterChange} 
-            onResetFilters={resetFilters} 
+            onResetFilters={resetFilters}
+            availableJobDescriptions={jobDescriptionFiles.map(jd => jd.name)} 
           />
-          <Separator className="my-8" />
-          {screeningResults.map((result, index) => (
-            <Card key={result.jobDescriptionName + index} className="shadow-lg transition-shadow duration-300 hover:shadow-xl mb-8">
-              <CardHeader>
-                <CardTitle className="text-2xl font-headline text-primary flex items-center">
-                  <Briefcase className="w-6 h-6 mr-2" />
-                  Results for: {result.jobDescriptionName}
-                </CardTitle>
-                <CardDescription>
-                  Candidates ranked based on the job description "{result.jobDescriptionName}".
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <CandidateTable 
-                  candidates={filterCandidatesForJob(result.candidates, filters)} 
-                  onViewFeedback={(candidate) => handleViewFeedback(candidate, result.jobDescriptionDataUri)} 
-                />
-                 {filterCandidatesForJob(result.candidates, filters).length === 0 && (
-                    <p className="text-center text-muted-foreground py-4">No candidates match the current filter criteria for this job description.</p>
-                  )}
-              </CardContent>
-            </Card>
-          ))}
+           {screeningResults.length > 0 && <Separator className="my-8" />}
         </div>
       )}
+
+      {!isLoading && displayedScreeningResults.length > 0 && (
+          <>
+            {displayedScreeningResults.map((result, index) => (
+              <Card key={result.jobDescriptionName + index} className="shadow-lg transition-shadow duration-300 hover:shadow-xl mb-8">
+                <CardHeader>
+                  <CardTitle className="text-2xl font-headline text-primary flex items-center">
+                    <Briefcase className="w-6 h-6 mr-2" />
+                    Results for: {result.jobDescriptionName}
+                  </CardTitle>
+                  <CardDescription>
+                    Candidates ranked based on the job description "{result.jobDescriptionName}".
+                    {filters.selectedJobDescriptionName && filters.selectedJobDescriptionName !== result.jobDescriptionName && 
+                      ` Currently filtered to: ${filters.selectedJobDescriptionName}.`}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <CandidateTable 
+                    candidates={filterCandidatesForJob(result.candidates, filters)} 
+                    onViewFeedback={(candidate) => handleViewFeedback(candidate, result.jobDescriptionDataUri)} 
+                  />
+                  {filterCandidatesForJob(result.candidates, filters).length === 0 && (
+                      <p className="text-center text-muted-foreground py-4">No candidates match the current filter criteria for this job description.</p>
+                    )}
+                </CardContent>
+              </Card>
+            ))}
+          </>
+        )}
+
        {!isLoading && screeningResults.length === 0 && resumeFiles.length > 0 && jobDescriptionFiles.length > 0 && (
          <p className="text-center text-muted-foreground py-8">Click "Screen & Rank Resumes" to see results.</p>
+       )}
+
+       {!isLoading && displayedScreeningResults.length === 0 && screeningResults.length > 0 && filters.selectedJobDescriptionName && (
+         <p className="text-center text-muted-foreground py-8">No results found for the selected job description: "{filters.selectedJobDescriptionName}". Try selecting "All Job Descriptions".</p>
        )}
 
 
