@@ -55,9 +55,9 @@ export default function HomePage() {
     }
   }, [screeningResults, isLoading]);
 
-  const handleJobDescriptionUpload = useCallback(async (files: File[]) => {
+  const handleJobDescriptionUpload = useCallback(async (files: File[]) => { // `files` is the complete current list from FileUploadArea
     try {
-      const newJobDescriptionFilesPromises = files.map(async (file) => {
+      const processedJobDescriptionFilesPromises = files.map(async (file) => {
         const dataUri = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result as string);
@@ -66,8 +66,8 @@ export default function HomePage() {
         });
         return { id: crypto.randomUUID(), file, dataUri, name: file.name };
       });
-      const newJobDescriptionFiles = await Promise.all(newJobDescriptionFilesPromises);
-      setJobDescriptionFiles(prev => [...prev, ...newJobDescriptionFiles].filter((v,i,a)=>a.findIndex(t=>(t.name === v.name))===i));
+      const processedJobDescriptionFiles = await Promise.all(processedJobDescriptionFilesPromises);
+      setJobDescriptionFiles(processedJobDescriptionFiles); // Set the new list directly
     } catch (error) {
       console.error("Error processing job description files:", error);
       toast({
@@ -78,9 +78,9 @@ export default function HomePage() {
     }
   }, [toast]);
 
-  const handleResumesUpload = useCallback(async (files: File[]) => {
+  const handleResumesUpload = useCallback(async (files: File[]) => { // `files` is the complete current list from FileUploadArea
     try {
-      const newResumeFilesPromises = files.map(async (file) => {
+      const processedResumeFilesPromises = files.map(async (file) => {
         const dataUri = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result as string);
@@ -89,8 +89,8 @@ export default function HomePage() {
         });
         return { id: crypto.randomUUID(), file, dataUri, name: file.name };
       });
-      const newResumeFiles = await Promise.all(newResumeFilesPromises);
-      setResumeFiles(prev => [...prev, ...newResumeFiles].filter((v,i,a)=>a.findIndex(t=>(t.name === v.name))===i));
+      const processedResumeFiles = await Promise.all(processedResumeFilesPromises);
+      setResumeFiles(processedResumeFiles); // Set the new list directly
     } catch (error) {
       console.error("Error processing resume files:", error);
       toast({
