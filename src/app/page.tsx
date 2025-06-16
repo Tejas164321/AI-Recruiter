@@ -26,6 +26,8 @@ const loadingSteps = [
   { icon: BrainCircuit, text: "Generating AI Insights..." },
 ];
 
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+
 export default function HomePage() {
   const [jobDescriptionFiles, setJobDescriptionFiles] = useState<JobDescriptionFile[]>([]);
   const [resumeFiles, setResumeFiles] = useState<ResumeFile[]>([]);
@@ -96,7 +98,7 @@ export default function HomePage() {
       console.error("Error processing job description files:", error);
       toast({
         title: "File Upload Error",
-        description: "Could not process one or more job description files. Please check the file type and try again.",
+        description: `Could not process one or more job description files. ${error instanceof Error ? error.message : "Please check the file type and try again."}`,
         variant: "destructive",
       });
     }
@@ -119,7 +121,7 @@ export default function HomePage() {
       console.error("Error processing resume files:", error);
       toast({
         title: "File Upload Error",
-        description: "Could not process one or more resume files. Please check the file type and try again.",
+        description: `Could not process one or more resume files. ${error instanceof Error ? error.message : "Please check the file type and try again."}`,
         variant: "destructive",
       });
     }
@@ -136,7 +138,7 @@ export default function HomePage() {
     }
 
     setIsLoading(true);
-    setScreeningResults([]); // Clear previous results
+    setScreeningResults([]); 
 
     try {
       const input: RankCandidatesInput = {
@@ -193,7 +195,7 @@ export default function HomePage() {
                 Job Descriptions
               </CardTitle>
               <CardDescription>
-                Upload job description files (PDF, TXT, MD, CSV, XLS, XLSX). You can upload multiple.
+                Upload job description files (PDF, TXT, MD, CSV, XLS, XLSX). Max 5MB each.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -208,8 +210,9 @@ export default function HomePage() {
                   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
                 }}
                 multiple={true}
-                label="PDF, TXT, MD, CSV, XLS, XLSX files up to 10MB each"
+                label="PDF, TXT, MD, CSV, XLS, XLSX files up to 5MB each"
                 id="job-description-upload"
+                maxSizeInBytes={MAX_FILE_SIZE_BYTES}
               />
             </CardContent>
           </Card>
@@ -222,7 +225,7 @@ export default function HomePage() {
                 Upload Resumes
               </CardTitle>
               <CardDescription>
-                Upload candidate resumes in PDF format. You can drag and drop multiple files.
+                Upload candidate resumes in PDF format. Max 5MB each.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -230,8 +233,9 @@ export default function HomePage() {
                 onFilesUpload={handleResumesUpload}
                 acceptedFileTypes={{ "application/pdf": [".pdf"] }}
                 multiple
-                label="PDF files up to 10MB each"
+                label="PDF files up to 5MB each"
                 id="resume-upload"
+                maxSizeInBytes={MAX_FILE_SIZE_BYTES}
               />
             </CardContent>
           </Card>

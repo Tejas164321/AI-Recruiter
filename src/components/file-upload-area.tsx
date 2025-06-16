@@ -3,10 +3,11 @@
 
 import { UploadCloud, FileText, XCircle } from "lucide-react";
 import React, { useCallback, useState } from "react";
-import { useDropzone, type Accept } from "react-dropzone";
+import { useDropzone, type Accept, type FileRejection } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast"; // Import useToast
 
 interface FileUploadAreaProps {
   onFilesUpload: (files: File[]) => void;
@@ -14,6 +15,7 @@ interface FileUploadAreaProps {
   multiple?: boolean;
   label: string;
   id: string;
+  maxSizeInBytes?: number; // New prop for max file size
 }
 
 export function FileUploadArea({
@@ -22,32 +24,56 @@ export function FileUploadArea({
   multiple = false,
   label,
   id,
+  maxSizeInBytes, // Destructure new prop
 }: FileUploadAreaProps) {
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const { toast } = useToast(); // Initialize useToast
 
   const onDrop = useCallback(
-    (acceptedFiles: File[]) => {
-      const newFiles = multiple ? [...uploadedFiles, ...acceptedFiles] : acceptedFiles;
-      // Filter out duplicates by name before setting and calling onFilesUpload
-      const uniqueNewFiles = newFiles.filter(
-        (file, index, self) => index === self.findIndex((f) => f.name === file.name)
-      );
-      setUploadedFiles(uniqueNewFiles);
-      onFilesUpload(uniqueNewFiles);
+    (acceptedFiles: File[], fileRejections: FileRejection[]) => {
+      // Handle rejected files (e.g., due to size)
+      fileRejections.forEach(({ file, errors }) => {
+        errors.forEach((error) => {
+          if (error.code === "file-too-large") {
+            toast({
+              title: "File Rejected",
+              description: `File "${file.name}" is too large. Maximum size is ${maxSizeInBytes ? (maxSizeInBytes / (1024 * 1024)).toFixed(0) : 'N/A'}MB.`,
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "File Rejected",
+              description: `Could not upload "${file.name}": ${error.message}`,
+              variant: "destructive",
+            });
+          }
+        });
+      });
+
+      // Process accepted files
+      if (acceptedFiles.length > 0) {
+        const newFiles = multiple ? [...uploadedFiles, ...acceptedFiles] : acceptedFiles;
+        const uniqueNewFiles = newFiles.filter(
+          (file, index, self) => index === self.findIndex((f) => f.name === file.name)
+        );
+        setUploadedFiles(uniqueNewFiles);
+        onFilesUpload(uniqueNewFiles);
+      }
     },
-    [onFilesUpload, multiple, uploadedFiles]
+    [onFilesUpload, multiple, uploadedFiles, toast, maxSizeInBytes]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: acceptedFileTypes,
     multiple,
+    maxSize: maxSizeInBytes, // Pass maxSize to useDropzone
   });
 
   const removeFile = (fileName: string) => {
     const newFiles = uploadedFiles.filter((file) => file.name !== fileName);
     setUploadedFiles(newFiles);
-    onFilesUpload(newFiles); // Ensure this is called to update parent state
+    onFilesUpload(newFiles);
   };
 
   return (
@@ -74,7 +100,7 @@ export function FileUploadArea({
       {uploadedFiles.length > 0 && (
         <div className="space-y-2">
           <h4 className="text-sm font-medium text-foreground">Uploaded files:</h4>
-          <ScrollArea className="max-h-28 w-full"> {/* Adjusted max height for ~2-3 items, removed pr-3 */}
+          <ScrollArea className="max-h-28 w-full">
             <ul className="space-y-1">
               {uploadedFiles.map((file) => (
                 <li
