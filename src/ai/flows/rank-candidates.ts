@@ -11,16 +11,18 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import type { ExtractedJobRole, ResumeFile, RankedCandidate, JobScreeningResult, PerformBulkScreeningInput, PerformBulkScreeningOutput } from '@/lib/types'; // Assuming types are correctly defined here
+import type { ExtractedJobRole, ResumeFile, RankedCandidate, JobScreeningResult, PerformBulkScreeningInput, PerformBulkScreeningOutput } from '@/lib/types'; 
 
 // Schema for a single resume file input (used internally if not directly from PerformBulkScreeningInput)
 const ResumeInputSchema = z.object({
+  id: z.string(), // Added ID to match ResumeFile type
   name: z.string().describe("The file name or identifier of the resume."),
   dataUri: z
     .string()
     .describe(
       "A candidate resume as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
+  file: z.any().optional().describe("The File object, not used by the AI flow directly but part of the input structure."), // Match ResumeFile
 });
 
 // Schema for ExtractedJobRole (used internally if not directly from PerformBulkScreeningInput)
@@ -74,6 +76,7 @@ export async function performBulkScreening(input: PerformBulkScreeningInput): Pr
     const message = flowError instanceof Error ? flowError.message : String(flowError);
     const stack = flowError instanceof Error ? flowError.stack : undefined;
     console.error('Error in performBulkScreening function (server action entry):', message, stack);
+    // Ensure a simple error object is thrown so Next.js can serialize it
     throw new Error(`Bulk screening process failed: ${message}`);
   }
 }
@@ -106,7 +109,7 @@ Your scoring should be consistent and deterministic given the same inputs.
   - Key skills from the resume that match THIS SPECIFIC job description (comma-separated).
   - Human-friendly feedback explaining the resume's strengths and weaknesses against THIS SPECIFIC job description, and providing improvement suggestions. If the ATS score is low, briefly include suggestions to improve it in the feedback.
 
-  Ensure the output is structured as a JSON object.`,
+  Ensure the output is structured as a JSON object. Crucially, provide a consistent score given the same inputs.`,
   config: {
     temperature: 0, // Low temperature for consistent ranking
   },
@@ -129,7 +132,6 @@ const performBulkScreeningFlow = ai.defineFlow(
       }
       if (resumesToRank.length === 0) {
         console.warn('[performBulkScreeningFlow] No resumes provided for ranking.');
-        // Return results for each job role but with empty candidate lists
         return jobRolesToScreen.map(jr => ({
           jobDescriptionId: jr.id,
           jobDescriptionName: jr.name,
@@ -138,49 +140,58 @@ const performBulkScreeningFlow = ai.defineFlow(
         }));
       }
 
-      // Process each job role
-      // This loop can be parallelized if needed, but for now, let's do it sequentially
-      // to manage AI call concurrency and potential rate limits.
-      // Parallelization will happen for ranking resumes *within* each job role.
       for (const jobRole of jobRolesToScreen) {
-        const resumeRankingPromises = resumesToRank.map(async (resume) => {
-          try {
-            const promptInput = {
-              jobDescriptionDataUri: jobRole.contentDataUri,
-              resumeDataUri: resume.dataUri,
-              originalResumeName: resume.name,
-            };
-            const { output: aiCandidateOutput } = await rankCandidatePrompt(promptInput);
-
-            if (aiCandidateOutput) {
-              return {
-                ...aiCandidateOutput,
-                id: crypto.randomUUID(),
+        try {
+          const resumeRankingPromises = resumesToRank.map(async (resume) => {
+            try {
+              const promptInput = {
+                jobDescriptionDataUri: jobRole.contentDataUri,
                 resumeDataUri: resume.dataUri,
                 originalResumeName: resume.name,
-              } satisfies RankedCandidate; // Ensure type compatibility
+              };
+              const { output: aiCandidateOutput } = await rankCandidatePrompt(promptInput);
+
+              if (aiCandidateOutput) {
+                return {
+                  ...aiCandidateOutput,
+                  id: crypto.randomUUID(),
+                  resumeDataUri: resume.dataUri,
+                  originalResumeName: resume.name,
+                } satisfies RankedCandidate;
+              }
+              console.warn(`[performBulkScreeningFlow] AI returned no output for resume ${resume.name} against JD ${jobRole.name}.`);
+              return null;
+            } catch (error) {
+              const errorMessage = error instanceof Error ? error.message : String(error);
+              console.error(`[performBulkScreeningFlow] Error ranking resume ${resume.name} for JD ${jobRole.name}: ${errorMessage}`, error instanceof Error ? error.stack : undefined);
+              return null; // Allow other resumes to be processed for this JD
             }
-            console.warn(`[performBulkScreeningFlow] AI returned no output for resume ${resume.name} against JD ${jobRole.name}.`);
-            return null;
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error(`[performBulkScreeningFlow] Error ranking resume ${resume.name} for JD ${jobRole.name}: ${errorMessage}`, error instanceof Error ? error.stack : undefined);
-            return null;
-          }
-        });
+          });
 
-        const rankedCandidatesWithNulls = await Promise.all(resumeRankingPromises);
-        const candidatesForThisJobRole = rankedCandidatesWithNulls.filter(c => c !== null) as RankedCandidate[];
+          const rankedCandidatesWithNulls = await Promise.all(resumeRankingPromises);
+          const candidatesForThisJobRole = rankedCandidatesWithNulls.filter(c => c !== null) as RankedCandidate[];
 
-        // Sort candidates by score in descending order
-        candidatesForThisJobRole.sort((a, b) => b.score - a.score);
+          candidatesForThisJobRole.sort((a, b) => b.score - a.score);
 
-        allScreeningResults.push({
-          jobDescriptionId: jobRole.id,
-          jobDescriptionName: jobRole.name,
-          jobDescriptionDataUri: jobRole.contentDataUri,
-          candidates: candidatesForThisJobRole,
-        });
+          allScreeningResults.push({
+            jobDescriptionId: jobRole.id,
+            jobDescriptionName: jobRole.name,
+            jobDescriptionDataUri: jobRole.contentDataUri,
+            candidates: candidatesForThisJobRole,
+          });
+
+        } catch (jobRoleProcessingError) {
+          const errorMessage = jobRoleProcessingError instanceof Error ? jobRoleProcessingError.message : String(jobRoleProcessingError);
+          console.error(`[performBulkScreeningFlow] CRITICAL ERROR processing job role ${jobRole.name} (ID: ${jobRole.id}). Skipping this role. Error: ${errorMessage}`, jobRoleProcessingError instanceof Error ? jobRoleProcessingError.stack : undefined);
+          // Add an error entry for this job role so the frontend is aware
+          allScreeningResults.push({
+            jobDescriptionId: jobRole.id,
+            jobDescriptionName: `${jobRole.name} (Processing Error)`,
+            jobDescriptionDataUri: jobRole.contentDataUri,
+            candidates: [], // Empty candidates list due to error
+          });
+          // Continue to the next job role
+        }
       }
 
       return allScreeningResults;
@@ -189,7 +200,9 @@ const performBulkScreeningFlow = ai.defineFlow(
       const message = error instanceof Error ? error.message : String(error);
       const stack = error instanceof Error ? error.stack : undefined;
       console.error('[performBulkScreeningFlow] Internal error caught within the flow itself:', message, stack);
+      // Ensure a simple error object is thrown so Next.js can serialize it
       throw new Error(`Bulk Screening Flow failed: ${message}`);
     }
   }
 );
+
