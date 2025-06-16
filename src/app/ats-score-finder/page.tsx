@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileUploadArea } from "@/components/file-upload-area";
@@ -11,7 +11,7 @@ import type { ResumeFile, AtsScoreResult } from "@/lib/types";
 import { AtsScoreTable } from "@/components/ats-score-table";
 import { AtsFeedbackModal } from "@/components/ats-feedback-modal";
 import { BarChartBig, Loader2, ScanSearch, BrainCircuit } from "lucide-react";
-import { LoadingIndicator } from "@/components/loading-indicator"; // Assuming a generic loading indicator
+import { LoadingIndicator } from "@/components/loading-indicator";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 const MAX_FILES_ATS = 10; // Limit concurrent processing for stability
@@ -25,6 +25,38 @@ export default function AtsScoreFinderPage() {
 
   const { toast } = useToast();
   const resultsSectionRef = useRef<HTMLDivElement | null>(null);
+  const analyzeButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  // Scroll to "Analyze Resumes" button when resumes are uploaded and not currently loading
+  useEffect(() => {
+    if (uploadedResumeFiles.length > 0 && !isLoading && analyzeButtonRef.current) {
+      const timer = setTimeout(() => {
+        analyzeButtonRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [uploadedResumeFiles, isLoading]);
+
+  // Scroll to results/loading section when loading starts
+  useEffect(() => {
+    if (isLoading && resultsSectionRef.current) {
+      const timer = setTimeout(() => {
+        resultsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading]);
+
+  // Scroll to results when analysis is complete and results are available
+  useEffect(() => {
+    if (!isLoading && atsResults.length > 0 && resultsSectionRef.current) {
+        const timer = setTimeout(() => {
+            resultsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 100);
+        return () => clearTimeout(timer);
+    }
+  }, [isLoading, atsResults]);
+
 
   const handleResumesUpload = useCallback(async (files: File[]) => {
     if (files.length > MAX_FILES_ATS) {
@@ -64,8 +96,6 @@ export default function AtsScoreFinderPage() {
     const results: AtsScoreResult[] = [];
     let filesProcessedSuccessfully = 0;
 
-    // Process files in chunks if needed, though for simplicity, Promise.all is used here
-    // For a very large number of files, consider a queue or chunking.
     const processingPromises = uploadedResumeFiles.map(async (resumeFile) => {
       try {
         const input: CalculateAtsScoreInput = {
@@ -102,7 +132,6 @@ export default function AtsScoreFinderPage() {
 
     await Promise.all(processingPromises);
 
-    // Sort by ATS score descending by default
     results.sort((a, b) => b.atsScore - a.atsScore);
     setAtsResults(results);
     setIsLoading(false);
@@ -112,7 +141,7 @@ export default function AtsScoreFinderPage() {
             title: "ATS Analysis Complete",
             description: `${filesProcessedSuccessfully} of ${uploadedResumeFiles.length} resumes processed. Results are below.`,
         });
-        resultsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        // Scrolling to results is now handled by useEffect
     } else if (uploadedResumeFiles.length > 0) {
          toast({
             title: "ATS Analysis Failed",
@@ -120,8 +149,6 @@ export default function AtsScoreFinderPage() {
             variant: "destructive"
         });
     }
-
-
   }, [uploadedResumeFiles, toast]);
 
   const handleViewInsights = (result: AtsScoreResult) => {
@@ -166,6 +193,7 @@ export default function AtsScoreFinderPage() {
             maxSizeInBytes={MAX_FILE_SIZE_BYTES}
           />
           <Button
+            ref={analyzeButtonRef}
             onClick={handleAnalyzeResumes}
             disabled={isLoading || uploadedResumeFiles.length === 0}
             size="lg"

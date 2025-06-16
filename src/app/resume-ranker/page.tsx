@@ -41,6 +41,39 @@ export default function ResumeRankerPage() {
 
   const { toast } = useToast();
   const resultsSectionRef = useRef<HTMLDivElement | null>(null);
+  const processButtonRef = useRef<HTMLButtonElement | null>(null);
+
+
+  // Scroll to "Process All Candidates" button when JDs & Resumes are ready and not loading
+  useEffect(() => {
+    if (
+      extractedJobRoles.length > 0 &&
+      uploadedResumeFiles.length > 0 &&
+      !isLoadingRoles &&
+      !isLoadingAllScreenings &&
+      processButtonRef.current
+    ) {
+      const timer = setTimeout(() => {
+        processButtonRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [extractedJobRoles, uploadedResumeFiles, isLoadingRoles, isLoadingAllScreenings]);
+
+  // Scroll to results/loading section when loading starts or results are ready
+  useEffect(() => {
+    const shouldScrollToResultsArea = 
+      (isLoadingRoles || isLoadingAllScreenings) || 
+      (!isLoadingAllScreenings && !isLoadingRoles && allScreeningResults.length > 0);
+
+    if (shouldScrollToResultsArea && resultsSectionRef.current) {
+      const timer = setTimeout(() => {
+        resultsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100); 
+      return () => clearTimeout(timer);
+    }
+  }, [isLoadingRoles, isLoadingAllScreenings, allScreeningResults]);
+
 
   const currentScreeningResult = useMemo(() => {
     if (!selectedJobRoleId || allScreeningResults.length === 0) {
@@ -49,17 +82,6 @@ export default function ResumeRankerPage() {
     const foundResult = allScreeningResults.find(result => result.jobDescriptionId === String(selectedJobRoleId));
     return foundResult || null;
   }, [selectedJobRoleId, allScreeningResults]);
-
-  const scrollToResults = useCallback(() => {
-    if (!isLoadingAllScreenings && !isLoadingRoles && allScreeningResults.length > 0 && resultsSectionRef.current) {
-      const timer = setTimeout(() => {
-        resultsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [isLoadingAllScreenings, isLoadingRoles, allScreeningResults]);
-
-  useEffect(scrollToResults, [scrollToResults]);
 
 
   const startBulkScreeningProcess = useCallback(async () => {
@@ -306,6 +328,7 @@ export default function ResumeRankerPage() {
       
       <div className="flex justify-center pt-4">
         <Button
+          ref={processButtonRef}
           onClick={handleScreenAllButtonClick}
           disabled={isLoadingAllScreenings || isLoadingRoles || extractedJobRoles.length === 0 || uploadedResumeFiles.length === 0}
           size="lg"
