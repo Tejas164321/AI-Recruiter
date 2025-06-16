@@ -1,4 +1,3 @@
-
 'use server';
 
 /**
@@ -103,7 +102,7 @@ Your scoring should be consistent and deterministic given the same inputs.
   {{media url=resumeDataUri}}
 
   Analyze the resume and the job description, then provide the following:
-  - Candidate's full name, as extracted from the resume content.
+  - Candidate's full name, as extracted from the resume content. If no name can be reliably extracted, return an empty string for the name.
   - A match score (0-100) indicating the resume's relevance to THIS SPECIFIC job description.
   - An ATS (Applicant Tracking System) compatibility score (0-100). This score should reflect how well the resume is structured for automated parsing by ATS software, considering factors like formatting, keyword optimization, and clarity.
   - Key skills from the resume that match THIS SPECIFIC job description (comma-separated).
@@ -141,36 +140,51 @@ const performBulkScreeningFlow = ai.defineFlow(
       }
 
       for (const jobRole of jobRolesToScreen) {
+        let candidatesForThisJobRole: RankedCandidate[] = [];
         try {
           const resumeRankingPromises = resumesToRank.map(async (resume) => {
+            let aiCandidateOutput: z.infer<typeof AICandidateOutputSchema> | null = null;
             try {
               const promptInput = {
                 jobDescriptionDataUri: jobRole.contentDataUri,
                 resumeDataUri: resume.dataUri,
                 originalResumeName: resume.name,
               };
-              const { output: aiCandidateOutput } = await rankCandidatePrompt(promptInput);
+              const { output } = await rankCandidatePrompt(promptInput);
+              aiCandidateOutput = output;
 
               if (aiCandidateOutput) {
                 return {
                   ...aiCandidateOutput,
                   id: crypto.randomUUID(),
+                  name: aiCandidateOutput.name || resume.name.replace(/\.[^/.]+$/, "") || "Unnamed Candidate", // Use extracted name or fallback
                   resumeDataUri: resume.dataUri,
                   originalResumeName: resume.name,
                 } satisfies RankedCandidate;
+              } else {
+                console.warn(`[performBulkScreeningFlow] AI returned no output for resume ${resume.name} against JD ${jobRole.name}.`);
+                // Fall through to create a default entry
               }
-              console.warn(`[performBulkScreeningFlow] AI returned no output for resume ${resume.name} against JD ${jobRole.name}.`);
-              return null;
             } catch (error) {
               const errorMessage = error instanceof Error ? error.message : String(error);
               console.error(`[performBulkScreeningFlow] Error ranking resume ${resume.name} for JD ${jobRole.name}: ${errorMessage}`, error instanceof Error ? error.stack : undefined);
-              return null; // Allow other resumes to be processed for this JD
+              // Fall through to create a default entry
             }
+            
+            // If aiCandidateOutput is still null (due to error or no output), create a default entry
+            return {
+              id: crypto.randomUUID(),
+              name: resume.name.replace(/\.[^/.]+$/, "") || "Candidate (Processing Error)",
+              score: 0,
+              atsScore: 0,
+              keySkills: 'Error during processing',
+              feedback: `Could not fully process resume "${resume.name}" against job description "${jobRole.name}".`,
+              originalResumeName: resume.name,
+              resumeDataUri: resume.dataUri,
+            } satisfies RankedCandidate;
           });
 
-          const rankedCandidatesWithNulls = await Promise.all(resumeRankingPromises);
-          const candidatesForThisJobRole = rankedCandidatesWithNulls.filter(c => c !== null) as RankedCandidate[];
-
+          candidatesForThisJobRole = await Promise.all(resumeRankingPromises);
           candidatesForThisJobRole.sort((a, b) => b.score - a.score);
 
           allScreeningResults.push({
@@ -183,26 +197,34 @@ const performBulkScreeningFlow = ai.defineFlow(
         } catch (jobRoleProcessingError) {
           const errorMessage = jobRoleProcessingError instanceof Error ? jobRoleProcessingError.message : String(jobRoleProcessingError);
           console.error(`[performBulkScreeningFlow] CRITICAL ERROR processing job role ${jobRole.name} (ID: ${jobRole.id}). Skipping this role. Error: ${errorMessage}`, jobRoleProcessingError instanceof Error ? jobRoleProcessingError.stack : undefined);
-          // Add an error entry for this job role so the frontend is aware
+          
+          // Create error entries for all resumes for this failed job role
+          const errorCandidatesForThisJobRole: RankedCandidate[] = resumesToRank.map(resume => ({
+            id: crypto.randomUUID(),
+            name: resume.name.replace(/\.[^/.]+$/, "") || "Candidate (Processing Error)",
+            score: 0,
+            atsScore: 0,
+            keySkills: 'Job role processing error',
+            feedback: `An error occurred while processing the job role "${jobRole.name}", so this resume could not be ranked against it.`,
+            originalResumeName: resume.name,
+            resumeDataUri: resume.dataUri,
+          }));
+          
           allScreeningResults.push({
             jobDescriptionId: jobRole.id,
             jobDescriptionName: `${jobRole.name} (Processing Error)`,
             jobDescriptionDataUri: jobRole.contentDataUri,
-            candidates: [], // Empty candidates list due to error
+            candidates: errorCandidatesForThisJobRole, 
           });
-          // Continue to the next job role
         }
       }
-
       return allScreeningResults;
 
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       const stack = error instanceof Error ? error.stack : undefined;
       console.error('[performBulkScreeningFlow] Internal error caught within the flow itself:', message, stack);
-      // Ensure a simple error object is thrown so Next.js can serialize it
       throw new Error(`Bulk Screening Flow failed: ${message}`);
     }
   }
 );
-
