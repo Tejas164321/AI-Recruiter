@@ -124,14 +124,11 @@ export default function HomePage() {
         jobDescriptions: jobDescriptionFiles.map(jd => ({ name: jd.name, dataUri: jd.dataUri })),
         resumes: resumeFiles.map(rf => ({ name: rf.name, dataUri: rf.dataUri })),
       };
+      // The rankCandidates flow now returns RankCandidatesOutput which is JobScreeningResult[]
+      // where candidates already have their IDs.
       const output: RankCandidatesOutput = await rankCandidates(input);
       
-      const processedOutput = output.map(jobResult => ({
-        ...jobResult,
-        candidates: jobResult.candidates.map(c => ({ ...c, id: c.id || crypto.randomUUID() }))
-      }));
-
-      setScreeningResults(processedOutput);
+      setScreeningResults(output); // No more client-side ID processing needed
       toast({ title: "Success", description: "Resumes screened and ranked successfully." });
     } catch (error) {
       console.error("Error screening resumes:", error);
@@ -283,7 +280,7 @@ export default function HomePage() {
           />
           <Separator className="my-8" />
           {screeningResults.map((result, index) => (
-            <Card key={index} className="shadow-lg transition-shadow duration-300 hover:shadow-xl mb-8">
+            <Card key={result.jobDescriptionName + index} className="shadow-lg transition-shadow duration-300 hover:shadow-xl mb-8">
               <CardHeader>
                 <CardTitle className="text-2xl font-headline text-primary flex items-center">
                   <Briefcase className="w-6 h-6 mr-2" />
@@ -320,3 +317,4 @@ export default function HomePage() {
     </div>
   );
 }
+
