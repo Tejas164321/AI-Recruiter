@@ -48,6 +48,7 @@ export default function HomePage() {
       setCurrentLoadingStep(0);
       interval = setInterval(() => {
         setCurrentLoadingStep((prevStep) => {
+          if (loadingSteps.length === 0) return 0;
           if (prevStep === loadingSteps.length - 1) {
             return prevStep;
           }
@@ -79,32 +80,50 @@ export default function HomePage() {
   }, [screeningResults, isLoading]);
 
   const handleJobDescriptionUpload = useCallback(async (files: File[]) => {
-    const newJobDescriptionFilesPromises = files.map(async (file) => {
-      const dataUri = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = (error) => reject(error);
-        reader.readAsDataURL(file);
+    try {
+      const newJobDescriptionFilesPromises = files.map(async (file) => {
+        const dataUri = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = (error) => reject(error);
+          reader.readAsDataURL(file);
+        });
+        return { id: crypto.randomUUID(), file, dataUri, name: file.name };
       });
-      return { id: crypto.randomUUID(), file, dataUri, name: file.name };
-    });
-    const newJobDescriptionFiles = await Promise.all(newJobDescriptionFilesPromises);
-    setJobDescriptionFiles(prev => [...prev, ...newJobDescriptionFiles].filter((v,i,a)=>a.findIndex(t=>(t.name === v.name))===i)); // Avoid duplicates by name
-  }, []);
+      const newJobDescriptionFiles = await Promise.all(newJobDescriptionFilesPromises);
+      setJobDescriptionFiles(prev => [...prev, ...newJobDescriptionFiles].filter((v,i,a)=>a.findIndex(t=>(t.name === v.name))===i));
+    } catch (error) {
+      console.error("Error processing job description files:", error);
+      toast({
+        title: "File Upload Error",
+        description: "Could not process one or more job description files. Please check the file type and try again.",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
 
   const handleResumesUpload = useCallback(async (files: File[]) => {
-    const newResumeFilesPromises = files.map(async (file) => {
-      const dataUri = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = (error) => reject(error);
-        reader.readAsDataURL(file);
+    try {
+      const newResumeFilesPromises = files.map(async (file) => {
+        const dataUri = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = (error) => reject(error);
+          reader.readAsDataURL(file);
+        });
+        return { id: crypto.randomUUID(), file, dataUri, name: file.name };
       });
-      return { id: crypto.randomUUID(), file, dataUri, name: file.name };
-    });
-    const newResumeFiles = await Promise.all(newResumeFilesPromises);
-    setResumeFiles(prev => [...prev, ...newResumeFiles].filter((v,i,a)=>a.findIndex(t=>(t.name === v.name))===i)); // Avoid duplicates by name
-  }, []);
+      const newResumeFiles = await Promise.all(newResumeFilesPromises);
+      setResumeFiles(prev => [...prev, ...newResumeFiles].filter((v,i,a)=>a.findIndex(t=>(t.name === v.name))===i));
+    } catch (error) {
+      console.error("Error processing resume files:", error);
+      toast({
+        title: "File Upload Error",
+        description: "Could not process one or more resume files. Please check the file type and try again.",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
 
   const handleScreenResumes = async () => {
     if (jobDescriptionFiles.length === 0) {
@@ -117,7 +136,7 @@ export default function HomePage() {
     }
 
     setIsLoading(true);
-    setScreeningResults([]);
+    setScreeningResults([]); // Clear previous results
 
     try {
       const input: RankCandidatesInput = {
@@ -131,7 +150,8 @@ export default function HomePage() {
       toast({ title: "Success", description: "Resumes screened and ranked successfully." });
     } catch (error) {
       console.error("Error screening resumes:", error);
-      toast({ title: "Screening Failed", description: "An error occurred while screening resumes. Please try again.", variant: "destructive" });
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      toast({ title: "Screening Failed", description: `An error occurred while screening resumes: ${errorMessage}. Please try again.`, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
