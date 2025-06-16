@@ -28,8 +28,12 @@ export function FileUploadArea({
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       const newFiles = multiple ? [...uploadedFiles, ...acceptedFiles] : acceptedFiles;
-      setUploadedFiles(newFiles);
-      onFilesUpload(newFiles);
+      // Filter out duplicates by name before setting and calling onFilesUpload
+      const uniqueNewFiles = newFiles.filter(
+        (file, index, self) => index === self.findIndex((f) => f.name === file.name)
+      );
+      setUploadedFiles(uniqueNewFiles);
+      onFilesUpload(uniqueNewFiles);
     },
     [onFilesUpload, multiple, uploadedFiles]
   );
@@ -43,7 +47,7 @@ export function FileUploadArea({
   const removeFile = (fileName: string) => {
     const newFiles = uploadedFiles.filter((file) => file.name !== fileName);
     setUploadedFiles(newFiles);
-    onFilesUpload(newFiles);
+    onFilesUpload(newFiles); // Ensure this is called to update parent state
   };
 
   return (
@@ -70,7 +74,7 @@ export function FileUploadArea({
       {uploadedFiles.length > 0 && (
         <div className="space-y-2">
           <h4 className="text-sm font-medium text-foreground">Uploaded files:</h4>
-          <ScrollArea className="max-h-40 w-full pr-3"> {/* Max height for ~4-5 items */}
+          <ScrollArea className="max-h-28 w-full pr-3"> {/* Adjusted max height for ~2-3 items */}
             <ul className="space-y-1">
               {uploadedFiles.map((file) => (
                 <li
