@@ -4,6 +4,7 @@ import './globals.css';
 import { MainLayout } from '@/components/layout/main-layout';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
+import { LoadingProvider } from "@/contexts/loading-context"; // Import LoadingProvider
 
 export const metadata: Metadata = {
   title: 'ResumeRank AI',
@@ -29,8 +30,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <MainLayout>{children}</MainLayout>
-          <Toaster />
+          <LoadingProvider> {/* Wrap with LoadingProvider */}
+            <MainLayout>{children}</MainLayout>
+            <Toaster />
+          </LoadingProvider>
         </ThemeProvider>
       </body>
     </html>

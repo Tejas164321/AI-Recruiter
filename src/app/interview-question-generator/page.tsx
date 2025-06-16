@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react"; // Added useEffect
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileUploadArea } from "@/components/file-upload-area";
@@ -15,6 +15,7 @@ import { HelpCircle, Loader2, Lightbulb, FileText, ScrollText, Users, Brain, Sea
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { motion } from "framer-motion";
+import { useLoading } from "@/contexts/loading-context"; // Import useLoading
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
@@ -35,6 +36,11 @@ const cardHoverVariants = {
 };
 
 export default function InterviewQuestionGeneratorPage() {
+  const { setIsPageLoading } = useLoading(); // Consume useLoading
+  useEffect(() => {
+    setIsPageLoading(false); // Signal page has loaded
+  }, [setIsPageLoading]);
+
   const [jobDescriptionFile, setJobDescriptionFile] = useState<JobDescriptionFile | null>(null);
   const [roleTitle, setRoleTitle] = useState<string>("");
   const [focusAreas, setFocusAreas] = useState<string>("");
@@ -272,4 +278,3 @@ export default function InterviewQuestionGeneratorPage() {
     </div>
   );
 }
-

@@ -12,11 +12,17 @@ import { AtsScoreTable } from "@/components/ats-score-table";
 import { AtsFeedbackModal } from "@/components/ats-feedback-modal";
 import { BarChartBig, Loader2, ScanSearch, BrainCircuit } from "lucide-react";
 import { LoadingIndicator } from "@/components/loading-indicator";
+import { useLoading } from "@/contexts/loading-context"; // Import useLoading
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 const MAX_FILES_ATS = 10; // Limit concurrent processing for stability
 
 export default function AtsScoreFinderPage() {
+  const { setIsPageLoading } = useLoading(); // Consume useLoading
+  useEffect(() => {
+    setIsPageLoading(false); // Signal page has loaded
+  }, [setIsPageLoading]);
+
   const [uploadedResumeFiles, setUploadedResumeFiles] = useState<ResumeFile[]>([]);
   const [atsResults, setAtsResults] = useState<AtsScoreResult[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);

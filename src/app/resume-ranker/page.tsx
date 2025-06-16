@@ -15,6 +15,7 @@ import type { ResumeFile, RankedCandidate, Filters, JobDescriptionFile, JobScree
 import { Users, ScanSearch, Briefcase, BrainCircuit } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { LoadingIndicator } from "@/components/loading-indicator";
+import { useLoading } from "@/contexts/loading-context"; // Import useLoading
 
 const initialFilters: Filters = {
   scoreRange: [0, 100],
@@ -24,6 +25,11 @@ const initialFilters: Filters = {
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
 export default function ResumeRankerPage() {
+  const { setIsPageLoading } = useLoading(); // Consume useLoading
+  useEffect(() => {
+    setIsPageLoading(false); // Signal page has loaded
+  }, [setIsPageLoading]);
+
   const [uploadedJobDescriptionFiles, setUploadedJobDescriptionFiles] = useState<JobDescriptionFile[]>([]);
   const [uploadedResumeFiles, setUploadedResumeFiles] = useState<ResumeFile[]>([]);
   

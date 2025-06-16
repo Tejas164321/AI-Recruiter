@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ArrowRight, BrainCircuit, BarChartBig, MessageSquarePlus } from "lucide-react";
 import { motion } from "framer-motion";
+import { useLoading } from "@/contexts/loading-context"; // Import useLoading
 
 const cardHoverVariants = {
   hover: {
@@ -22,8 +23,12 @@ const cardHoverVariants = {
 
 
 export default function DashboardPage() {
-  // In a real app, you'd protect this route and fetch user data
-  const userName = "Valued User"; // Placeholder
+  const { setIsPageLoading } = useLoading(); // Get setIsPageLoading
+  const userName = "Valued User"; 
+
+  const handleLinkClick = () => {
+    setIsPageLoading(true);
+  };
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -40,7 +45,7 @@ export default function DashboardPage() {
           whileHover="hover"
           variants={cardHoverVariants}
         >
-          <Link href="/resume-ranker" passHref className="block group">
+          <Link href="/resume-ranker" onClick={handleLinkClick} className="block group">
             <Card className="shadow-lg h-full flex flex-col border border-primary/10 hover:border-primary/50 transition-colors duration-300">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -65,7 +70,7 @@ export default function DashboardPage() {
             whileHover="hover"
             variants={cardHoverVariants}
           >
-            <Link href="/ats-score-finder" passHref className="block group">
+            <Link href="/ats-score-finder" onClick={handleLinkClick} className="block group">
                <Card className="shadow-lg h-full flex flex-col hover:border-primary/50 transition-colors duration-300">
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -76,7 +81,7 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent className="flex-grow">
                   <CardDescription>
-                    Analyze resumes for Applicant Tracking System (ATS) compatibility. Get scores and suggestions to optimize for automated screening. (Coming Soon)
+                    Analyze resumes for Applicant Tracking System (ATS) compatibility. Get scores and suggestions to optimize for automated screening.
                   </CardDescription>
                 </CardContent>
               </Card>
@@ -88,7 +93,7 @@ export default function DashboardPage() {
             whileHover="hover"
             variants={cardHoverVariants}
           >
-            <Link href="/interview-question-generator" passHref className="block group"> 
+            <Link href="/interview-question-generator" onClick={handleLinkClick} passHref className="block group"> 
                <Card className="shadow-lg h-full flex flex-col hover:border-primary/50 transition-colors duration-300">
                  <CardHeader>
                     <div className="flex items-center justify-between">

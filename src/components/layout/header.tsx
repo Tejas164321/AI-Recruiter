@@ -1,12 +1,14 @@
 
 "use client";
 
-import { BrainCircuit } from "lucide-react";
+import { BrainCircuit, Loader2 } from "lucide-react";
 import { ThemeToggleButton } from "@/components/theme-toggle-button";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useLoading } from "@/contexts/loading-context"; // Import useLoading
 
 export function Header() {
+  const { isPageLoading } = useLoading(); // Consume loading state
   // Placeholder for authentication state
   const isAuthenticated = false; 
 
@@ -14,7 +16,11 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
         <Link href="/" className="mr-auto flex items-center cursor-pointer" aria-label="Go to homepage">
-          <BrainCircuit className="h-8 w-8 mr-2 text-primary" />
+          {isPageLoading ? (
+            <Loader2 className="h-8 w-8 mr-2 text-primary animate-spin" />
+          ) : (
+            <BrainCircuit className="h-8 w-8 mr-2 text-primary" />
+          )}
           <span className="text-2xl font-bold text-primary font-headline">ResumeRank AI</span>
         </Link>
         
