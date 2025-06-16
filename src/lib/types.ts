@@ -13,6 +13,7 @@ export interface RankedCandidate {
   id: string; 
   name: string;
   score: number;
+  atsScore: number; 
   keySkills: string;
   feedback: string;
   originalResumeName: string; 
@@ -23,3 +24,4 @@ export interface Filters {
   scoreRange: [number, number];
   skillKeyword: string;
 }
+

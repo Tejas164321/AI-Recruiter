@@ -16,7 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { generateInterviewQuestions, type GenerateInterviewQuestionsInput, type GenerateInterviewQuestionsOutput } from "@/ai/flows/generate-interview-questions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, HelpCircle, Lightbulb, Star, Activity, ThumbsDown } from "lucide-react";
+import { Loader2, HelpCircle, Lightbulb, Star, Activity, ThumbsDown, ShieldCheck } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 
@@ -85,14 +85,24 @@ export function FeedbackModal({ isOpen, onClose, candidate, jobDescriptionDataUr
 
   if (!candidate) return null;
 
-  const getScoreBadge = (score: number) => {
-    if (score > 75) {
-      return <Badge className="bg-accent text-accent-foreground text-base px-3 py-1"><Star className="w-4 h-4 mr-1.5" /> {score}/100</Badge>;
-    } else if (score > 50) {
-      return <Badge className="bg-yellow-500 text-black text-base px-3 py-1"><Activity className="w-4 h-4 mr-1.5" /> {score}/100</Badge>;
-    } else {
-      return <Badge variant="destructive" className="text-base px-3 py-1"><ThumbsDown className="w-4 h-4 mr-1.5" /> {score}/100</Badge>;
+  const getScoreBadge = (score: number, iconType: "match" | "ats" = "match") => {
+    let IconComponent = Star;
+    if (iconType === "match") {
+      if (score > 75) IconComponent = Star;
+      else if (score > 50) IconComponent = Activity;
+      else IconComponent = ThumbsDown;
+    } else { // ats
+      if (score > 75) IconComponent = ShieldCheck; // Positive ATS
+      else if (score > 50) IconComponent = ShieldCheck; // Neutral ATS
+      else IconComponent = ShieldCheck; // Potentially warning for ATS
     }
+    
+    let badgeClass = "bg-accent text-accent-foreground";
+    if (score <= 50) badgeClass = "bg-destructive text-destructive-foreground";
+    else if (score <= 75) badgeClass = "bg-yellow-500 text-black";
+
+
+    return <Badge className={`${badgeClass} text-base px-3 py-1`}><IconComponent className="w-4 h-4 mr-1.5" /> {score}/100</Badge>;
   };
 
   return (
@@ -106,9 +116,15 @@ export function FeedbackModal({ isOpen, onClose, candidate, jobDescriptionDataUr
         </DialogHeader>
         <ScrollArea className="max-h-[70vh] pr-4">
           <div className="grid gap-6 py-4">
-            <div>
-              <h4 className="font-semibold text-foreground mb-2">Overall Score</h4>
-              {getScoreBadge(candidate.score)}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-semibold text-foreground mb-2">Overall Match Score</h4>
+                {getScoreBadge(candidate.score, "match")}
+              </div>
+              <div>
+                <h4 className="font-semibold text-foreground mb-2">ATS Compatibility Score</h4>
+                {getScoreBadge(candidate.atsScore, "ats")}
+              </div>
             </div>
             <Separator />
             <div>
@@ -187,3 +203,4 @@ export function FeedbackModal({ isOpen, onClose, candidate, jobDescriptionDataUr
     </Dialog>
   );
 }
+

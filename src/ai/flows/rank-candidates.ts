@@ -30,8 +30,9 @@ export type RankCandidatesInput = z.infer<typeof RankCandidatesInputSchema>;
 const RankedCandidateSchema = z.object({
   name: z.string().describe('The name of the candidate.'),
   score: z.number().describe('The match score (0-100) of the resume to the job description.'),
+  atsScore: z.number().describe('The ATS (Applicant Tracking System) compatibility score (0-100), reflecting how well the resume is structured for automated parsing, considering factors like formatting, keyword optimization, and clarity.'),
   keySkills: z.string().describe('Key skills matching the job description.'),
-  feedback: z.string().describe('AI-driven feedback for the candidate.'),
+  feedback: z.string().describe('AI-driven feedback for the candidate, including strengths, weaknesses, improvement suggestions, and notes on ATS score if relevant.'),
 });
 
 const RankCandidatesOutputSchema = z.array(RankedCandidateSchema);
@@ -60,13 +61,15 @@ const rankCandidatePrompt = ai.definePrompt({
 
   Analyze the resume and provide the following:
   - A match score (0-100) indicating the resume's relevance to the job description.
+  - An ATS (Applicant Tracking System) compatibility score (0-100). This score should reflect how well the resume is structured for automated parsing by ATS software, considering factors like formatting, keyword optimization, and clarity.
   - Key skills from the resume that match the job description.
-  - Human-friendly feedback explaining the resume's strengths and weaknesses, and providing improvement suggestions.
+  - Human-friendly feedback explaining the resume's strengths and weaknesses, and providing improvement suggestions. If the ATS score is low, briefly include suggestions to improve it in the feedback.
 
   Ensure the output is structured as a JSON object with the following fields:
   {
     "name": "Candidate Name",
     "score": Match Score (0-100),
+    "atsScore": ATS Compatibility Score (0-100),
     "keySkills": "List of key skills",
     "feedback": "AI-driven feedback"
   }`,
@@ -97,3 +100,4 @@ const rankCandidatesFlow = ai.defineFlow(
     return rankedCandidates;
   }
 );
+
