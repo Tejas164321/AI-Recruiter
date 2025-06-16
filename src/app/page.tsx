@@ -6,6 +6,47 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import Image from "next/image";
 import { ArrowRight, CheckCircle, BarChartBig, Users, Lock } from "lucide-react";
+import { motion } from "framer-motion";
+
+const sectionVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: (delay: number = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring",
+      damping: 15,
+      stiffness: 100,
+      delay,
+      duration: 0.5,
+    },
+  }),
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, x: -10 },
+  visible: (delay: number = 0) => ({
+    opacity: 1,
+    x: 0,
+    transition: {
+      delay,
+      duration: 0.3,
+    },
+  }),
+};
+
+const cardHoverVariants = {
+  hover: {
+    scale: 1.03,
+    boxShadow: "0px 10px 30px -5px hsl(var(--primary)/0.2)",
+    transition: { type: "spring", stiffness: 300, damping: 10 }
+  },
+  initial: {
+    scale: 1,
+    boxShadow: "0px 5px 15px rgba(0,0,0,0.1)"
+  }
+};
+
 
 export default function LandingPage() {
   return (
@@ -15,41 +56,72 @@ export default function LandingPage() {
         <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-br from-primary/10 via-background to-background">
           <div className="container px-4 md:px-6">
             <div className="grid gap-6 lg:grid-cols-2 lg:gap-12 xl:gap-24 items-center">
-              <div className="flex flex-col justify-center space-y-4">
+              <motion.div 
+                className="flex flex-col justify-center space-y-4"
+                initial="hidden"
+                animate="visible"
+                variants={sectionVariants}
+                custom={0}
+              >
                 <div className="space-y-2">
-                  <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none font-headline text-primary">
+                  <motion.h1
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.1 }}
+                    className="text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none font-headline text-primary"
+                  >
                     Unlock Your Hiring Potential with ResumeRank AI
-                  </h1>
-                  <p className="max-w-[600px] text-foreground md:text-xl">
+                  </motion.h1>
+                  <motion.p
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.3 }}
+                    className="max-w-[600px] text-foreground md:text-xl"
+                  >
                     Streamline your recruitment process with AI-powered resume screening, candidate ranking, and an upcoming ATS score checker. Make smarter hiring decisions, faster.
-                  </p>
+                  </motion.p>
                 </div>
-                <div className="flex flex-col gap-2 min-[400px]:flex-row">
-                  <Link
-                    href="/signup"
-                    className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
-                    prefetch={false}
-                  >
-                    Get Started
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                  <Link
-                    href="/#features"
-                    className="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-8 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
-                    prefetch={false}
-                  >
-                    Learn More
-                  </Link>
-                </div>
-              </div>
-              <Image
-                src="https://placehold.co/600x400.png"
-                width="600"
-                height="400"
-                alt="Hero"
-                data-ai-hint="team collaboration"
-                className="mx-auto aspect-video overflow-hidden rounded-xl object-cover sm:w-full lg:order-last"
-              />
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.5 }}
+                  className="flex flex-col gap-2 min-[400px]:flex-row"
+                >
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Link
+                      href="/signup"
+                      className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+                      prefetch={false}
+                    >
+                      Get Started
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </motion.div>
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Link
+                      href="/#features"
+                      className="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-8 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+                      prefetch={false}
+                    >
+                      Learn More
+                    </Link>
+                  </motion.div>
+                </motion.div>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+              >
+                <Image
+                  src="https://placehold.co/600x400.png"
+                  width="600"
+                  height="400"
+                  alt="Hero"
+                  data-ai-hint="team collaboration"
+                  className="mx-auto aspect-video overflow-hidden rounded-xl object-cover sm:w-full lg:order-last shadow-2xl"
+                />
+              </motion.div>
             </div>
           </div>
         </section>
@@ -57,72 +129,120 @@ export default function LandingPage() {
         {/* Features Section */}
         <section id="features" className="w-full py-12 md:py-24 lg:py-32 bg-background">
           <div className="container px-4 md:px-6">
-            <div className="flex flex-col items-center justify-center space-y-4 text-center">
+            <motion.div
+              className="flex flex-col items-center justify-center space-y-4 text-center"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.3 }}
+              variants={sectionVariants}
+              custom={0.2}
+            >
               <div className="space-y-2">
-                <div className="inline-block rounded-lg bg-muted px-3 py-1 text-sm">Key Features</div>
-                <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl font-headline">
+                <motion.div
+                  initial={{ opacity:0, scale:0.8 }}
+                  whileInView={{ opacity:1, scale:1 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration:0.5, delay:0.3 }}
+                  className="inline-block rounded-lg bg-muted px-3 py-1 text-sm"
+                >
+                  Key Features
+                </motion.div>
+                <motion.h2
+                  initial={{ opacity:0, y:20 }}
+                  whileInView={{ opacity:1, y:0 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration:0.5, delay:0.4 }}
+                  className="text-3xl font-bold tracking-tighter sm:text-5xl font-headline"
+                >
                   Everything You Need to Optimize Recruitment
-                </h2>
-                <p className="max-w-[900px] text-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+                </motion.h2>
+                <motion.p
+                  initial={{ opacity:0, y:20 }}
+                  whileInView={{ opacity:1, y:0 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration:0.5, delay:0.5 }}
+                  className="max-w-[900px] text-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed"
+                >
                   Our platform offers a suite of tools designed to make your hiring process more efficient and effective.
-                </p>
+                </motion.p>
               </div>
-            </div>
+            </motion.div>
             <div className="mx-auto grid max-w-5xl items-start gap-8 sm:grid-cols-2 md:gap-12 lg:grid-cols-3 lg:max-w-none mt-12">
-              <Card className="shadow-lg hover:shadow-xl transition-shadow">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-center bg-primary/10 rounded-full w-12 h-12 mb-4">
-                    <BarChartBig className="h-6 w-6 text-primary" />
-                  </div>
-                  <CardTitle className="font-headline">AI-Powered Resume Ranking</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription>
-                    Automatically rank candidates based on job description relevance. Get match scores and AI-generated feedback to quickly identify top talent.
-                  </CardDescription>
-                  <ul className="mt-4 space-y-2 text-sm">
-                    <li className="flex items-center"><CheckCircle className="mr-2 h-4 w-4 text-accent" />Intelligent Skill Matching</li>
-                    <li className="flex items-center"><CheckCircle className="mr-2 h-4 w-4 text-accent" />ATS Compatibility Insights</li>
-                    <li className="flex items-center"><CheckCircle className="mr-2 h-4 w-4 text-accent" />Customizable Filtering</li>
-                  </ul>
-                </CardContent>
-              </Card>
-              <Card className="shadow-lg hover:shadow-xl transition-shadow">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-center bg-primary/10 rounded-full w-12 h-12 mb-4">
-                    <Users className="h-6 w-6 text-primary" />
-                  </div>
-                  <CardTitle className="font-headline">ATS Score Finder (Coming Soon)</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription>
-                    Get a detailed analysis of how well resumes are optimized for Applicant Tracking Systems. Improve your candidates' chances of getting noticed.
-                  </CardDescription>
-                    <ul className="mt-4 space-y-2 text-sm">
-                    <li className="flex items-center"><CheckCircle className="mr-2 h-4 w-4 text-accent" />Resume Structure Analysis</li>
-                    <li className="flex items-center"><CheckCircle className="mr-2 h-4 w-4 text-accent" />Keyword Optimization Tips</li>
-                    <li className="flex items-center"><CheckCircle className="mr-2 h-4 w-4 text-accent" />Format Compatibility Check</li>
-                  </ul>
-                </CardContent>
-              </Card>
-              <Card className="shadow-lg hover:shadow-xl transition-shadow">
-                <CardHeader className="pb-4">
-                   <div className="flex items-center justify-center bg-primary/10 rounded-full w-12 h-12 mb-4">
-                    <Lock className="h-6 w-6 text-primary" />
-                  </div>
-                  <CardTitle className="font-headline">Secure Authentication & Access</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription>
-                    Manage your recruitment data with robust user authentication and a personalized dashboard to access all your tools.
-                  </CardDescription>
-                   <ul className="mt-4 space-y-2 text-sm">
-                    <li className="flex items-center"><CheckCircle className="mr-2 h-4 w-4 text-accent" />Secure Sign-Up & Login</li>
-                    <li className="flex items-center"><CheckCircle className="mr-2 h-4 w-4 text-accent" />Personalized User Dashboard</li>
-                    <li className="flex items-center"><CheckCircle className="mr-2 h-4 w-4 text-accent" />Role-Based Access (Future)</li>
-                  </ul>
-                </CardContent>
-              </Card>
+              {[
+                {
+                  icon: BarChartBig,
+                  title: "AI-Powered Resume Ranking",
+                  description: "Automatically rank candidates based on job description relevance. Get match scores and AI-generated feedback to quickly identify top talent.",
+                  items: ["Intelligent Skill Matching", "ATS Compatibility Insights", "Customizable Filtering"],
+                  delay: 0.3
+                },
+                {
+                  icon: Users,
+                  title: "ATS Score Finder (Coming Soon)",
+                  description: "Get a detailed analysis of how well resumes are optimized for Applicant Tracking Systems. Improve your candidates' chances of getting noticed.",
+                  items: ["Resume Structure Analysis", "Keyword Optimization Tips", "Format Compatibility Check"],
+                  delay: 0.45
+                },
+                {
+                  icon: Lock,
+                  title: "Secure Authentication & Access",
+                  description: "Manage your recruitment data with robust user authentication and a personalized dashboard to access all your tools.",
+                  items: ["Secure Sign-Up & Login", "Personalized User Dashboard", "Role-Based Access (Future)"],
+                  delay: 0.6
+                }
+              ].map((feature, index) => (
+                <motion.div
+                  key={index}
+                  initial="initial"
+                  animate="initial"
+                  whileHover="hover"
+                  variants={cardHoverVariants}
+                >
+                  <motion.div
+                     variants={sectionVariants}
+                     initial="hidden"
+                     whileInView="visible"
+                     viewport={{ once: true, amount: 0.2 }}
+                     custom={feature.delay}
+                     className="h-full"
+                  >
+                  <Card className="shadow-lg h-full flex flex-col">
+                    <CardHeader className="pb-4">
+                      <motion.div 
+                        initial={{ opacity: 0, scale: 0.5 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.4, delay: feature.delay + 0.1}}
+                        className="flex items-center justify-center bg-primary/10 rounded-full w-12 h-12 mb-4"
+                      >
+                        <feature.icon className="h-6 w-6 text-primary" />
+                      </motion.div>
+                      <CardTitle className="font-headline">{feature.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex flex-col flex-grow">
+                      <CardDescription>
+                        {feature.description}
+                      </CardDescription>
+                      <motion.ul className="mt-4 space-y-2 text-sm flex-grow">
+                        {feature.items.map((item, itemIndex) => (
+                          <motion.li
+                            key={itemIndex}
+                            custom={feature.delay + 0.2 + itemIndex * 0.1}
+                            initial="hidden"
+                            whileInView="visible"
+                            viewport={{ once: true }}
+                            variants={itemVariants}
+                            className="flex items-center"
+                          >
+                            <CheckCircle className="mr-2 h-4 w-4 text-accent" />{item}
+                          </motion.li>
+                        ))}
+                      </motion.ul>
+                    </CardContent>
+                  </Card>
+                  </motion.div>
+                </motion.div>
+              ))}
             </div>
           </div>
         </section>
@@ -130,26 +250,42 @@ export default function LandingPage() {
         {/* Call to Action Section */}
         <section className="w-full py-12 md:py-24 lg:py-32 bg-muted/40">
           <div className="container grid items-center justify-center gap-4 px-4 text-center md:px-6">
-            <div className="space-y-3">
+            <motion.div
+              className="space-y-3"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.5 }}
+              variants={sectionVariants}
+              custom={0.2}
+            >
               <h2 className="text-3xl font-bold tracking-tighter md:text-4xl/tight font-headline">
                 Ready to Revolutionize Your Hiring?
               </h2>
               <p className="mx-auto max-w-[600px] text-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
                 Join ResumeRank AI today and start making data-driven hiring decisions.
               </p>
-            </div>
-            <div className="mx-auto w-full max-w-sm space-y-2">
-              <Link
-                href="/signup"
-                className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
-                prefetch={false}
-              >
-                Sign Up for Free
-              </Link>
+            </motion.div>
+            <motion.div
+              className="mx-auto w-full max-w-sm space-y-2"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.5 }}
+              variants={sectionVariants}
+              custom={0.4}
+            >
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Link
+                  href="/signup"
+                  className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+                  prefetch={false}
+                >
+                  Sign Up for Free
+                </Link>
+              </motion.div>
               <p className="text-xs text-muted-foreground">
                 Get started with our core features. No credit card required.
               </p>
-            </div>
+            </motion.div>
           </div>
         </section>
       </main>
