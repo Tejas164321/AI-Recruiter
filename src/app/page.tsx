@@ -12,8 +12,9 @@ import { useToast } from "@/hooks/use-toast";
 import { performBulkScreening, type PerformBulkScreeningOutput, type PerformBulkScreeningInput } from "@/ai/flows/rank-candidates";
 import { extractJobRoles, type ExtractJobRolesInput, type ExtractJobRolesOutput } from "@/ai/flows/extract-job-roles";
 import type { ResumeFile, RankedCandidate, Filters, JobDescriptionFile, JobScreeningResult, ExtractedJobRole } from "@/lib/types";
-import { Users, ScanSearch, Loader2, Briefcase } from "lucide-react";
+import { Users, ScanSearch, Briefcase } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { LoadingIndicator } from "@/components/loading-indicator"; // Import the new loading indicator
 
 const initialFilters: Filters = {
   scoreRange: [0, 100],
@@ -50,7 +51,7 @@ export default function HomePage() {
   }, [selectedJobRoleId, allScreeningResults]);
 
   const scrollToResults = useCallback(() => {
-    if (!isLoadingAllScreenings && !isLoadingRoles && allScreeningResults.length > 0) {
+    if (!isLoadingAllScreenings && !isLoadingRoles && allScreeningResults.length > 0 && resultsSectionRef.current) {
       const timer = setTimeout(() => {
         resultsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 100);
@@ -59,6 +60,7 @@ export default function HomePage() {
   }, [isLoadingAllScreenings, isLoadingRoles, allScreeningResults]);
 
   useEffect(scrollToResults, [scrollToResults]);
+
 
   const startBulkScreeningProcess = useCallback(async () => {
     if (extractedJobRoles.length === 0 || uploadedResumeFiles.length === 0) {
@@ -69,7 +71,7 @@ export default function HomePage() {
     }
 
     setIsLoadingAllScreenings(true);
-    // setAllScreeningResults([]); // Clear previous results before starting a new bulk process
+    setAllScreeningResults([]); // Clear previous results before starting a new bulk process
 
     try {
       const input: PerformBulkScreeningInput = {
@@ -84,22 +86,26 @@ export default function HomePage() {
         toast({ title: "Screening Complete", description: `All candidates processed for ${output.length} job role(s).` });
         
         const currentSelectionIsValid = selectedJobRoleId && output.some(res => res.jobDescriptionId === selectedJobRoleId);
-        if (!currentSelectionIsValid && output[0]) { // Ensure output[0] exists
+        
+        if (!currentSelectionIsValid && output[0]) { 
           setSelectedJobRoleId(output[0].jobDescriptionId);
-        } else if (!selectedJobRoleId && output[0]) { // If no role was selected at all, select the first
+        } else if (!selectedJobRoleId && output[0]) { 
              setSelectedJobRoleId(output[0].jobDescriptionId);
         }
       } else {
         toast({ title: "Screening Complete", description: "No screening results were generated.", variant: "default"});
+        setSelectedJobRoleId(null); // Ensure no role is selected if no results.
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred during bulk screening.";
       toast({ title: "Bulk Screening Failed", description: errorMessage, variant: "destructive" });
-      setAllScreeningResults([]); // Clear results on failure
+      setAllScreeningResults([]); 
+      setSelectedJobRoleId(null);
     } finally {
       setIsLoadingAllScreenings(false);
     }
   }, [extractedJobRoles, uploadedResumeFiles, toast, selectedJobRoleId]);
+
 
   const fetchExtractedJobRoles = useCallback(async (jdFiles: JobDescriptionFile[]) => {
     if (jdFiles.length === 0) {
@@ -118,18 +124,18 @@ export default function HomePage() {
         jobDescriptionDocuments: jdFiles.map(jd => ({ name: jd.name, dataUri: jd.dataUri })),
       };
       const output: ExtractJobRolesOutput = await extractJobRoles(input);
-      setExtractedJobRoles(output);
+      
+      const validRoles = output.filter(role => role.name && role.contentDataUri);
+      setExtractedJobRoles(validRoles);
 
-      if (output.length > 0) {
-        const firstRoleId = output[0].id;
+      if (validRoles.length > 0) {
+        const firstRoleId = validRoles[0].id;
         setSelectedJobRoleId(firstRoleId); 
-        // Auto-trigger bulk screening if resumes are already present
         if (uploadedResumeFiles.length > 0) {
-           // Delay slightly to allow state updates to propagate before starting bulk screening
            setTimeout(() => startBulkScreeningProcess(), 100);
         }
       } else {
-        toast({ title: "No Job Roles Found", description: "Could not extract specific job roles. Ensure they are valid job descriptions.", variant: "default" });
+        toast({ title: "No Valid Job Roles Found", description: "Could not extract specific job roles. Ensure documents are valid job descriptions.", variant: "default" });
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred during role extraction.";
@@ -139,6 +145,7 @@ export default function HomePage() {
       setIsLoadingRoles(false);
     }
   }, [toast, uploadedResumeFiles, startBulkScreeningProcess]);
+
 
   const handleJobDescriptionUpload = useCallback(async (files: File[]) => {
     const newJdFilesPromises = files.map(async (file) => {
@@ -159,6 +166,7 @@ export default function HomePage() {
     }
   }, [fetchExtractedJobRoles, toast]);
 
+
   const handleResumesUpload = useCallback(async (files: File[]) => {
      const newResumeFilesPromises = files.map(async (file) => {
       const dataUri = await new Promise<string>((resolve, reject) => {
@@ -172,9 +180,7 @@ export default function HomePage() {
     try {
         const newResumeFiles = await Promise.all(newResumeFilesPromises);
         setUploadedResumeFiles(newResumeFiles);
-        // Auto-trigger bulk screening if job roles are already present
         if (extractedJobRoles.length > 0) {
-            // Delay slightly to allow state updates to propagate
             setTimeout(() => startBulkScreeningProcess(), 100);
         }
     } catch (error) {
@@ -185,7 +191,7 @@ export default function HomePage() {
 
   const handleJobRoleChange = useCallback((roleId: string | null) => {
     setSelectedJobRoleId(roleId);
-    setFilters(initialFilters); // Reset filters when job role changes
+    setFilters(initialFilters); 
   }, []);
 
   const handleScreenAllButtonClick = async () => {
@@ -221,6 +227,11 @@ export default function HomePage() {
     return filterCandidates(currentScreeningResult?.candidates, filters);
   }, [currentScreeningResult, filters, filterCandidates]);
 
+  const getLoadingStage = (): "roles" | "screening" | "general" => {
+    if (isLoadingRoles) return "roles";
+    if (isLoadingAllScreenings) return "screening";
+    return "general";
+  }
 
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-8">
@@ -286,8 +297,8 @@ export default function HomePage() {
           size="lg"
           className="bg-accent hover:bg-accent/90 text-accent-foreground text-base px-8 py-6 shadow-md hover:shadow-lg transition-all duration-150 hover:scale-105 active:scale-95"
         >
-          {isLoadingAllScreenings ? ( 
-            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+          {(isLoadingAllScreenings || isLoadingRoles) ? ( 
+            <BrainCircuit className="w-5 h-5 mr-2 animate-spin" /> // Simple spinner for button, main anim elsewhere
           ) : (
             <ScanSearch className="w-5 h-5 mr-2" />
           )}
@@ -299,20 +310,12 @@ export default function HomePage() {
         {(isLoadingRoles || isLoadingAllScreenings) && (
            <Card className="shadow-lg">
                <CardContent className="pt-6">
-               <div className="text-center py-8 space-y-6">
-                   <Loader2 className="w-16 h-16 mx-auto text-primary animate-spin" />
-                   <p className="text-xl font-semibold text-primary">
-                   {isLoadingRoles ? "Extracting job roles..." : (isLoadingAllScreenings ? "AI is analyzing all resumes and roles..." : "Processing...")}
-                   </p>
-                   <p className="text-sm text-muted-foreground">
-                   This may take a few moments. Please be patient.
-                   </p>
-               </div>
+                  <LoadingIndicator stage={getLoadingStage()} />
                </CardContent>
            </Card>
         )}
 
-        {!isLoadingRoles && uploadedJobDescriptionFiles.length > 0 && (
+        {!isLoadingRoles && uploadedJobDescriptionFiles.length > 0 && extractedJobRoles.length > 0 && (
           <>
             <Separator className="my-8" />
             <FilterControls 
@@ -336,8 +339,9 @@ export default function HomePage() {
                     Results for: {currentScreeningResult.jobDescriptionName}
                   </CardTitle>
                   <CardDescription>
-                    Candidates ranked for the job role "{currentScreeningResult.jobDescriptionName}".
-                    Total candidates processed for this role: {currentScreeningResult.candidates.length}.
+                    Candidates ranked for job role: "{currentScreeningResult.jobDescriptionName}".
+                    Total candidates uploaded: {uploadedResumeFiles.length}. 
+                    Showing {displayedCandidates.length} of {currentScreeningResult.candidates.length} processed for this role.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -346,7 +350,12 @@ export default function HomePage() {
                     onViewFeedback={handleViewFeedback} 
                   />
                   {currentScreeningResult.candidates && currentScreeningResult.candidates.length > 0 && displayedCandidates.length === 0 && (
-                      <p className="text-center text-muted-foreground py-4">No candidates match the current filter criteria for this job role.</p>
+                      <p className="text-center text-muted-foreground py-4">No candidates match the current filter criteria for "{currentScreeningResult.jobDescriptionName}".</p>
+                  )}
+                   {currentScreeningResult.candidates.length === 0 && uploadedResumeFiles.length > 0 && (
+                    <p className="text-center text-muted-foreground py-4">
+                      No candidates were processed successfully for "{currentScreeningResult.jobDescriptionName}". Check if resumes were uploaded.
+                    </p>
                   )}
                 </CardContent>
               </Card>
@@ -383,5 +392,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    
