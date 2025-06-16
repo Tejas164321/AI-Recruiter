@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileUploadArea } from "@/components/file-upload-area";
@@ -124,11 +124,10 @@ export default function HomePage() {
         jobDescriptions: jobDescriptionFiles.map(jd => ({ name: jd.name, dataUri: jd.dataUri })),
         resumes: resumeFiles.map(rf => ({ name: rf.name, dataUri: rf.dataUri })),
       };
-      // The rankCandidates flow now returns RankCandidatesOutput which is JobScreeningResult[]
-      // where candidates already have their IDs.
+      
       const output: RankCandidatesOutput = await rankCandidates(input);
       
-      setScreeningResults(output); // No more client-side ID processing needed
+      setScreeningResults(output); 
       toast({ title: "Success", description: "Resumes screened and ranked successfully." });
     } catch (error) {
       console.error("Error screening resumes:", error);
