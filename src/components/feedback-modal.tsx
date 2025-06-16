@@ -15,9 +15,9 @@ import type { RankedCandidate } from "@/lib/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { generateInterviewQuestions, type GenerateInterviewQuestionsInput, type GenerateInterviewQuestionsOutput } from "@/ai/flows/generate-interview-questions";
-import { generateCandidateFeedback, type GenerateCandidateFeedbackInput, type GenerateCandidateFeedbackOutput } from "@/ai/flows/generate-candidate-feedback";
+// Removed import for generateCandidateFeedback as it's no longer used here
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, HelpCircle, Lightbulb, MessageSquarePlus } from "lucide-react";
+import { Loader2, HelpCircle, Lightbulb } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 
@@ -34,9 +34,7 @@ export function FeedbackModal({ isOpen, onClose, candidate, jobDescriptionDataUr
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState<boolean>(false);
   const [questionError, setQuestionError] = useState<string | null>(null);
 
-  const [alternativeFeedback, setAlternativeFeedback] = useState<string | null>(null);
-  const [isGeneratingAltFeedback, setIsGeneratingAltFeedback] = useState<boolean>(false);
-  const [altFeedbackError, setAltFeedbackError] = useState<string | null>(null);
+  // Removed state for alternativeFeedback, isGeneratingAltFeedback, altFeedbackError
 
   const { toast } = useToast();
 
@@ -72,47 +70,14 @@ export function FeedbackModal({ isOpen, onClose, candidate, jobDescriptionDataUr
     }
   }, [candidate, jobDescriptionDataUri, toast]);
 
-  const handleGenerateAlternativeFeedback = useCallback(async () => {
-    if (!candidate || !jobDescriptionDataUri || !candidate.resumeDataUri) {
-      setAltFeedbackError("Missing necessary information (candidate, job description, or resume data) to generate alternative feedback.");
-      return;
-    }
-
-    setIsGeneratingAltFeedback(true);
-    setAltFeedbackError(null);
-    setAlternativeFeedback(null);
-
-    try {
-      const input: GenerateCandidateFeedbackInput = {
-        candidateName: candidate.name,
-        jobDescriptionDataUri: jobDescriptionDataUri,
-        resumeDataUri: candidate.resumeDataUri,
-        matchScore: candidate.score,
-      };
-      const output: GenerateCandidateFeedbackOutput = await generateCandidateFeedback(input);
-      setAlternativeFeedback(output.feedback);
-      if (!output.feedback) {
-         toast({ title: "No Alternative Feedback", description: "The AI couldn't generate alternative feedback.", variant: "default"});
-      }
-    } catch (error) {
-      console.error("Error generating alternative feedback:", error);
-      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-      setAltFeedbackError(`Failed to generate alternative feedback: ${errorMessage}`);
-      toast({ title: "Error Generating Alt. Feedback", description: `An error occurred: ${errorMessage}`, variant: "destructive"});
-    } finally {
-      setIsGeneratingAltFeedback(false);
-    }
-  }, [candidate, jobDescriptionDataUri, toast]);
-
+  // Removed handleGenerateAlternativeFeedback callback
 
   React.useEffect(() => {
     if (!isOpen) {
       setInterviewQuestions([]);
       setIsGeneratingQuestions(false);
       setQuestionError(null);
-      setAlternativeFeedback(null);
-      setIsGeneratingAltFeedback(false);
-      setAltFeedbackError(null);
+      // Removed cleanup for alternative feedback state
     }
   }, [isOpen]);
    
@@ -120,9 +85,7 @@ export function FeedbackModal({ isOpen, onClose, candidate, jobDescriptionDataUr
     setInterviewQuestions([]);
     setIsGeneratingQuestions(false);
     setQuestionError(null);
-    setAlternativeFeedback(null);
-    setIsGeneratingAltFeedback(false);
-    setAltFeedbackError(null);
+    // Removed cleanup for alternative feedback state on candidate change
   },[candidate?.id]);
 
 
@@ -164,48 +127,10 @@ export function FeedbackModal({ isOpen, onClose, candidate, jobDescriptionDataUr
 
             <Separator />
 
-            <div>
-              <h4 className="font-semibold text-foreground mb-2 flex items-center">
-                <MessageSquarePlus className="w-5 h-5 mr-2 text-primary" />
-                Alternative Feedback
-              </h4>
-              {altFeedbackError && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertTitle>Error</AlertTitle>
-                  <AlertDescription>{altFeedbackError}</AlertDescription>
-                </Alert>
-              )}
-              {isGeneratingAltFeedback && (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="w-8 h-8 mr-2 animate-spin text-primary" />
-                  <p className="text-muted-foreground">Generating alternative feedback...</p>
-                </div>
-              )}
-              {!isGeneratingAltFeedback && alternativeFeedback && (
-                <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-                  {alternativeFeedback}
-                </p>
-              )}
-              {!isGeneratingAltFeedback && !alternativeFeedback && !altFeedbackError && (
-                 <p className="text-sm text-muted-foreground">Click the button below to generate an alternative perspective on feedback.</p>
-              )}
-              <Button 
-                onClick={handleGenerateAlternativeFeedback} 
-                disabled={isGeneratingAltFeedback || !jobDescriptionDataUri || !candidate.resumeDataUri}
-                className="mt-4 w-full sm:w-auto"
-                variant="outline"
-              >
-                {isGeneratingAltFeedback ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Lightbulb className="w-4 h-4 mr-2" />
-                )}
-                {alternativeFeedback ? "Regenerate Alternative Feedback" : "Generate Alternative Feedback"}
-              </Button>
-            </div>
+            {/* Removed Alternative Feedback section */}
 
-            <Separator />
-
+            {/* <Separator /> // This separator might now be redundant if Alternative Feedback was the only thing between it and Questions */}
+            
             <div>
               <h4 className="font-semibold text-foreground mb-2 flex items-center">
                 <HelpCircle className="w-5 h-5 mr-2 text-primary" />
@@ -256,4 +181,3 @@ export function FeedbackModal({ isOpen, onClose, candidate, jobDescriptionDataUr
     </Dialog>
   );
 }
-
