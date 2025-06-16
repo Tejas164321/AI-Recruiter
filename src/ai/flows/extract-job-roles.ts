@@ -75,7 +75,7 @@ If the document does not appear to be a job description or no clear job roles ca
 Pay close attention to formatting cues like headings, horizontal lines, page breaks, or significant spacing that might separate different job descriptions.
 The "content" field for each job description must be the full text for that specific job, not a summary.`,
   config: {
-    temperature: 0.1,
+    temperature: 0, // Changed from 0.1 to 0 for more deterministic output
   },
 });
 
@@ -110,14 +110,9 @@ const extractJobRolesFlow = ai.defineFlow(
           segmentedJdsOutput.forEach((segmentedJd, index) => {
             let displayName = segmentedJd.title?.replace(/[^\w\s.-]/gi, '').trim() || '';
             if (!displayName) {
-              // If no title from AI, use a placeholder.
               displayName = segmentedJdsOutput.length > 1 ? `Job Role ${index + 1}` : "Untitled Job Role";
             }
-            // If there's only one JD identified in this document, and still no title from AI,
-            // and only one document was uploaded overall, we *could* use the original file name,
-            // but the request is to avoid file names in display.
-            // So, stick to "Untitled Job Role" if title extraction fails.
-
+            
             const content = segmentedJd.content || "No content extracted for this job description.";
             const contentDataUri = `data:text/plain;charset=utf-8;base64,${Buffer.from(content).toString('base64')}`;
 
@@ -130,9 +125,10 @@ const extractJobRolesFlow = ai.defineFlow(
           });
         } else {
           // Fallback: if segmentation returns empty, treat the whole document as one job role
+          // using a generic name and not the original file name for display.
           allExtractedRoles.push({
             id: randomUUID(),
-            name: "Untitled Job Role", // Use generic name
+            name: "Untitled Job Role", 
             contentDataUri: doc.dataUri, 
             originalDocumentName: doc.name,
           });
@@ -143,7 +139,7 @@ const extractJobRolesFlow = ai.defineFlow(
         // Fallback on error during segmentation for a specific file
         allExtractedRoles.push({
           id: randomUUID(),
-          name: "Untitled Job Role", // Use generic name
+          name: "Untitled Job Role",
           contentDataUri: doc.dataUri,
           originalDocumentName: doc.name,
         });
@@ -153,12 +149,10 @@ const extractJobRolesFlow = ai.defineFlow(
     await Promise.all(segmentationPromises);
 
     if (allExtractedRoles.length === 0 && input.jobDescriptionDocuments.length > 0) {
-        // If after all processing, no roles were extracted but documents were provided,
-        // create a fallback for each original document.
         input.jobDescriptionDocuments.forEach(doc => {
             allExtractedRoles.push({
                 id: randomUUID(),
-                name: "Untitled Job Role", // Use generic name
+                name: "Untitled Job Role",
                 contentDataUri: doc.dataUri,
                 originalDocumentName: doc.name,
             });
@@ -167,4 +161,3 @@ const extractJobRolesFlow = ai.defineFlow(
     return allExtractedRoles;
   }
 );
-
