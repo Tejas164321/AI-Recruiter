@@ -61,7 +61,7 @@ export function CandidateTable({ candidates, onViewFeedback }: CandidateTablePro
   };
 
   if (candidates.length === 0) {
-    return <p className="text-center text-muted-foreground py-8">No candidates processed yet. Upload resumes and a job description to see results.</p>;
+    return <p className="text-center text-muted-foreground py-8">No candidates to display for this job role and filter combination.</p>;
   }
 
   const getScoreBadge = (score: number) => {
