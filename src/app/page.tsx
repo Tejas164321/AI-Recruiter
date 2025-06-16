@@ -88,23 +88,25 @@ export default function LandingPage() {
                   className="flex flex-col gap-2 min-[400px]:flex-row"
                 >
                   <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}>
-                    <Link
-                      href="/signup"
-                      className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
-                      prefetch={false}
-                    >
-                      Get Started
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
+                    <Button asChild size="lg">
+                      <Link
+                        href="/signup"
+                        prefetch={false}
+                      >
+                        Get Started
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
                   </motion.div>
                   <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}>
-                    <Link
-                      href="/#features"
-                      className="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-8 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
-                      prefetch={false}
-                    >
-                      Learn More
-                    </Link>
+                     <Button variant="outline" size="lg" asChild>
+                        <Link
+                          href="/#features"
+                          prefetch={false}
+                        >
+                          Learn More
+                        </Link>
+                      </Button>
                   </motion.div>
                 </motion.div>
               </motion.div>
@@ -274,13 +276,14 @@ export default function LandingPage() {
               custom={0.4}
             >
               <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}>
-                <Link
-                  href="/signup"
-                  className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow-lg hover:shadow-primary/40 transition-all duration-300 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
-                  prefetch={false}
-                >
-                  Sign Up for Free
-                </Link>
+                <Button asChild size="lg" className="w-full shadow-lg hover:shadow-primary/40 transition-all duration-300">
+                    <Link
+                    href="/signup"
+                    prefetch={false}
+                    >
+                    Sign Up for Free
+                    </Link>
+                </Button>
               </motion.div>
               <p className="text-xs text-muted-foreground">
                 Get started with our core features. No credit card required.
