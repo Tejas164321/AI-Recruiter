@@ -66,7 +66,7 @@ export default function DashboardPage() {
             variants={cardHoverVariants}
           >
             <Link href="/ats-score-finder" passHref className="block group">
-               <Card className="shadow-lg h-full flex flex-col border border-primary/10 hover:border-primary/50 transition-colors duration-300">
+               <Card className="shadow-lg h-full flex flex-col hover:border-primary/50 transition-colors duration-300"> {/* Removed static border-primary/10 */}
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <BarChartBig className="w-10 h-10 text-primary mb-2" />
@@ -89,7 +89,7 @@ export default function DashboardPage() {
             variants={cardHoverVariants}
           >
             <Link href="/interview-question-generator" passHref className="block group">
-               <Card className="shadow-lg h-full flex flex-col border border-primary/10 hover:border-primary/50 transition-colors duration-300">
+               <Card className="shadow-lg h-full flex flex-col hover:border-primary/50 transition-colors duration-300"> {/* Removed static border-primary/10 */}
                  <CardHeader>
                     <div className="flex items-center justify-between">
                         <MessageSquarePlus className="w-10 h-10 text-primary mb-2" />
