@@ -199,34 +199,23 @@ export default function HomePage() {
         </div>
       </div>
 
-      <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
-        <CardHeader>
-            <CardTitle className="flex items-center text-2xl font-headline">
-                <ScanSearch className="w-7 h-7 mr-3 text-primary" />
-                Start Screening
-            </CardTitle>
-            <CardDescription>
-                Once you've uploaded the job description and resumes, click below to screen and rank them using AI.
-            </CardDescription>
-        </CardHeader>
-        <CardContent className="flex justify-center">
-            <Button
-            onClick={handleScreenResumes}
-            disabled={isLoading || !jobDescriptionDataUri || resumeFiles.length === 0}
-            size="lg"
-            className="bg-accent hover:bg-accent/90 text-accent-foreground text-base px-8 py-6 shadow-md hover:shadow-lg transition-all duration-150 hover:scale-105 active:scale-95"
-            aria-live="polite"
-            aria-busy={isLoading}
-            >
-            {isLoading ? (
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-            ) : (
-                <ScanSearch className="w-5 h-5 mr-2" />
-            )}
-            Screen & Rank Resumes
-            </Button>
-        </CardContent>
-      </Card>
+      <div className="flex justify-center pt-4">
+        <Button
+          onClick={handleScreenResumes}
+          disabled={isLoading || !jobDescriptionDataUri || resumeFiles.length === 0}
+          size="lg"
+          className="bg-accent hover:bg-accent/90 text-accent-foreground text-base px-8 py-6 shadow-md hover:shadow-lg transition-all duration-150 hover:scale-105 active:scale-95"
+          aria-live="polite"
+          aria-busy={isLoading}
+        >
+          {isLoading ? (
+            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+          ) : (
+            <ScanSearch className="w-5 h-5 mr-2" />
+          )}
+          Screen & Rank Resumes
+        </Button>
+      </div>
       
       {isLoading && (
         <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
