@@ -204,3 +204,4 @@ export function FeedbackModal({ isOpen, onClose, candidate, jobDescriptionDataUr
     </Dialog>
   );
 }
+
