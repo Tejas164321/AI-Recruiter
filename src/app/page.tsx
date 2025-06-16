@@ -118,7 +118,7 @@ export default function LandingPage() {
                   width="600"
                   height="400"
                   alt="ResumeRank AI Hero"
-                  className="mx-auto aspect-video overflow-hidden rounded-xl object-cover sm:w-full lg:order-last shadow-2xl"
+                  className="mx-auto aspect-video overflow-hidden rounded-xl object-cover sm:w-full lg:order-last shadow-[0_20px_40px_-10px_hsl(var(--primary)/0.25)]"
                   priority
                 />
               </motion.div>
