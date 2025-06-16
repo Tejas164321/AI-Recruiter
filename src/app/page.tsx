@@ -9,7 +9,7 @@ import { CandidateTable } from "@/components/candidate-table";
 import { FeedbackModal } from "@/components/feedback-modal";
 import { FilterControls } from "@/components/filter-controls";
 import { useToast } from "@/hooks/use-toast";
-import { rankCandidates, type RankCandidatesInput, type RankCandidatesOutput } from "@/ai/flows/rank-candidates";
+import { rankCandidates, type RankCandidatesOutput } from "@/ai/flows/rank-candidates";
 import { extractJobRoles, type ExtractJobRolesInput, type ExtractJobRolesOutput } from "@/ai/flows/extract-job-roles";
 import type { ResumeFile, RankedCandidate, Filters, JobDescriptionFile, JobScreeningResult, ExtractedJobRole } from "@/lib/types";
 import { Users, ScanSearch, Loader2, Briefcase } from "lucide-react";
@@ -58,7 +58,6 @@ export default function HomePage() {
 
     if (!targetRoleId || uploadedResumeFiles.length === 0) {
       if (uploadedResumeFiles.length === 0 && targetRoleId) {
-         // Clear previous results if no resumes but a role is selected
         setCurrentScreeningResult(null);
       }
       return;
@@ -66,25 +65,31 @@ export default function HomePage() {
 
     const roleToRank = extractedJobRoles.find(role => role.id === targetRoleId);
     if (!roleToRank) {
-      toast({ title: "Error", description: "Selected job role not found.", variant: "destructive" });
+      toast({ title: "Error", description: "Selected job role not found for ranking.", variant: "destructive" });
+      setCurrentScreeningResult(null); 
       return;
     }
 
     setIsLoadingCandidates(true);
-    setCurrentScreeningResult(null); // Clear previous results before new ranking
+    setCurrentScreeningResult(null); 
 
     try {
-      const input: RankCandidatesInput = {
+      const input = { // RankCandidatesInput type is inferred
         targetJobDescription: { name: roleToRank.name, dataUri: roleToRank.contentDataUri },
         resumes: uploadedResumeFiles.map(rf => ({ name: rf.name, dataUri: rf.dataUri })),
       };
       
       const output: RankCandidatesOutput = await rankCandidates(input);
-      setCurrentScreeningResult(output);
-      toast({ title: "Success", description: `Resumes ranked for "${output.jobDescriptionName}".` });
+      if (output) {
+        setCurrentScreeningResult(output);
+        toast({ title: "Success", description: `Resumes ranked for "${output.jobDescriptionName}".` });
+      } else {
+        // This case should ideally not be hit if rankCandidates flow always returns valid output or throws
+        throw new Error("Ranking process returned no output.");
+      }
     } catch (error) {
       console.error("Error screening resumes:", error);
-      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred during ranking.";
       toast({ title: "Ranking Failed", description: `Error ranking for "${roleToRank.name}": ${errorMessage}.`, variant: "destructive" });
       setCurrentScreeningResult(null);
     } finally {
@@ -97,11 +102,11 @@ export default function HomePage() {
     if (jdFiles.length === 0) {
       setExtractedJobRoles([]);
       setSelectedJobRoleId(null);
-      setCurrentScreeningResult(null); // Clear results if no JDs
+      setCurrentScreeningResult(null); 
       return;
     }
     setIsLoadingRoles(true);
-    setCurrentScreeningResult(null); // Clear previous results
+    setCurrentScreeningResult(null); 
 
     try {
       const input: ExtractJobRolesInput = {
@@ -113,11 +118,9 @@ export default function HomePage() {
       if (output.length > 0) {
         const firstRoleId = output[0].id;
         setSelectedJobRoleId(firstRoleId);
-        // Automatically trigger ranking for the first role if resumes are already present
         if (uploadedResumeFiles.length > 0) {
-          triggerCandidateRanking(firstRoleId);
+          await triggerCandidateRanking(firstRoleId); // Ensure ranking is awaited here
         } else {
-          // If no resumes, ensure no stale results are shown for the new default role
           setCurrentScreeningResult(null);
         }
       } else {
@@ -126,7 +129,7 @@ export default function HomePage() {
       }
     } catch (error) {
       console.error("Error extracting job roles:", error);
-      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred during role extraction.";
       toast({ title: "Job Role Extraction Failed", description: errorMessage, variant: "destructive" });
       setExtractedJobRoles([]);
       setSelectedJobRoleId(null);
@@ -136,7 +139,6 @@ export default function HomePage() {
   }, [toast, uploadedResumeFiles, triggerCandidateRanking]);
 
   const handleJobDescriptionUpload = useCallback(async (files: File[]) => {
-    // This function is called by FileUploadArea with the full list of current files
     const newJdFilesPromises = files.map(async (file) => {
       const dataUri = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -148,15 +150,14 @@ export default function HomePage() {
     });
     try {
         const newJdFiles = await Promise.all(newJdFilesPromises);
-        setUploadedJobDescriptionFiles(newJdFiles);
-        fetchExtractedJobRoles(newJdFiles);
+        setUploadedJobDescriptionFiles(newJdFiles); // Directly set the new list
+        await fetchExtractedJobRoles(newJdFiles); // Ensure this is awaited
     } catch (error) {
         toast({ title: "Error processing JDs", description: String(error), variant: "destructive"});
     }
   }, [fetchExtractedJobRoles, toast]);
 
   const handleResumesUpload = useCallback(async (files: File[]) => {
-    // This function is called by FileUploadArea with the full list of current files
      const newResumeFilesPromises = files.map(async (file) => {
       const dataUri = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -168,9 +169,9 @@ export default function HomePage() {
     });
     try {
         const newResumeFiles = await Promise.all(newResumeFilesPromises);
-        setUploadedResumeFiles(newResumeFiles);
+        setUploadedResumeFiles(newResumeFiles); // Directly set the new list
         if (selectedJobRoleId) {
-            triggerCandidateRanking(selectedJobRoleId);
+            await triggerCandidateRanking(selectedJobRoleId); // Ensure this is awaited
         }
     } catch (error) {
          toast({ title: "Error processing resumes", description: String(error), variant: "destructive"});
@@ -178,18 +179,18 @@ export default function HomePage() {
   }, [selectedJobRoleId, triggerCandidateRanking, toast]);
 
 
-  const handleJobRoleChange = useCallback((roleId: string | null) => {
+  const handleJobRoleChange = useCallback(async (roleId: string | null) => {
     setSelectedJobRoleId(roleId);
     if (roleId) {
-      triggerCandidateRanking(roleId);
+      await triggerCandidateRanking(roleId); // Ensure ranking is awaited
     } else {
-      setCurrentScreeningResult(null); // Clear results if no role is selected
+      setCurrentScreeningResult(null); 
     }
   }, [triggerCandidateRanking]);
 
-  const handleScreenResumesButtonClick = () => {
+  const handleScreenResumesButtonClick = async () => {
     if (selectedJobRoleId) {
-      triggerCandidateRanking(selectedJobRoleId);
+      await triggerCandidateRanking(selectedJobRoleId); // Ensure ranking is awaited
     } else {
       toast({ title: "No Job Role Selected", description: "Please select a job role to rank candidates against.", variant: "destructive" });
     }
@@ -198,7 +199,6 @@ export default function HomePage() {
   const handleViewFeedback = (candidate: RankedCandidate) => {
     if (currentScreeningResult) {
       setSelectedCandidateForFeedback(candidate);
-      // jobDescriptionDataUriForFeedback is now part of currentScreeningResult
       setIsFeedbackModalOpen(true);
     }
   };
@@ -228,6 +228,7 @@ export default function HomePage() {
 
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-8">
+      {/* File Upload Section */}
       <div className="flex flex-col md:flex-row gap-8">
         <div className="flex-1">
           <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl h-full">
@@ -283,6 +284,7 @@ export default function HomePage() {
         </div>
       </div>
       
+      {/* Rank Button Section */}
       <div className="flex justify-center pt-4">
         <Button
           onClick={handleScreenResumesButtonClick}
@@ -299,77 +301,81 @@ export default function HomePage() {
         </Button>
       </div>
       
-      {(isLoadingRoles || isLoadingCandidates) &&  (
-         <div ref={resultsSectionRef}> {/* Ensure scroll target exists during loading */}
-            <Card className="shadow-lg">
-                <CardContent className="pt-6">
-                <div className="text-center py-8 space-y-6">
-                    <Loader2 className="w-16 h-16 mx-auto text-primary animate-spin" />
-                    <p className="text-xl font-semibold text-primary">
-                    {isLoadingRoles ? "Extracting job roles..." : "AI is analyzing resumes..."}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                    This may take a few moments. Please be patient.
-                    </p>
-                </div>
-                </CardContent>
-            </Card>
-         </div>
-      )}
+      {/* Filters, Loading, and Results Section Wrapper */}
+      <div ref={resultsSectionRef} className="space-y-8">
+        {(isLoadingRoles || isLoadingCandidates) && (
+           <Card className="shadow-lg">
+               <CardContent className="pt-6">
+               <div className="text-center py-8 space-y-6">
+                   <Loader2 className="w-16 h-16 mx-auto text-primary animate-spin" />
+                   <p className="text-xl font-semibold text-primary">
+                   {isLoadingRoles ? "Extracting job roles..." : "AI is analyzing resumes..."}
+                   </p>
+                   <p className="text-sm text-muted-foreground">
+                   This may take a few moments. Please be patient.
+                   </p>
+               </div>
+               </CardContent>
+           </Card>
+        )}
 
-      {(!isLoadingRoles && uploadedJobDescriptionFiles.length > 0) && (
-        <div ref={resultsSectionRef}>
-          <Separator className="my-8" />
-          <FilterControls 
-            filters={filters} 
-            onFilterChange={handleFilterChange} 
-            onResetFilters={resetFilters}
-            extractedJobRoles={extractedJobRoles}
-            selectedJobRoleId={selectedJobRoleId}
-            onJobRoleChange={handleJobRoleChange}
-            isLoadingRoles={isLoadingRoles}
-          />
-        </div>
-      )}
-
-      {!isLoadingCandidates && currentScreeningResult && (
+        {/* Filters are shown if not loading roles and JDs are uploaded */}
+        {!isLoadingRoles && uploadedJobDescriptionFiles.length > 0 && (
           <>
             <Separator className="my-8" />
-            <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl mb-8">
-              <CardHeader>
-                <CardTitle className="text-2xl font-headline text-primary flex items-center">
-                  <Briefcase className="w-6 h-6 mr-2" />
-                  Results for: {currentScreeningResult.jobDescriptionName}
-                </CardTitle>
-                <CardDescription>
-                  Candidates ranked for the job role "{currentScreeningResult.jobDescriptionName}".
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <CandidateTable 
-                  candidates={displayedCandidates} 
-                  onViewFeedback={handleViewFeedback} 
-                />
-                {displayedCandidates.length === 0 && currentScreeningResult.candidates.length > 0 && (
-                    <p className="text-center text-muted-foreground py-4">No candidates match the current filter criteria for this job role.</p>
-                )}
-                 {currentScreeningResult.candidates.length === 0 && (
-                    <p className="text-center text-muted-foreground py-4">No candidates were found or processed for this job role. Try uploading resumes.</p>
-                )}
-              </CardContent>
-            </Card>
+            <FilterControls 
+              filters={filters} 
+              onFilterChange={handleFilterChange} 
+              onResetFilters={resetFilters}
+              extractedJobRoles={extractedJobRoles}
+              selectedJobRoleId={selectedJobRoleId}
+              onJobRoleChange={handleJobRoleChange}
+              isLoadingRoles={isLoadingRoles} // Pass this to disable filters while roles load
+            />
           </>
         )}
 
-       {!isLoadingCandidates && !isLoadingRoles && !currentScreeningResult && uploadedJobDescriptionFiles.length > 0 && uploadedResumeFiles.length > 0 && selectedJobRoleId && (
-         <p className="text-center text-muted-foreground py-8">Click "Rank for Selected Job Role" or change the job role to see results.</p>
-       )}
+        {/* Results Table Section: Show if not loading candidates, not loading roles, AND currentScreeningResult is populated */}
+        {!isLoadingCandidates && !isLoadingRoles && currentScreeningResult && (
+            <>
+              <Separator className="my-8" /> {/* This separator might appear twice if filters are also shown, consider placement */}
+              <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl mb-8">
+                <CardHeader>
+                  <CardTitle className="text-2xl font-headline text-primary flex items-center">
+                    <Briefcase className="w-6 h-6 mr-2" />
+                    Results for: {currentScreeningResult.jobDescriptionName}
+                  </CardTitle>
+                  <CardDescription>
+                    Candidates ranked for the job role "{currentScreeningResult.jobDescriptionName}".
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <CandidateTable 
+                    candidates={displayedCandidates} 
+                    onViewFeedback={handleViewFeedback} 
+                  />
+                  {displayedCandidates.length === 0 && currentScreeningResult.candidates && currentScreeningResult.candidates.length > 0 && (
+                      <p className="text-center text-muted-foreground py-4">No candidates match the current filter criteria for this job role.</p>
+                  )}
+                   {(!currentScreeningResult.candidates || currentScreeningResult.candidates.length === 0) && (
+                      <p className="text-center text-muted-foreground py-4">No candidates were found or processed for this job role. Try uploading resumes.</p>
+                  )}
+                </CardContent>
+              </Card>
+            </>
+          )}
+
+        {/* Informational messages for various states when no results/table is shown */}
+        {!isLoadingCandidates && !isLoadingRoles && !currentScreeningResult && uploadedJobDescriptionFiles.length > 0 && uploadedResumeFiles.length > 0 && selectedJobRoleId && (
+          <p className="text-center text-muted-foreground py-8">Click "Rank for Selected Job Role" or change the job role to see results.</p>
+        )}
         {!isLoadingCandidates && !isLoadingRoles && !currentScreeningResult && extractedJobRoles.length > 0 && uploadedResumeFiles.length === 0 && (
             <p className="text-center text-muted-foreground py-8">Upload resumes to see candidates ranked for the selected job role.</p>
         )}
         {!isLoadingCandidates && !isLoadingRoles && extractedJobRoles.length === 0 && uploadedJobDescriptionFiles.length > 0 && (
              <p className="text-center text-muted-foreground py-8">No specific job roles could be extracted. Check your JD files or try re-uploading.</p>
         )}
+      </div>
 
 
       <FeedbackModal
