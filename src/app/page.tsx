@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useCallback, useMemo, useEffect } from "react";
+import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileUploadArea } from "@/components/file-upload-area";
@@ -38,6 +38,9 @@ export default function HomePage() {
 
   const { toast } = useToast();
 
+  const loadingSectionRef = useRef<HTMLDivElement | null>(null);
+  const resultsSectionRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isLoading) {
@@ -55,6 +58,26 @@ export default function HomePage() {
     }
     return () => clearInterval(interval);
   }, [isLoading]);
+
+  useEffect(() => {
+    if (isLoading) {
+      // Ensure the element exists before scrolling
+      const timer = setTimeout(() => {
+        loadingSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading]);
+
+  useEffect(() => {
+    if (!isLoading && rankedCandidates.length > 0) {
+      // Ensure the element exists and DOM is updated
+      const timer = setTimeout(() => {
+        resultsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100); // A small delay can help
+      return () => clearTimeout(timer);
+    }
+  }, [rankedCandidates, isLoading]);
 
 
   const handleJobDescriptionUpload = useCallback(async (files: File[]) => {
@@ -218,38 +241,40 @@ export default function HomePage() {
       </div>
       
       {isLoading && (
-        <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
-          <CardContent className="pt-6">
-            <div className="text-center py-8 space-y-4">
-              <div className="relative w-16 h-16 mx-auto">
-                {loadingSteps.map((step, index) => (
+        <div ref={loadingSectionRef}>
+          <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
+            <CardContent className="pt-6">
+              <div className="text-center py-8 space-y-4">
+                <div className="relative w-16 h-16 mx-auto">
+                  {loadingSteps.map((step, index) => (
+                    <div
+                      key={index}
+                      className={`absolute inset-0 flex items-center justify-center transition-opacity duration-500 ease-in-out ${
+                        currentLoadingStep % loadingSteps.length === index ? "opacity-100" : "opacity-0"
+                      }`}
+                    >
+                      <step.icon className="w-10 h-10 text-primary animate-pulse" />
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xl font-semibold text-primary h-6">
+                  {loadingSteps[currentLoadingStep % loadingSteps.length].text}
+                </p>
+                <div className="w-full max-w-md mx-auto bg-muted rounded-full h-3 overflow-hidden">
                   <div
-                    key={index}
-                    className={`absolute inset-0 flex items-center justify-center transition-opacity duration-500 ease-in-out ${
-                      currentLoadingStep % loadingSteps.length === index ? "opacity-100" : "opacity-0"
-                    }`}
-                  >
-                    <step.icon className="w-10 h-10 text-primary animate-pulse" />
-                  </div>
-                ))}
+                    className="bg-primary h-3 rounded-full transition-all duration-1000 ease-out"
+                    style={{ width: `${((currentLoadingStep % loadingSteps.length + 1) / loadingSteps.length) * 100}%` }}
+                  ></div>
+                </div>
+                <p className="text-sm text-muted-foreground">AI is analyzing... Please be patient.</p>
               </div>
-              <p className="text-xl font-semibold text-primary h-6">
-                {loadingSteps[currentLoadingStep % loadingSteps.length].text}
-              </p>
-              <div className="w-full max-w-md mx-auto bg-muted rounded-full h-3 overflow-hidden">
-                <div
-                  className="bg-primary h-3 rounded-full transition-all duration-1000 ease-out"
-                  style={{ width: `${((currentLoadingStep % loadingSteps.length + 1) / loadingSteps.length) * 100}%` }}
-                ></div>
-              </div>
-              <p className="text-sm text-muted-foreground">AI is analyzing... Please be patient.</p>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {!isLoading && rankedCandidates.length > 0 && (
-        <>
+        <div ref={resultsSectionRef}>
           <Separator className="my-8" />
           <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
             <CardHeader>
@@ -261,7 +286,7 @@ export default function HomePage() {
               <CandidateTable candidates={filteredCandidates} onViewFeedback={handleViewFeedback} />
             </CardContent>
           </Card>
-        </>
+        </div>
       )}
 
       <FeedbackModal
@@ -273,3 +298,4 @@ export default function HomePage() {
     </div>
   );
 }
+
