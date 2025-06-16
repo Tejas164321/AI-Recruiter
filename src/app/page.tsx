@@ -114,12 +114,12 @@ export default function LandingPage() {
                 transition={{ duration: 0.6, delay: 0.2 }}
               >
                 <Image
-                  src="https://placehold.co/600x400.png"
+                  src="/landingpage.png"
                   width="600"
                   height="400"
-                  alt="Hero"
-                  data-ai-hint="AI recruitment hiring technology"
+                  alt="ResumeRank AI Hero"
                   className="mx-auto aspect-video overflow-hidden rounded-xl object-cover sm:w-full lg:order-last shadow-2xl"
+                  priority
                 />
               </motion.div>
             </div>
@@ -323,3 +323,5 @@ export function PrivacyPage() {
     </div>
   );
 }
+
+    
