@@ -17,7 +17,7 @@ body {
     --popover: 0 0% 100%;
     --popover-foreground: 215 25% 27%;
 
-    --primary: 215 100% 64%; /* #468FFF Saturated sky-blue */
+    --primary: 215 100% 45%; /* #006FFF Darker Saturated sky-blue for better contrast */
     --primary-foreground: 215 100% 97%; /* Light color for text on primary */
 
     --secondary: 215 30% 88%; /* Muted version of primary/background */
@@ -26,7 +26,7 @@ body {
     --muted: 215 30% 88%;
     --muted-foreground: 215 20% 55%; /* Lighter text for muted components */
 
-    --accent: 163 61% 47%; /* #30BF97 Teal-green */
+    --accent: 163 61% 35%; /* #1A8C6A Darker Teal-green for better contrast */
     --accent-foreground: 163 61% 97%; /* Light color for text on accent */
 
     --destructive: 0 84.2% 60.2%;
@@ -34,7 +34,7 @@ body {
 
     --border: 215 20% 80%;
     --input: 215 20% 85%; /* Slightly lighter than border for input fields */
-    --ring: 215 100% 64%; /* Primary color for focus rings */
+    --ring: 215 100% 45%; /* Primary color for focus rings, updated to match new primary */
 
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
@@ -46,12 +46,12 @@ body {
     /* Sidebar specific colors - retain for now, may not be used extensively */
     --sidebar-background: 213 25% 92%; /* Slightly darker than main background */
     --sidebar-foreground: 215 25% 27%;
-    --sidebar-primary: 215 100% 64%;
+    --sidebar-primary: 215 100% 45%;
     --sidebar-primary-foreground: 215 100% 97%;
-    --sidebar-accent: 163 61% 47%;
+    --sidebar-accent: 163 61% 35%;
     --sidebar-accent-foreground: 163 61% 97%;
     --sidebar-border: 215 20% 75%;
-    --sidebar-ring: 215 100% 64%;
+    --sidebar-ring: 215 100% 45%;
   }
 
   .dark {
@@ -65,8 +65,8 @@ body {
     --popover: 215 28% 12%;
     --popover-foreground: 213 33% 95%;
 
-    --primary: 215 100% 64%;
-    --primary-foreground: 215 25% 15%;
+    --primary: 215 100% 55%; /* Adjusted for dark mode, slightly lighter than light mode's primary for visibility */
+    --primary-foreground: 215 25% 15%; /* Dark text on a moderately light primary for dark mode */
 
     --secondary: 215 25% 25%;
     --secondary-foreground: 213 33% 95%;
@@ -74,15 +74,15 @@ body {
     --muted: 215 25% 25%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 163 61% 47%;
-    --accent-foreground: 215 25% 15%;
+    --accent: 163 61% 40%; /* Adjusted for dark mode, slightly lighter than light mode's accent */
+    --accent-foreground: 215 25% 15%; /* Dark text on a moderately light accent for dark mode */
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
 
     --border: 215 25% 30%;
     --input: 215 25% 30%;
-    --ring: 215 100% 64%;
+    --ring: 215 100% 55%; /* Adjusted ring for dark mode */
 
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
@@ -92,12 +92,12 @@ body {
     
     --sidebar-background: 215 28% 12%;
     --sidebar-foreground: 213 33% 95%;
-    --sidebar-primary: 215 100% 64%;
+    --sidebar-primary: 215 100% 55%;
     --sidebar-primary-foreground: 215 25% 15%;
-    --sidebar-accent: 163 61% 47%;
+    --sidebar-accent: 163 61% 40%;
     --sidebar-accent-foreground: 215 25% 15%;
     --sidebar-border: 215 25% 25%;
-    --sidebar-ring: 215 100% 64%;
+    --sidebar-ring: 215 100% 55%;
   }
 }
 
