@@ -45,11 +45,11 @@ export default function HomePage() {
       interval = setInterval(() => {
         setCurrentLoadingStep((prevStep) => {
           if (prevStep === loadingSteps.length -1) {
-            return prevStep; // Stay on last step if already there
+            return prevStep; 
           }
           return (prevStep + 1);
         });
-      }, 2000); // Change step every 2 seconds
+      }, 2000); 
     } else {
       setCurrentLoadingStep(0);
     }
@@ -146,56 +146,58 @@ export default function HomePage() {
     });
   }, [rankedCandidates, filters]);
 
-  const LoadingIcon = loadingSteps[currentLoadingStep % loadingSteps.length].icon;
-
-
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-8">
-      <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
-        <CardHeader>
-          <CardTitle className="flex items-center text-2xl font-headline">
-            <FileText className="w-7 h-7 mr-3 text-primary" />
-            Job Description
-          </CardTitle>
-          <CardDescription>
-            Upload the job description file (PDF, TXT, or MD). The AI will use this to rank candidate resumes.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <FileUploadArea
-            onFilesUpload={handleJobDescriptionUpload}
-            acceptedFileTypes={{ 
-              "application/pdf": [".pdf"],
-              "text/plain": [".txt"],
-              "text/markdown": [".md"]
-            }}
-            multiple={false}
-            label="PDF, TXT, or MD file up to 10MB"
-            id="job-description-upload"
-          />
-        </CardContent>
-      </Card>
-
-      <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
-        <CardHeader>
-          <CardTitle className="flex items-center text-2xl font-headline">
-            <Users className="w-7 h-7 mr-3 text-primary" />
-            Upload Resumes
-          </CardTitle>
-          <CardDescription>
-            Upload candidate resumes in PDF format. You can drag and drop multiple files.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <FileUploadArea
-            onFilesUpload={handleResumesUpload}
-            acceptedFileTypes={{ "application/pdf": [".pdf"] }}
-            multiple
-            label="PDF files up to 10MB each"
-            id="resume-upload"
-          />
-        </CardContent>
-      </Card>
+      <div className="flex flex-col md:flex-row gap-8">
+        <div className="flex-1">
+          <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl h-full">
+            <CardHeader>
+              <CardTitle className="flex items-center text-2xl font-headline">
+                <FileText className="w-7 h-7 mr-3 text-primary" />
+                Job Description
+              </CardTitle>
+              <CardDescription>
+                Upload the job description file (PDF, TXT, or MD). The AI will use this to rank candidate resumes.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FileUploadArea
+                onFilesUpload={handleJobDescriptionUpload}
+                acceptedFileTypes={{ 
+                  "application/pdf": [".pdf"],
+                  "text/plain": [".txt"],
+                  "text/markdown": [".md"]
+                }}
+                multiple={false}
+                label="PDF, TXT, or MD file up to 10MB"
+                id="job-description-upload"
+              />
+            </CardContent>
+          </Card>
+        </div>
+        <div className="flex-1">
+          <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl h-full">
+            <CardHeader>
+              <CardTitle className="flex items-center text-2xl font-headline">
+                <Users className="w-7 h-7 mr-3 text-primary" />
+                Upload Resumes
+              </CardTitle>
+              <CardDescription>
+                Upload candidate resumes in PDF format. You can drag and drop multiple files.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FileUploadArea
+                onFilesUpload={handleResumesUpload}
+                acceptedFileTypes={{ "application/pdf": [".pdf"] }}
+                multiple
+                label="PDF files up to 10MB each"
+                id="resume-upload"
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
         <CardHeader>
