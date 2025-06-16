@@ -10,8 +10,8 @@ import { FeedbackModal } from "@/components/feedback-modal";
 import { FilterControls } from "@/components/filter-controls";
 import { useToast } from "@/hooks/use-toast";
 import { rankCandidates, type RankCandidatesInput, type RankCandidatesOutput } from "@/ai/flows/rank-candidates";
-import type { ResumeFile, RankedCandidate, Filters } from "@/lib/types";
-import { FileText, Users, ScanSearch, Loader2, BrainCircuit } from "lucide-react";
+import type { ResumeFile, RankedCandidate, Filters, JobDescriptionFile, JobScreeningResult } from "@/lib/types";
+import { FileText, Users, ScanSearch, Loader2, BrainCircuit, Briefcase } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 const initialFilters: Filters = {
@@ -20,18 +20,19 @@ const initialFilters: Filters = {
 };
 
 const loadingSteps = [
-  { icon: FileText, text: "Reading Job Description..." },
+  { icon: FileText, text: "Reading Job Descriptions..." },
   { icon: Users, text: "Processing Resumes..." },
   { icon: ScanSearch, text: "Cross-Referencing Skills..." },
   { icon: BrainCircuit, text: "Generating AI Insights..." },
 ];
 
 export default function HomePage() {
-  const [jobDescriptionDataUri, setJobDescriptionDataUri] = useState<string | null>(null);
+  const [jobDescriptionFiles, setJobDescriptionFiles] = useState<JobDescriptionFile[]>([]);
   const [resumeFiles, setResumeFiles] = useState<ResumeFile[]>([]);
-  const [rankedCandidates, setRankedCandidates] = useState<RankedCandidate[]>([]);
+  const [screeningResults, setScreeningResults] = useState<JobScreeningResult[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [selectedCandidateForFeedback, setSelectedCandidateForFeedback] = useState<RankedCandidate | null>(null);
+  const [jobDescriptionDataUriForFeedback, setJobDescriptionDataUriForFeedback] = useState<string | null>(null);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState<boolean>(false);
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [currentLoadingStep, setCurrentLoadingStep] = useState(0);
@@ -44,15 +45,15 @@ export default function HomePage() {
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isLoading) {
-      setCurrentLoadingStep(0); 
+      setCurrentLoadingStep(0);
       interval = setInterval(() => {
         setCurrentLoadingStep((prevStep) => {
-          if (prevStep === loadingSteps.length -1) {
-            return prevStep; 
+          if (prevStep === loadingSteps.length - 1) {
+            return prevStep;
           }
           return (prevStep + 1);
         });
-      }, 2000); 
+      }, 2000);
     } else {
       setCurrentLoadingStep(0);
     }
@@ -61,7 +62,6 @@ export default function HomePage() {
 
   useEffect(() => {
     if (isLoading) {
-      // Ensure the element exists before scrolling
       const timer = setTimeout(() => {
         loadingSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 0);
@@ -70,29 +70,26 @@ export default function HomePage() {
   }, [isLoading]);
 
   useEffect(() => {
-    if (!isLoading && rankedCandidates.length > 0) {
-      // Ensure the element exists and DOM is updated
+    if (!isLoading && screeningResults.length > 0) {
       const timer = setTimeout(() => {
         resultsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100); // A small delay can help
+      }, 100);
       return () => clearTimeout(timer);
     }
-  }, [rankedCandidates, isLoading]);
-
+  }, [screeningResults, isLoading]);
 
   const handleJobDescriptionUpload = useCallback(async (files: File[]) => {
-    if (files.length === 0) {
-      setJobDescriptionDataUri(null);
-      return;
-    }
-    const file = files[0];
-    const dataUri = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = (error) => reject(error);
-      reader.readAsDataURL(file);
+    const newJobDescriptionFilesPromises = files.map(async (file) => {
+      const dataUri = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = (error) => reject(error);
+        reader.readAsDataURL(file);
+      });
+      return { id: crypto.randomUUID(), file, dataUri, name: file.name };
     });
-    setJobDescriptionDataUri(dataUri);
+    const newJobDescriptionFiles = await Promise.all(newJobDescriptionFilesPromises);
+    setJobDescriptionFiles(prev => [...prev, ...newJobDescriptionFiles].filter((v,i,a)=>a.findIndex(t=>(t.name === v.name))===i)); // Avoid duplicates by name
   }, []);
 
   const handleResumesUpload = useCallback(async (files: File[]) => {
@@ -103,15 +100,15 @@ export default function HomePage() {
         reader.onerror = (error) => reject(error);
         reader.readAsDataURL(file);
       });
-      return { id: crypto.randomUUID(), file, dataUri };
+      return { id: crypto.randomUUID(), file, dataUri, name: file.name };
     });
     const newResumeFiles = await Promise.all(newResumeFilesPromises);
-    setResumeFiles(newResumeFiles);
+    setResumeFiles(prev => [...prev, ...newResumeFiles].filter((v,i,a)=>a.findIndex(t=>(t.name === v.name))===i)); // Avoid duplicates by name
   }, []);
 
   const handleScreenResumes = async () => {
-    if (!jobDescriptionDataUri) {
-      toast({ title: "Error", description: "Job description file cannot be empty.", variant: "destructive" });
+    if (jobDescriptionFiles.length === 0) {
+      toast({ title: "Error", description: "At least one job description file is required.", variant: "destructive" });
       return;
     }
     if (resumeFiles.length === 0) {
@@ -120,23 +117,22 @@ export default function HomePage() {
     }
 
     setIsLoading(true);
-    setRankedCandidates([]); 
+    setScreeningResults([]);
 
     try {
       const input: RankCandidatesInput = {
-        jobDescriptionDataUri,
-        resumes: resumeFiles.map((rf) => rf.dataUri),
+        jobDescriptions: jobDescriptionFiles.map(jd => ({ name: jd.name, dataUri: jd.dataUri })),
+        resumes: resumeFiles.map(rf => ({ name: rf.name, dataUri: rf.dataUri })),
       };
       const output: RankCandidatesOutput = await rankCandidates(input);
       
-      const newRankedCandidates = output.map((rc, index) => ({
-        ...rc,
-        id: crypto.randomUUID(),
-        originalResumeName: resumeFiles[index]?.file.name || 'N/A',
-        resumeDataUri: resumeFiles[index]?.dataUri || '',
+      // Output is already JobScreeningResult[], ensure candidates have unique IDs if needed by CandidateTable
+      const processedOutput = output.map(jobResult => ({
+        ...jobResult,
+        candidates: jobResult.candidates.map(c => ({ ...c, id: c.id || crypto.randomUUID() }))
       }));
 
-      setRankedCandidates(newRankedCandidates);
+      setScreeningResults(processedOutput);
       toast({ title: "Success", description: "Resumes screened and ranked successfully." });
     } catch (error) {
       console.error("Error screening resumes:", error);
@@ -146,8 +142,9 @@ export default function HomePage() {
     }
   };
 
-  const handleViewFeedback = (candidate: RankedCandidate) => {
+  const handleViewFeedback = (candidate: RankedCandidate, jdDataUri: string) => {
     setSelectedCandidateForFeedback(candidate);
+    setJobDescriptionDataUriForFeedback(jdDataUri);
     setIsFeedbackModalOpen(true);
   };
 
@@ -159,15 +156,16 @@ export default function HomePage() {
     setFilters(initialFilters);
   };
 
-  const filteredCandidates = useMemo(() => {
-    return rankedCandidates.filter(candidate => {
-      const scoreMatch = candidate.score >= filters.scoreRange[0] && candidate.score <= filters.scoreRange[1];
-      const keywordMatch = filters.skillKeyword.trim() === "" || 
-                           candidate.keySkills.toLowerCase().includes(filters.skillKeyword.toLowerCase()) ||
-                           candidate.name.toLowerCase().includes(filters.skillKeyword.toLowerCase());
+  const filterCandidatesForJob = useCallback((candidates: RankedCandidate[], currentFilters: Filters): RankedCandidate[] => {
+    return candidates.filter(candidate => {
+      const scoreMatch = candidate.score >= currentFilters.scoreRange[0] && candidate.score <= currentFilters.scoreRange[1];
+      const keywordMatch = currentFilters.skillKeyword.trim() === "" || 
+                           candidate.keySkills.toLowerCase().includes(currentFilters.skillKeyword.toLowerCase()) ||
+                           candidate.name.toLowerCase().includes(currentFilters.skillKeyword.toLowerCase());
       return scoreMatch && keywordMatch;
     });
-  }, [rankedCandidates, filters]);
+  }, []);
+
 
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-8">
@@ -176,11 +174,11 @@ export default function HomePage() {
           <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl h-full">
             <CardHeader>
               <CardTitle className="flex items-center text-2xl font-headline">
-                <FileText className="w-7 h-7 mr-3 text-primary" />
-                Job Description
+                <Briefcase className="w-7 h-7 mr-3 text-primary" />
+                Job Descriptions
               </CardTitle>
               <CardDescription>
-                Upload the job description file (PDF, TXT, or MD). The AI will use this to rank candidate resumes.
+                Upload job description files (PDF, TXT, or MD). You can upload multiple.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -191,8 +189,8 @@ export default function HomePage() {
                   "text/plain": [".txt"],
                   "text/markdown": [".md"]
                 }}
-                multiple={false}
-                label="PDF, TXT, or MD file up to 10MB"
+                multiple={true} // Allow multiple JDs
+                label="PDF, TXT, or MD files up to 10MB each"
                 id="job-description-upload"
               />
             </CardContent>
@@ -225,7 +223,7 @@ export default function HomePage() {
       <div className="flex justify-center pt-4">
         <Button
           onClick={handleScreenResumes}
-          disabled={isLoading || !jobDescriptionDataUri || resumeFiles.length === 0}
+          disabled={isLoading || jobDescriptionFiles.length === 0 || resumeFiles.length === 0}
           size="lg"
           className="bg-accent hover:bg-accent/90 text-accent-foreground text-base px-8 py-6 shadow-md hover:shadow-lg transition-all duration-150 hover:scale-105 active:scale-95"
           aria-live="polite"
@@ -273,29 +271,50 @@ export default function HomePage() {
         </div>
       )}
 
-      {!isLoading && rankedCandidates.length > 0 && (
+      {!isLoading && screeningResults.length > 0 && (
         <div ref={resultsSectionRef}>
           <Separator className="my-8" />
-          <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
-            <CardHeader>
-              <CardTitle className="text-2xl font-headline">Screening Results</CardTitle>
-              <CardDescription>Ranked candidates based on the provided job description.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <FilterControls filters={filters} onFilterChange={handleFilterChange} onResetFilters={resetFilters} />
-              <CandidateTable candidates={filteredCandidates} onViewFeedback={handleViewFeedback} />
-            </CardContent>
-          </Card>
+          <FilterControls 
+            filters={filters} 
+            onFilterChange={handleFilterChange} 
+            onResetFilters={resetFilters} 
+          />
+          <Separator className="my-8" />
+          {screeningResults.map((result, index) => (
+            <Card key={index} className="shadow-lg transition-shadow duration-300 hover:shadow-xl mb-8">
+              <CardHeader>
+                <CardTitle className="text-2xl font-headline text-primary flex items-center">
+                  <Briefcase className="w-6 h-6 mr-2" />
+                  Results for: {result.jobDescriptionName}
+                </CardTitle>
+                <CardDescription>
+                  Candidates ranked based on the job description "{result.jobDescriptionName}".
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <CandidateTable 
+                  candidates={filterCandidatesForJob(result.candidates, filters)} 
+                  onViewFeedback={(candidate) => handleViewFeedback(candidate, result.jobDescriptionDataUri)} 
+                />
+                 {filterCandidatesForJob(result.candidates, filters).length === 0 && (
+                    <p className="text-center text-muted-foreground py-4">No candidates match the current filter criteria for this job description.</p>
+                  )}
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
+       {!isLoading && screeningResults.length === 0 && resumeFiles.length > 0 && jobDescriptionFiles.length > 0 && (
+         <p className="text-center text-muted-foreground py-8">Click "Screen & Rank Resumes" to see results.</p>
+       )}
+
 
       <FeedbackModal
         isOpen={isFeedbackModalOpen}
         onClose={() => setIsFeedbackModalOpen(false)}
         candidate={selectedCandidateForFeedback}
-        jobDescriptionDataUri={jobDescriptionDataUri}
+        jobDescriptionDataUri={jobDescriptionDataUriForFeedback} 
       />
     </div>
   );
 }
-

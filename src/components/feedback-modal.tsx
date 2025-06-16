@@ -25,7 +25,7 @@ interface FeedbackModalProps {
   isOpen: boolean;
   onClose: () => void;
   candidate: RankedCandidate | null;
-  jobDescriptionDataUri: string | null;
+  jobDescriptionDataUri: string | null; // This now refers to the specific JD for this feedback context
 }
 
 export function FeedbackModal({ isOpen, onClose, candidate, jobDescriptionDataUri }: FeedbackModalProps) {
@@ -37,7 +37,7 @@ export function FeedbackModal({ isOpen, onClose, candidate, jobDescriptionDataUr
 
   const handleGenerateQuestions = useCallback(async () => {
     if (!candidate || !jobDescriptionDataUri || !candidate.resumeDataUri) {
-      setQuestionError("Missing necessary information (candidate, job description, or resume data) to generate questions.");
+      setQuestionError("Missing necessary information (candidate, job description context, or resume data) to generate questions.");
       return;
     }
 
@@ -48,7 +48,7 @@ export function FeedbackModal({ isOpen, onClose, candidate, jobDescriptionDataUr
     try {
       const input: GenerateInterviewQuestionsInput = {
         candidateName: candidate.name,
-        jobDescriptionDataUri: jobDescriptionDataUri,
+        jobDescriptionDataUri: jobDescriptionDataUri, // Use the contextual JD
         resumeDataUri: candidate.resumeDataUri,
         keySkills: candidate.keySkills,
       };
@@ -76,11 +76,12 @@ export function FeedbackModal({ isOpen, onClose, candidate, jobDescriptionDataUr
     }
   }, [isOpen]);
    
+  // Reset questions if candidate ID or job context changes
   React.useEffect(() => {
     setInterviewQuestions([]);
     setIsGeneratingQuestions(false);
     setQuestionError(null);
-  },[candidate?.id]);
+  },[candidate?.id, jobDescriptionDataUri]);
 
 
   if (!candidate) return null;
@@ -92,9 +93,9 @@ export function FeedbackModal({ isOpen, onClose, candidate, jobDescriptionDataUr
       else if (score > 50) IconComponent = Activity;
       else IconComponent = ThumbsDown;
     } else { // ats
-      if (score > 75) IconComponent = ShieldCheck; // Positive ATS
-      else if (score > 50) IconComponent = ShieldCheck; // Neutral ATS
-      else IconComponent = ShieldCheck; // Potentially warning for ATS
+      if (score > 75) IconComponent = ShieldCheck; 
+      else if (score > 50) IconComponent = ShieldCheck; 
+      else IconComponent = ShieldCheck; 
     }
     
     let badgeClass = "bg-accent text-accent-foreground";
@@ -178,7 +179,7 @@ export function FeedbackModal({ isOpen, onClose, candidate, jobDescriptionDataUr
                 </div>
               )}
               {!isGeneratingQuestions && interviewQuestions.length === 0 && !questionError && (
-                 <p className="text-sm text-muted-foreground italic">Click the button below to generate tailored interview questions.</p>
+                 <p className="text-sm text-muted-foreground italic">Click the button below to generate tailored interview questions for this job context.</p>
               )}
               <Button 
                 onClick={handleGenerateQuestions} 
@@ -203,4 +204,3 @@ export function FeedbackModal({ isOpen, onClose, candidate, jobDescriptionDataUr
     </Dialog>
   );
 }
-
