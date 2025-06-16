@@ -11,7 +11,7 @@ import { FilterControls } from "@/components/filter-controls";
 import { useToast } from "@/hooks/use-toast";
 import { rankCandidates, type RankCandidatesInput, type RankCandidatesOutput } from "@/ai/flows/rank-candidates";
 import type { ResumeFile, RankedCandidate, Filters, JobDescriptionFile, JobScreeningResult } from "@/lib/types";
-import { FileText, Users, ScanSearch, Loader2, BrainCircuit, Briefcase } from "lucide-react";
+import { Users, ScanSearch, Loader2, Briefcase } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 const initialFilters: Filters = {
@@ -19,13 +19,6 @@ const initialFilters: Filters = {
   skillKeyword: "",
   selectedJobDescriptionName: null,
 };
-
-const loadingSteps = [
-  { icon: FileText, text: "Reading Job Descriptions..." },
-  { icon: Users, text: "Processing Resumes..." },
-  { icon: ScanSearch, text: "Cross-Referencing Skills..." },
-  { icon: BrainCircuit, text: "Generating AI Insights..." },
-];
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
@@ -38,31 +31,11 @@ export default function HomePage() {
   const [jobDescriptionDataUriForFeedback, setJobDescriptionDataUriForFeedback] = useState<string | null>(null);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState<boolean>(false);
   const [filters, setFilters] = useState<Filters>(initialFilters);
-  const [currentLoadingStep, setCurrentLoadingStep] = useState(0);
 
   const { toast } = useToast();
 
   const loadingSectionRef = useRef<HTMLDivElement | null>(null);
   const resultsSectionRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isLoading) {
-      setCurrentLoadingStep(0);
-      interval = setInterval(() => {
-        setCurrentLoadingStep((prevStep) => {
-          if (loadingSteps.length === 0) return 0;
-          if (prevStep === loadingSteps.length - 1) {
-            return prevStep;
-          }
-          return (prevStep + 1);
-        });
-      }, 2000);
-    } else {
-      setCurrentLoadingStep(0);
-    }
-    return () => clearInterval(interval);
-  }, [isLoading]);
 
   useEffect(() => {
     if (isLoading) {
@@ -274,29 +247,14 @@ export default function HomePage() {
         <div ref={loadingSectionRef}>
           <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
             <CardContent className="pt-6">
-              <div className="text-center py-8 space-y-4">
-                <div className="relative w-16 h-16 mx-auto">
-                  {loadingSteps.map((step, index) => (
-                    <div
-                      key={index}
-                      className={`absolute inset-0 flex items-center justify-center transition-opacity duration-500 ease-in-out ${
-                        currentLoadingStep % loadingSteps.length === index ? "opacity-100" : "opacity-0"
-                      }`}
-                    >
-                      <step.icon className="w-10 h-10 text-primary animate-pulse" />
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xl font-semibold text-primary h-6">
-                  {loadingSteps[currentLoadingStep % loadingSteps.length].text}
+              <div className="text-center py-8 space-y-6">
+                <Loader2 className="w-16 h-16 mx-auto text-primary animate-spin" />
+                <p className="text-xl font-semibold text-primary">
+                  AI is analyzing your files...
                 </p>
-                <div className="w-full max-w-md mx-auto bg-muted rounded-full h-3 overflow-hidden">
-                  <div
-                    className="bg-primary h-3 rounded-full transition-all duration-1000 ease-out"
-                    style={{ width: `${((currentLoadingStep % loadingSteps.length + 1) / loadingSteps.length) * 100}%` }}
-                  ></div>
-                </div>
-                <p className="text-sm text-muted-foreground">AI is analyzing... Please be patient.</p>
+                <p className="text-sm text-muted-foreground">
+                  This may take a few moments, especially with many or large files. Please be patient.
+                </p>
               </div>
             </CardContent>
           </Card>
