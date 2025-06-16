@@ -8,15 +8,15 @@ import { motion } from "framer-motion";
 
 const cardHoverVariants = {
   hover: {
-    scale: 1.02, // Slightly less aggressive scale for dashboard cards
-    y: -5, // Lift effect
-    boxShadow: "0px 12px 28px hsla(var(--primary), 0.25)", // Enhanced themed shadow
+    scale: 1.02, 
+    y: -5, 
+    boxShadow: "0px 12px 28px hsla(var(--primary), 0.25)", 
     transition: { type: "spring", stiffness: 280, damping: 18 }
   },
   initial: {
     scale: 1,
     y: 0,
-    boxShadow: "0px 6px 18px hsla(var(--primary), 0.1)" // Default shadow from card itself is shadow-lg
+    boxShadow: "0px 6px 18px hsla(var(--primary), 0.1)" 
   }
 };
 
@@ -32,9 +32,9 @@ export default function DashboardPage() {
         <p className="text-muted-foreground">Select a tool below to get started.</p>
       </header>
 
-      <div className="flex flex-col gap-8"> {/* Main container: vertical flow */}
+      <div className="flex flex-col gap-8"> 
         
-        {/* Primary Feature: Resume Ranker */}
+        
         <motion.div
           initial="initial"
           whileHover="hover"
@@ -44,13 +44,13 @@ export default function DashboardPage() {
             <Card className="shadow-lg h-full flex flex-col border border-primary/10 hover:border-primary/50 transition-colors duration-300">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <BrainCircuit className="w-12 h-12 text-primary mb-2" /> {/* Increased icon size */}
-                  <ArrowRight className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" /> {/* Increased arrow size */}
+                  <BrainCircuit className="w-12 h-12 text-primary mb-2" /> 
+                  <ArrowRight className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" /> 
                 </div>
-                <CardTitle className="text-2xl font-headline text-primary">AI Resume Ranker</CardTitle> {/* Increased title size */}
+                <CardTitle className="text-2xl font-headline text-primary">AI Resume Ranker</CardTitle> 
               </CardHeader>
               <CardContent className="flex-grow">
-                <CardDescription className="text-base"> {/* Increased description size */}
+                <CardDescription className="text-base"> 
                   Upload job descriptions and resumes to intelligently rank candidates. Leverage AI insights for faster, more accurate screening.
                 </CardDescription>
               </CardContent>
@@ -58,7 +58,7 @@ export default function DashboardPage() {
           </Link>
         </motion.div>
 
-        {/* Secondary Features */}
+        
         <div className="grid gap-6 md:grid-cols-2">
           <motion.div
             initial="initial"
@@ -88,7 +88,7 @@ export default function DashboardPage() {
             whileHover="hover"
             variants={cardHoverVariants}
           >
-            <Link href="/interview-question-generator" className="block group"> {/* passHref removed here */}
+            <Link href="/interview-question-generator" passHref className="block group"> 
                <Card className="shadow-lg h-full flex flex-col hover:border-primary/50 transition-colors duration-300">
                  <CardHeader>
                     <div className="flex items-center justify-between">
