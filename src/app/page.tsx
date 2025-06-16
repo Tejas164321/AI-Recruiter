@@ -9,7 +9,7 @@ import { CandidateTable } from "@/components/candidate-table";
 import { FeedbackModal } from "@/components/feedback-modal";
 import { FilterControls } from "@/components/filter-controls";
 import { useToast } from "@/hooks/use-toast";
-import { performBulkScreening, type PerformBulkScreeningOutput, type PerformBulkScreeningInput } from "@/ai/flows/rank-candidates"; // Updated import
+import { performBulkScreening, type PerformBulkScreeningOutput, type PerformBulkScreeningInput } from "@/ai/flows/rank-candidates";
 import { extractJobRoles, type ExtractJobRolesInput, type ExtractJobRolesOutput } from "@/ai/flows/extract-job-roles";
 import type { ResumeFile, RankedCandidate, Filters, JobDescriptionFile, JobScreeningResult, ExtractedJobRole } from "@/lib/types";
 import { Users, ScanSearch, Loader2, Briefcase } from "lucide-react";
@@ -29,11 +29,9 @@ export default function HomePage() {
   const [extractedJobRoles, setExtractedJobRoles] = useState<ExtractedJobRole[]>([]);
   const [selectedJobRoleId, setSelectedJobRoleId] = useState<string | null>(null);
   
-  // Stores results for ALL job roles after bulk screening
   const [allScreeningResults, setAllScreeningResults] = useState<JobScreeningResult[]>([]); 
   
   const [isLoadingRoles, setIsLoadingRoles] = useState<boolean>(false);
-  // New loading state for the entire bulk screening process
   const [isLoadingAllScreenings, setIsLoadingAllScreenings] = useState<boolean>(false); 
   
   const [selectedCandidateForFeedback, setSelectedCandidateForFeedback] = useState<RankedCandidate | null>(null);
@@ -43,7 +41,6 @@ export default function HomePage() {
   const { toast } = useToast();
   const resultsSectionRef = useRef<HTMLDivElement | null>(null);
 
-  // Derived state for the currently viewed job role's results
   const currentScreeningResult = useMemo(() => {
     if (!selectedJobRoleId || allScreeningResults.length === 0) {
       return null;
@@ -51,9 +48,7 @@ export default function HomePage() {
     return allScreeningResults.find(result => result.jobDescriptionId === selectedJobRoleId) || null;
   }, [selectedJobRoleId, allScreeningResults]);
 
-
   const scrollToResults = useCallback(() => {
-    // Scroll when bulk screening is done and there are results
     if (!isLoadingAllScreenings && !isLoadingRoles && allScreeningResults.length > 0) {
       const timer = setTimeout(() => {
         resultsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -64,17 +59,16 @@ export default function HomePage() {
 
   useEffect(scrollToResults, [scrollToResults]);
 
-  // Main function to trigger bulk screening for all roles and resumes
   const startBulkScreeningProcess = useCallback(async () => {
     if (extractedJobRoles.length === 0 || uploadedResumeFiles.length === 0) {
       if(extractedJobRoles.length === 0) toast({ title: "No Job Roles", description: "Please upload job descriptions first.", variant: "destructive" });
       if(uploadedResumeFiles.length === 0) toast({ title: "No Resumes", description: "Please upload resumes first.", variant: "destructive" });
-      setAllScreeningResults([]); // Clear any old results
+      setAllScreeningResults([]);
       return;
     }
 
     setIsLoadingAllScreenings(true);
-    setAllScreeningResults([]); // Clear previous results before starting
+    setAllScreeningResults([]); 
 
     try {
       const input: PerformBulkScreeningInput = {
@@ -87,9 +81,18 @@ export default function HomePage() {
       
       if (output.length > 0) {
         toast({ title: "Screening Complete", description: `All candidates processed for ${output.length} job role(s).` });
-        // selectedJobRoleId should already be set to the first role, or user can pick
+        
+        // Ensure a valid job role is selected if possible
+        // Check if the current selectedJobRoleId is valid given the new results
+        const currentSelectionIsValid = selectedJobRoleId && output.some(res => res.jobDescriptionId === selectedJobRoleId);
+        if (!currentSelectionIsValid) {
+          // If current selection is not valid (or was null), select the first role from the results
+          setSelectedJobRoleId(output[0].jobDescriptionId);
+        }
       } else {
         toast({ title: "Screening Complete", description: "No screening results were generated.", variant: "default"});
+        // If no results, we might still have an extracted role selected, or selectedJobRoleId might be null
+        // No specific action needed here for selectedJobRoleId as current logic should handle it.
       }
     } catch (error) {
       console.error("Error during bulk screening:", error);
@@ -99,14 +102,13 @@ export default function HomePage() {
     } finally {
       setIsLoadingAllScreenings(false);
     }
-  }, [extractedJobRoles, uploadedResumeFiles, toast]);
-
+  }, [extractedJobRoles, uploadedResumeFiles, toast, selectedJobRoleId]); // Added selectedJobRoleId dependency for check
 
   const fetchExtractedJobRoles = useCallback(async (jdFiles: JobDescriptionFile[]) => {
     if (jdFiles.length === 0) {
       setExtractedJobRoles([]);
       setSelectedJobRoleId(null);
-      setAllScreeningResults([]); // Clear all results if JDs are removed
+      setAllScreeningResults([]);
       return;
     }
     
@@ -124,7 +126,6 @@ export default function HomePage() {
       if (output.length > 0) {
         const firstRoleId = output[0].id;
         setSelectedJobRoleId(firstRoleId); 
-        // If resumes are already present, trigger bulk screening
         if (uploadedResumeFiles.length > 0) {
           await startBulkScreeningProcess();
         }
@@ -139,7 +140,7 @@ export default function HomePage() {
     } finally {
       setIsLoadingRoles(false);
     }
-  }, [toast, uploadedResumeFiles, startBulkScreeningProcess]); // Added startBulkScreeningProcess dependency
+  }, [toast, uploadedResumeFiles, startBulkScreeningProcess]);
 
   const handleJobDescriptionUpload = useCallback(async (files: File[]) => {
     const newJdFilesPromises = files.map(async (file) => {
@@ -173,23 +174,20 @@ export default function HomePage() {
     try {
         const newResumeFiles = await Promise.all(newResumeFilesPromises);
         setUploadedResumeFiles(newResumeFiles);
-        // If job roles are already extracted, trigger bulk screening
         if (extractedJobRoles.length > 0) {
             await startBulkScreeningProcess();
         }
     } catch (error) {
          toast({ title: "Error processing resumes", description: String(error), variant: "destructive"});
     }
-  }, [extractedJobRoles, startBulkScreeningProcess, toast]); // Added startBulkScreeningProcess dependency
+  }, [extractedJobRoles, startBulkScreeningProcess, toast]);
 
 
   const handleJobRoleChange = useCallback(async (roleId: string | null) => {
     setSelectedJobRoleId(roleId);
-    // No backend call here, currentScreeningResult will update via useMemo
   }, []);
 
   const handleScreenAllButtonClick = async () => {
-    // This button now explicitly triggers the bulk screening
     await startBulkScreeningProcess();
   };
 
@@ -225,7 +223,6 @@ export default function HomePage() {
 
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-8">
-      {/* File Upload Section */}
       <div className="flex flex-col md:flex-row gap-8">
         <div className="flex-1">
           <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl h-full">
@@ -324,12 +321,11 @@ export default function HomePage() {
               extractedJobRoles={extractedJobRoles}
               selectedJobRoleId={selectedJobRoleId}
               onJobRoleChange={handleJobRoleChange}
-              isLoadingRoles={isLoadingRoles || isLoadingAllScreenings} // Disable filters during bulk load too
+              isLoadingRoles={isLoadingRoles || isLoadingAllScreenings}
             />
           </>
         )}
         
-        {/* Display results if not loading AND there is a currentScreeningResult (derived from allScreeningResults) */}
         {!isLoadingAllScreenings && !isLoadingRoles && currentScreeningResult && (
             <>
               {uploadedJobDescriptionFiles.length > 0 && <Separator className="my-8" />}
@@ -352,28 +348,26 @@ export default function HomePage() {
                   {currentScreeningResult.candidates && currentScreeningResult.candidates.length > 0 && displayedCandidates.length === 0 && (
                       <p className="text-center text-muted-foreground py-4">No candidates match the current filter criteria for this job role.</p>
                   )}
-                  {/* CandidateTable handles empty currentScreeningResult.candidates internally */}
                 </CardContent>
               </Card>
             </>
         )}
 
-        {/* Informational messages when not loading and no specific result is being shown */}
         {!isLoadingAllScreenings && !isLoadingRoles && !currentScreeningResult && (
           <>
             {uploadedJobDescriptionFiles.length > 0 && extractedJobRoles.length === 0 && !isLoadingRoles && (
               <p className="text-center text-muted-foreground py-8">No specific job roles could be extracted. Check your JD files or try re-uploading.</p>
             )}
-            {extractedJobRoles.length > 0 && uploadedResumeFiles.length === 0 && (
+            {extractedJobRoles.length > 0 && uploadedResumeFiles.length === 0 && !isLoadingAllScreenings && (
               <p className="text-center text-muted-foreground py-8">Upload resumes and click "Process All Candidates" to see rankings.</p>
             )}
-             {extractedJobRoles.length > 0 && uploadedResumeFiles.length > 0 && allScreeningResults.length === 0 && (
+             {extractedJobRoles.length > 0 && uploadedResumeFiles.length > 0 && allScreeningResults.length === 0 && !isLoadingAllScreenings && (
               <p className="text-center text-muted-foreground py-8">Click "Process All Candidates" to start screening.</p>
             )}
              {extractedJobRoles.length > 0 && allScreeningResults.length > 0 && !selectedJobRoleId && (
               <p className="text-center text-muted-foreground py-8">Select a job role from the filters to view results.</p>
             )}
-            {uploadedJobDescriptionFiles.length === 0 && (
+            {uploadedJobDescriptionFiles.length === 0 && uploadedResumeFiles.length === 0 && (
                <p className="text-center text-muted-foreground py-8">Upload job descriptions and resumes, then click "Process All Candidates".</p>
             )}
           </>
