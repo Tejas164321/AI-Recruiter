@@ -26,7 +26,7 @@ body {
     --muted: 215 30% 88%;
     --muted-foreground: 215 20% 55%; /* Lighter text for muted components */
 
-    --accent: 163 61% 35%; /* #1A8C6A Darker Teal-green for better contrast */
+    --accent: 163 70% 38%; /* #1A8C6A Darker Teal-green for better contrast */
     --accent-foreground: 163 61% 97%; /* Light color for text on accent */
 
     --destructive: 0 84.2% 60.2%;
@@ -55,49 +55,48 @@ body {
   }
 
   .dark {
-    /* Basic dark theme, may need refinement if dark mode is a priority */
-    --background: 215 28% 17%;
-    --foreground: 213 33% 95%;
+    --background: 0 0% 0%; /* True Black for AMOLED */
+    --foreground: 213 33% 95%; /* Light text for contrast */
 
-    --card: 215 28% 12%;
+    --card: 215 20% 7%; /* Very dark grey, near black */
     --card-foreground: 213 33% 95%;
 
-    --popover: 215 28% 12%;
+    --popover: 215 20% 7%; /* Match card background */
     --popover-foreground: 213 33% 95%;
 
-    --primary: 215 100% 55%; /* Adjusted for dark mode, slightly lighter than light mode's primary for visibility */
-    --primary-foreground: 215 25% 15%; /* Dark text on a moderately light primary for dark mode */
+    --primary: 215 100% 60%; /* Brighter blue for AMOLED */
+    --primary-foreground: 210 100% 10%; /* Very dark blue/black text on primary */
 
-    --secondary: 215 25% 25%;
-    --secondary-foreground: 213 33% 95%;
+    --secondary: 215 20% 15%; /* Darker grey for secondary elements */
+    --secondary-foreground: 213 33% 85%; /* Slightly less bright text */
 
-    --muted: 215 25% 25%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 215 20% 12%; /* Even darker for muted elements */
+    --muted-foreground: 215 20% 55%; /* Subtle grey text */
 
-    --accent: 163 61% 40%; /* Adjusted for dark mode, slightly lighter than light mode's accent */
-    --accent-foreground: 215 25% 15%; /* Dark text on a moderately light accent for dark mode */
+    --accent: 163 70% 45%; /* Brighter/more saturated teal for AMOLED */
+    --accent-foreground: 160 100% 10%; /* Very dark green/black text on accent */
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 70% 50%; /* Adjusted destructive for dark */
     --destructive-foreground: 0 0% 98%;
 
-    --border: 215 25% 30%;
-    --input: 215 25% 30%;
-    --ring: 215 100% 55%; /* Adjusted ring for dark mode */
+    --border: 215 15% 20%; /* Subtle border, visible on dark card/bg */
+    --input: 215 15% 22%; /* Input field bg */
+    --ring: 215 100% 60%; /* Match new primary for focus rings */
 
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --chart-1: 220 70% 55%; /* Adjusted chart colors for AMOLED */
+    --chart-2: 160 60% 50%;
+    --chart-3: 30 80% 60%;
+    --chart-4: 280 65% 65%;
+    --chart-5: 340 75% 60%;
     
-    --sidebar-background: 215 28% 12%;
+    --sidebar-background: 0 0% 0%; /* True Black for sidebar */
     --sidebar-foreground: 213 33% 95%;
-    --sidebar-primary: 215 100% 55%;
-    --sidebar-primary-foreground: 215 25% 15%;
-    --sidebar-accent: 163 61% 40%;
-    --sidebar-accent-foreground: 215 25% 15%;
-    --sidebar-border: 215 25% 25%;
-    --sidebar-ring: 215 100% 55%;
+    --sidebar-primary: 215 100% 60%;
+    --sidebar-primary-foreground: 210 100% 10%;
+    --sidebar-accent: 163 70% 45%;
+    --sidebar-accent-foreground: 160 100% 10%;
+    --sidebar-border: 215 15% 15%; /* Very subtle border */
+    --sidebar-ring: 215 100% 60%;
   }
 }
 
