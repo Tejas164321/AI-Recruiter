@@ -34,7 +34,7 @@ export type ExtractJobRolesInput = z.infer<typeof ExtractJobRolesInputSchema>;
 // Schema for a single, segmented/extracted job description for output
 const ExtractedJobRoleOutputSchema = z.object({
   id: z.string().describe("Unique identifier for this extracted job role."),
-  name: z.string().describe("The display name for this job role (e.g., 'OriginalFile.pdf - Extracted Title')."),
+  name: z.string().describe("The display name for this job role (e.g., 'Senior Software Engineer', 'Untitled Job Role'). This should primarily be the extracted title without the original file name."),
   contentDataUri: z.string().describe("The full text content of this individual job description, as a data URI."),
   originalDocumentName: z.string().describe("The name of the original document from which this job role was extracted."),
 });
@@ -57,13 +57,13 @@ const segmentJobDescriptionsPrompt = ai.definePrompt({
   },
   output: {
     schema: z.array(z.object({
-        title: z.string().describe("The concise job title of this individual job description (e.g., 'Senior Software Engineer', 'Marketing Manager'). Ensure the title is specific to the job described."),
+        title: z.string().describe("The concise job title of this individual job description (e.g., 'Senior Software Engineer', 'Marketing Manager'). Ensure the title is specific to the job described. If no clear title is found, this may be empty."),
         content: z.string().describe("The full text content of that specific job description, including all requirements, responsibilities, and qualifications."),
     })).describe("An array of individual job descriptions found in the document. If only one JD is present, it should be an array with a single element. If no distinct JDs are found or the document is not a job description, return an empty array."),
   },
   prompt: `You are an expert HR document parser. Your task is to analyze the provided document and identify all distinct job descriptions contained within it.
 For each distinct job description you find, you must extract:
-1.  A concise and accurate job title (e.g., "Senior Software Engineer", "Marketing Manager"). Ensure the title is specific to the job described. If the document has a clear overall title that seems to represent a single job, use that.
+1.  A concise and accurate job title (e.g., "Senior Software Engineer", "Marketing Manager"). Ensure the title is specific to the job described. If the document has a clear overall title that seems to represent a single job, use that. If no specific title can be determined, leave the title field empty or provide a very generic one like "Job Description".
 2.  The complete text content of that specific job description, including all requirements, responsibilities, and qualifications.
 
 Document to analyze (from original file: {{{originalFileName}}}):
@@ -108,10 +108,15 @@ const extractJobRolesFlow = ai.defineFlow(
 
         if (segmentedJdsOutput && segmentedJdsOutput.length > 0) {
           segmentedJdsOutput.forEach((segmentedJd, index) => {
-            const baseTitle = (segmentedJd.title || `Job Role ${index + 1}`).replace(/[^\w\s.-]/gi, '').trim();
-            const displayName = segmentedJdsOutput.length > 1 || input.jobDescriptionDocuments.length > 1
-              ? `${doc.name} - ${baseTitle}`
-              : baseTitle || doc.name;
+            let displayName = segmentedJd.title?.replace(/[^\w\s.-]/gi, '').trim() || '';
+            if (!displayName) {
+              // If no title from AI, use a placeholder.
+              displayName = segmentedJdsOutput.length > 1 ? `Job Role ${index + 1}` : "Untitled Job Role";
+            }
+            // If there's only one JD identified in this document, and still no title from AI,
+            // and only one document was uploaded overall, we *could* use the original file name,
+            // but the request is to avoid file names in display.
+            // So, stick to "Untitled Job Role" if title extraction fails.
 
             const content = segmentedJd.content || "No content extracted for this job description.";
             const contentDataUri = `data:text/plain;charset=utf-8;base64,${Buffer.from(content).toString('base64')}`;
@@ -127,8 +132,8 @@ const extractJobRolesFlow = ai.defineFlow(
           // Fallback: if segmentation returns empty, treat the whole document as one job role
           allExtractedRoles.push({
             id: randomUUID(),
-            name: doc.name, // Use original file name as display name
-            contentDataUri: doc.dataUri, // Use original data URI
+            name: "Untitled Job Role", // Use generic name
+            contentDataUri: doc.dataUri, 
             originalDocumentName: doc.name,
           });
         }
@@ -138,7 +143,7 @@ const extractJobRolesFlow = ai.defineFlow(
         // Fallback on error during segmentation for a specific file
         allExtractedRoles.push({
           id: randomUUID(),
-          name: doc.name,
+          name: "Untitled Job Role", // Use generic name
           contentDataUri: doc.dataUri,
           originalDocumentName: doc.name,
         });
@@ -153,7 +158,7 @@ const extractJobRolesFlow = ai.defineFlow(
         input.jobDescriptionDocuments.forEach(doc => {
             allExtractedRoles.push({
                 id: randomUUID(),
-                name: doc.name,
+                name: "Untitled Job Role", // Use generic name
                 contentDataUri: doc.dataUri,
                 originalDocumentName: doc.name,
             });
@@ -162,3 +167,4 @@ const extractJobRolesFlow = ai.defineFlow(
     return allExtractedRoles;
   }
 );
+
