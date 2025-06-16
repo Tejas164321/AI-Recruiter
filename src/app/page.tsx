@@ -38,12 +38,12 @@ const itemVariants = {
 const cardHoverVariants = {
   hover: {
     scale: 1.03,
-    boxShadow: "0px 10px 30px -5px hsl(var(--primary)/0.2)",
+    boxShadow: "0px 10px 30px -5px hsl(var(--primary)/0.2)", // Themed shadow
     transition: { type: "spring", stiffness: 300, damping: 10 }
   },
   initial: {
     scale: 1,
-    boxShadow: "0px 5px 15px rgba(0,0,0,0.1)"
+    boxShadow: "0px 5px 15px hsl(var(--primary)/0.05)" // Softer initial shadow
   }
 };
 
@@ -87,7 +87,7 @@ export default function LandingPage() {
                   transition={{ duration: 0.6, delay: 0.5 }}
                   className="flex flex-col gap-2 min-[400px]:flex-row"
                 >
-                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}>
                     <Link
                       href="/signup"
                       className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
@@ -97,7 +97,7 @@ export default function LandingPage() {
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </motion.div>
-                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}>
                     <Link
                       href="/#features"
                       className="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-8 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
@@ -206,14 +206,14 @@ export default function LandingPage() {
                      custom={feature.delay}
                      className="h-full"
                   >
-                  <Card className="shadow-lg h-full flex flex-col">
+                  <Card className="shadow-lg h-full flex flex-col border border-transparent hover:border-primary/30 transition-colors duration-300">
                     <CardHeader className="pb-4">
                       <motion.div 
                         initial={{ opacity: 0, scale: 0.5 }}
                         whileInView={{ opacity: 1, scale: 1 }}
                         viewport={{ once: true }}
                         transition={{ duration: 0.4, delay: feature.delay + 0.1}}
-                        className="flex items-center justify-center bg-primary/10 rounded-full w-12 h-12 mb-4"
+                        className="flex items-center justify-center bg-primary/10 rounded-full w-12 h-12 mb-4 border-2 border-primary/20"
                       >
                         <feature.icon className="h-6 w-6 text-primary" />
                       </motion.div>
@@ -248,7 +248,7 @@ export default function LandingPage() {
         </section>
 
         {/* Call to Action Section */}
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-muted/40">
+        <section className="w-full py-12 md:py-24 lg:py-32 bg-primary/10">
           <div className="container grid items-center justify-center gap-4 px-4 text-center md:px-6">
             <motion.div
               className="space-y-3"
@@ -273,10 +273,10 @@ export default function LandingPage() {
               variants={sectionVariants}
               custom={0.4}
             >
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}>
                 <Link
                   href="/signup"
-                  className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+                  className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow-lg hover:shadow-primary/40 transition-all duration-300 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
                   prefetch={false}
                 >
                   Sign Up for Free
@@ -323,5 +323,4 @@ export function PrivacyPage() {
     </div>
   );
 }
-
     
