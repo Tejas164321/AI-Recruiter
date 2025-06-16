@@ -140,6 +140,10 @@ const rankCandidatesFlow = ai.defineFlow(
           // Optionally, push a placeholder or error object for this candidate
         }
       }
+
+      // Sort candidates for this JD by score in descending order
+      candidatesForThisJD.sort((a, b) => b.score - a.score);
+      
       screeningResults.push({
         jobDescriptionName: jd.name,
         jobDescriptionDataUri: jd.dataUri,
