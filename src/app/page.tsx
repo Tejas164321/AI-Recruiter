@@ -118,7 +118,7 @@ export default function LandingPage() {
                   width="600"
                   height="400"
                   alt="Hero"
-                  data-ai-hint="team collaboration"
+                  data-ai-hint="AI recruitment hiring technology"
                   className="mx-auto aspect-video overflow-hidden rounded-xl object-cover sm:w-full lg:order-last shadow-2xl"
                 />
               </motion.div>
