@@ -16,7 +16,7 @@ export interface ResumeFile {
 // Represents a single, distinct job role extracted from an uploaded document
 export interface ExtractedJobRole {
   id: string; // Unique ID for this extracted role
-  name: string; // Display name for the dropdown (e.g., "JD_File.pdf - Software Engineer")
+  name: string; // Display name for the dropdown (e.g., "Software Engineer")
   contentDataUri: string; // Data URI of the content specific to this role
   originalDocumentName: string; // Name of the original file it came from
 }
@@ -36,12 +36,21 @@ export interface RankedCandidate {
 export interface Filters {
   scoreRange: [number, number];
   skillKeyword: string;
-  // selectedJobDescriptionName is now handled by selectedJobRoleId directly in page state
 }
 
 // Output for ranking candidates against a SINGLE job description
 export interface JobScreeningResult {
+  jobDescriptionId: string; // ID of the ExtractedJobRole this result is for
   jobDescriptionName: string; // Name of the job role against which candidates were ranked
   jobDescriptionDataUri: string; // Data URI of the job role content used for ranking
   candidates: RankedCandidate[];
 }
+
+// Input for the bulk screening flow
+export interface PerformBulkScreeningInput {
+  jobRolesToScreen: ExtractedJobRole[];
+  resumesToRank: ResumeFile[];
+}
+
+// Output for the bulk screening flow
+export type PerformBulkScreeningOutput = JobScreeningResult[];
