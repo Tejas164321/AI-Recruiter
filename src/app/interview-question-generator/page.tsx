@@ -14,13 +14,25 @@ import type { JobDescriptionFile } from "@/lib/types";
 import { HelpCircle, Loader2, Lightbulb, FileText, ScrollText, Users, Brain, SearchCheck } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
-// import { motion } from "framer-motion"; // Removed motion import
+import { motion } from "framer-motion";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
 interface CategorizedQuestions extends GenerateJDInterviewQuestionsOutput {}
 
-// cardHoverVariants removed
+const cardHoverVariants = {
+  hover: {
+    scale: 1.02,
+    y: -5,
+    boxShadow: "0px 12px 28px hsla(var(--primary), 0.25)",
+    transition: { type: "spring", stiffness: 280, damping: 18 }
+  },
+  initial: {
+    scale: 1,
+    y: 0,
+    boxShadow: "0px 6px 18px hsla(var(--primary), 0.1)"
+  }
+};
 
 export default function InterviewQuestionGeneratorPage() {
   const [jobDescriptionFile, setJobDescriptionFile] = useState<JobDescriptionFile | null>(null);
@@ -227,21 +239,29 @@ export default function InterviewQuestionGeneratorPage() {
               const questions = generatedQuestions[key];
               if (questions && questions.length > 0) {
                 return (
-                  <Card key={key} className="shadow-md bg-card flex flex-col h-full hover:shadow-lg transition-shadow duration-300">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="flex items-center text-lg text-primary font-medium">
-                        <Icon className="w-5 h-5 mr-2.5 shrink-0" />
-                        {title}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex-grow pt-0">
-                      <ul className="list-disc pl-5 space-y-2.5 text-sm text-foreground">
-                        {questions.map((q, index) => (
-                          <li key={index} className="leading-relaxed">{q}</li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
+                  <motion.div
+                    key={key}
+                    initial="initial"
+                    whileHover="hover"
+                    variants={cardHoverVariants}
+                    className="h-full" 
+                  >
+                    <Card className="bg-card flex flex-col h-full">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center text-lg text-primary font-medium">
+                          <Icon className="w-5 h-5 mr-2.5 shrink-0" />
+                          {title}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="flex-grow pt-0">
+                        <ul className="list-disc pl-5 space-y-2.5 text-sm text-foreground">
+                          {questions.map((q, index) => (
+                            <li key={index} className="leading-relaxed">{q}</li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
                 );
               }
               return null; 
@@ -252,3 +272,4 @@ export default function InterviewQuestionGeneratorPage() {
     </div>
   );
 }
+
