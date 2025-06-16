@@ -102,8 +102,8 @@ export function CandidateTable({ candidates, onViewFeedback }: CandidateTablePro
               </TableCell>
               <TableCell>
                 <div className="flex flex-wrap gap-1">
-                  {candidate.keySkills.split(',').map(skill => skill.trim()).filter(skill => skill).slice(0,5).map(skill => (
-                    <Badge key={skill} variant="outline" className="text-xs">{skill}</Badge>
+                  {candidate.keySkills.split(',').map(skill => skill.trim()).filter(skill => skill).slice(0,5).map((skill, index) => (
+                    <Badge key={`${skill}-${index}`} variant="outline" className="text-xs">{skill}</Badge>
                   ))}
                   {candidate.keySkills.split(',').length > 5 && <Badge variant="outline" className="text-xs">...</Badge>}
                 </div>

@@ -132,8 +132,8 @@ export function FeedbackModal({ isOpen, onClose, candidate, jobDescriptionDataUr
               <h4 className="font-semibold text-foreground mb-2">Key Skills Matched</h4>
               {candidate.keySkills && candidate.keySkills.split(',').filter(skill => skill.trim()).length > 0 ? (
                 <div className="flex flex-wrap gap-2">
-                    {candidate.keySkills.split(',').map(skill => skill.trim()).filter(skill => skill).map(skill => (
-                      <Badge key={skill} variant="secondary" className="text-sm">{skill}</Badge>
+                    {candidate.keySkills.split(',').map(skill => skill.trim()).filter(skill => skill).map((skill, index) => (
+                      <Badge key={`${skill.trim()}-${index}`} variant="secondary" className="text-sm">{skill}</Badge>
                     ))}
                 </div>
               ) : (
