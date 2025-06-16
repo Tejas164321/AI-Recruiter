@@ -1,9 +1,11 @@
+
 "use client";
 
 import { UploadCloud, FileText, XCircle } from "lucide-react";
 import React, { useCallback, useState } from "react";
 import { useDropzone, type Accept } from "react-dropzone";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 interface FileUploadAreaProps {
@@ -68,28 +70,30 @@ export function FileUploadArea({
       {uploadedFiles.length > 0 && (
         <div className="space-y-2">
           <h4 className="text-sm font-medium text-foreground">Uploaded files:</h4>
-          <ul className="space-y-1">
-            {uploadedFiles.map((file) => (
-              <li
-                key={file.name}
-                className="flex items-center justify-between p-2 text-sm rounded-md bg-secondary"
-              >
-                <div className="flex items-center space-x-2">
-                  <FileText className="w-4 h-4 text-muted-foreground" />
-                  <span>{file.name}</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="w-6 h-6"
-                  onClick={() => removeFile(file.name)}
-                  aria-label={`Remove ${file.name}`}
+          <ScrollArea className="max-h-40 w-full pr-3"> {/* Max height for ~4-5 items */}
+            <ul className="space-y-1">
+              {uploadedFiles.map((file) => (
+                <li
+                  key={file.name}
+                  className="flex items-center justify-between p-2 text-sm rounded-md bg-secondary"
                 >
-                  <XCircle className="w-4 h-4 text-destructive" />
-                </Button>
-              </li>
-            ))}
-          </ul>
+                  <div className="flex items-center space-x-2 overflow-hidden">
+                    <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    <span className="truncate" title={file.name}>{file.name}</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="w-6 h-6 flex-shrink-0"
+                    onClick={() => removeFile(file.name)}
+                    aria-label={`Remove ${file.name}`}
+                  >
+                    <XCircle className="w-4 h-4 text-destructive" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </ScrollArea>
         </div>
       )}
     </div>
