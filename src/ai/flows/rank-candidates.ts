@@ -69,12 +69,13 @@ export async function rankCandidates(input: RankCandidatesInput): Promise<RankCa
     const message = flowError instanceof Error ? flowError.message : String(flowError);
     const stack = flowError instanceof Error ? flowError.stack : undefined;
     console.error('Error in rankCandidates function (server action entry):', message, stack);
+    // Re-throw a new simple Error to ensure Next.js can serialize it
     throw new Error(`Candidate ranking process failed: ${message}`);
   }
 }
 
 const rankCandidatePrompt = ai.definePrompt({
-  name: 'rankSingleCandidateAgainstSingleJDPrompt', // Renamed for clarity
+  name: 'rankSingleCandidateAgainstSingleJDPrompt',
   input: {
     schema: z.object({
       jobDescriptionDataUri: z.string().describe("The target job description as a data URI."),
@@ -86,6 +87,7 @@ const rankCandidatePrompt = ai.definePrompt({
      schema: AICandidateOutputSchema,
   },
   prompt: `You are an expert HR assistant tasked with ranking a candidate resume against a specific job description.
+Your scoring should be consistent and deterministic given the same inputs.
 
   Job Description:
   {{media url=jobDescriptionDataUri}}
@@ -108,7 +110,7 @@ const rankCandidatePrompt = ai.definePrompt({
 
 const rankCandidatesFlow = ai.defineFlow(
   {
-    name: 'rankCandidatesAgainstSingleJDFlow', // Renamed for clarity
+    name: 'rankCandidatesAgainstSingleJDFlow',
     inputSchema: RankCandidatesInputSchema,
     outputSchema: RankCandidatesOutputSchema,
   },
@@ -117,13 +119,19 @@ const rankCandidatesFlow = ai.defineFlow(
       const { targetJobDescription, resumes } = input;
 
       if (!targetJobDescription || !targetJobDescription.dataUri) {
+        // This case should ideally be prevented by UI logic, but handle defensively.
+        console.error('[rankCandidatesFlow] Target job description is missing or invalid.');
+        // Return a structure that indicates failure or an empty state for this JD.
+        // The exact shape depends on how the UI expects to handle "no JD selected for ranking".
+        // For now, throwing an error might be better if this is an unexpected state.
         throw new Error("Target job description is missing or invalid.");
       }
       if (!resumes || resumes.length === 0) {
+        // If no resumes are provided, return an empty candidate list for this JD.
         return {
           jobDescriptionName: targetJobDescription.name,
           jobDescriptionDataUri: targetJobDescription.dataUri,
-          candidates: [], // No resumes to rank
+          candidates: [], 
         };
       }
 
@@ -144,12 +152,12 @@ const rankCandidatesFlow = ai.defineFlow(
               originalResumeName: resume.name,
             } satisfies z.infer<typeof FullRankedCandidateSchema>;
           }
-          console.warn(`AI returned no output for resume ${resume.name} against JD ${targetJobDescription.name}.`);
-          return null;
+          console.warn(`[rankCandidatesFlow] AI returned no output for resume ${resume.name} against JD ${targetJobDescription.name}. Treating as failed ranking for this resume.`);
+          return null; // Indicate failure for this specific resume, allows others to proceed
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
           console.error(`[rankCandidatesFlow] Error ranking resume ${resume.name} for JD ${targetJobDescription.name}: ${errorMessage}`, error instanceof Error ? error.stack : undefined);
-          return null; // Allow other rankings to proceed
+          return null; // Indicate failure for this specific resume
         }
       });
 
@@ -169,6 +177,7 @@ const rankCandidatesFlow = ai.defineFlow(
       const message = error instanceof Error ? error.message : String(error);
       const stack = error instanceof Error ? error.stack : undefined;
       console.error('[rankCandidatesFlow] Internal error caught within the flow itself:', message, stack);
+      // Re-throw a new simple Error to ensure Genkit/Next.js can serialize it
       throw new Error(`RankCandidatesFlow failed: ${message}`);
     }
   }
