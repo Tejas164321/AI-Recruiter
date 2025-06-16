@@ -17,13 +17,15 @@ export function LoadingIndicator({ stage }: LoadingIndicatorProps) {
 
   return (
     <div className="flex flex-col items-center justify-center space-y-8 py-10 text-center">
-      <div className="relative">
-        {/* Adjusted BrainCircuit size */}
-        <BrainCircuit className="w-16 h-16 text-primary opacity-70 animate-spin [animation-duration:4s] [animation-timing-function:linear]" />
-        <div className="absolute inset-0 flex items-center justify-center">
-          {/* Adjusted pulsing border size to fit the new icon size */}
-          <div className="w-20 h-20 border-2 border-primary/30 rounded-full animate-pulse [animation-duration:2s]"></div>
-        </div>
+      <div className="relative w-16 h-16"> {/* Container for the icon and its specific pulse effect */}
+        {/* Pulsing effect - a circle of the same size, behind the icon, pulsing opacity */}
+        <div
+          className="absolute inset-0 bg-primary rounded-full animate-pulse [animation-duration:2s] opacity-30"
+        ></div>
+        {/* The Icon itself, spinning, on top */}
+        <BrainCircuit
+          className="absolute inset-0 w-full h-full text-primary animate-spin [animation-duration:3s] [animation-timing-function:linear]"
+        />
       </div>
 
       <div className="flex items-center space-x-6">
