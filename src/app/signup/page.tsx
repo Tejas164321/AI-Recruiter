@@ -7,16 +7,28 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase/config";
+import { useRouter } from 'next/navigation';
+import { useAuth } from "@/contexts/auth-context";
 
 export default function SignupPage() {
   const { toast } = useToast();
+  const router = useRouter();
+  const { currentUser, isLoadingAuth } = useAuth();
+
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
+  useEffect(() => {
+    if (!isLoadingAuth && currentUser) {
+      router.push('/dashboard');
+    }
+  }, [currentUser, isLoadingAuth, router]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -28,24 +40,51 @@ export default function SignupPage() {
       });
       return;
     }
-    setIsLoading(true);
-    // Placeholder for actual signup logic
-    console.log("Signup attempt with:", { email, password });
+    if (password.length < 6) {
+       toast({
+        title: "Password Too Short",
+        description: "Password should be at least 6 characters long.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    toast({
-      title: "Sign Up Attempt",
-      description: "Sign up functionality is not yet implemented. User data logged to console.",
-      variant: "default",
-    });
-    setIsLoading(false);
-    // On successful signup, you would typically redirect:
-    // import { useRouter } from 'next/navigation';
-    // const router = useRouter();
-    // router.push('/dashboard');
+    setIsLoading(true);
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      toast({
+        title: "Sign Up Successful",
+        description: "Your account has been created. Welcome!",
+        variant: "default",
+      });
+      router.push('/dashboard'); // Redirect to dashboard after successful signup
+    } catch (error: any) {
+      console.error("Signup error:", error);
+      let errorMessage = "Failed to create an account. Please try again.";
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = "This email address is already in use.";
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = "Please enter a valid email address.";
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = "The password is too weak. Please choose a stronger password.";
+      }
+      toast({
+        title: "Sign Up Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
+  
+  if (isLoadingAuth) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-16 h-16 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
@@ -69,13 +108,13 @@ export default function SignupPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Password (min. 6 characters)</Label>
               <Input 
                 id="password" 
                 type="password" 
                 placeholder="••••••••" 
                 required 
-                minLength={8}
+                minLength={6}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading}
@@ -88,7 +127,7 @@ export default function SignupPage() {
                 type="password" 
                 placeholder="••••••••" 
                 required 
-                minLength={8}
+                minLength={6}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={isLoading}

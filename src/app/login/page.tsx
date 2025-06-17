@@ -7,35 +7,68 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase/config";
+import { useRouter } from 'next/navigation';
+import { useAuth } from "@/contexts/auth-context";
 
 export default function LoginPage() {
   const { toast } = useToast();
+  const router = useRouter();
+  const { currentUser, isLoadingAuth } = useAuth();
+
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  useEffect(() => {
+    // Redirect if user is already logged in and auth state is loaded
+    if (!isLoadingAuth && currentUser) {
+      router.push('/dashboard');
+    }
+  }, [currentUser, isLoadingAuth, router]);
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsLoading(true);
-    // Placeholder for actual login logic
-    console.log("Login attempt with:", { email, password });
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    toast({
-      title: "Login Attempt",
-      description: "Login functionality is not yet implemented. User data logged to console.",
-      variant: "default",
-    });
-    setIsLoading(false);
-    // On successful login, you would typically redirect:
-    // import { useRouter } from 'next/navigation';
-    // const router = useRouter();
-    // router.push('/dashboard');
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      toast({
+        title: "Login Successful",
+        description: "Welcome back!",
+        variant: "default", 
+      });
+      router.push('/dashboard'); // Redirect to dashboard after successful login
+    } catch (error: any) {
+      console.error("Login error:", error);
+      let errorMessage = "Failed to sign in. Please check your credentials.";
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        errorMessage = "Invalid email or password.";
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = "Please enter a valid email address.";
+      }
+      toast({
+        title: "Login Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
+  
+  // Show loading spinner or null while checking auth state initially
+  if (isLoadingAuth) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-16 h-16 animate-spin text-primary" />
+      </div>
+    );
+  }
+  // If user is already logged in (and not loading auth), they'd be redirected by useEffect.
+  // So, render the login form only if no user and auth check is done.
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background p-4">

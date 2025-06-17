@@ -3,9 +3,12 @@
 
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ArrowRight, BrainCircuit, BarChartBig, MessageSquarePlus } from "lucide-react";
+import { ArrowRight, BrainCircuit, BarChartBig, MessageSquarePlus, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
-import { useLoading } from "@/contexts/loading-context"; // Import useLoading
+import { useLoading } from "@/contexts/loading-context";
+import { useAuth } from "@/contexts/auth-context";
+import { useRouter } from 'next/navigation';
+import { useEffect } from "react";
 
 const cardHoverVariants = {
   hover: {
@@ -21,10 +24,34 @@ const cardHoverVariants = {
   }
 };
 
-
 export default function DashboardPage() {
-  const { setIsPageLoading } = useLoading(); // Get setIsPageLoading
-  const userName = "Valued User"; 
+  const { setIsPageLoading } = useLoading();
+  const { currentUser, isLoadingAuth } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    // This effect runs after the AuthProvider has determined the auth state
+    if (!isLoadingAuth && !currentUser) {
+      router.push('/login');
+    } else if (!isLoadingAuth && currentUser) {
+      // User is authenticated, safe to turn off general page loader
+      setIsPageLoading(false);
+    }
+  }, [currentUser, isLoadingAuth, router, setIsPageLoading]);
+
+  // Display loading state or redirect if not authenticated
+  if (isLoadingAuth || !currentUser) {
+    // AuthProvider already shows a full-page loader during initial auth check.
+    // This is a fallback or for subsequent checks if needed.
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-16 h-16 animate-spin text-primary" />
+      </div>
+    );
+  }
+  
+  // User is authenticated, render the dashboard
+  const userName = currentUser.displayName || currentUser.email || "Valued User";
 
   const handleLinkClick = () => {
     setIsPageLoading(true);
@@ -38,8 +65,6 @@ export default function DashboardPage() {
       </header>
 
       <div className="flex flex-col gap-8"> 
-        
-        
         <motion.div
           initial="initial"
           whileHover="hover"
@@ -63,7 +88,6 @@ export default function DashboardPage() {
           </Link>
         </motion.div>
 
-        
         <div className="grid gap-6 md:grid-cols-2">
           <motion.div
             initial="initial"

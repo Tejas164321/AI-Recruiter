@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import Image from "next/image";
-import { ArrowRight, CheckCircle, BarChartBig, ScanSearch, MessageSquarePlus } from "lucide-react";
+import { ArrowRight, CheckCircle, BarChartBig, ScanSearch, MessageSquarePlus, ShieldCheckIcon } from "lucide-react";
 import { motion } from "framer-motion";
 
 const sectionVariants = {
@@ -38,15 +38,14 @@ const itemVariants = {
 const cardHoverVariants = {
   hover: {
     scale: 1.03,
-    boxShadow: "0px 10px 30px -5px hsl(var(--primary)/0.2)", // Themed shadow
+    boxShadow: "0px 10px 30px -5px hsl(var(--primary)/0.2)", 
     transition: { type: "spring", stiffness: 300, damping: 10 }
   },
   initial: {
     scale: 1,
-    boxShadow: "0px 5px 15px hsl(var(--primary)/0.05)" // Softer initial shadow
+    boxShadow: "0px 5px 15px hsl(var(--primary)/0.05)" 
   }
 };
-
 
 export default function LandingPage() {
   const features = [
@@ -70,6 +69,13 @@ export default function LandingPage() {
       description: "Craft tailored interview questions from job descriptions. Get categorized questions (technical, behavioral, situational) to thoroughly assess candidates.",
       items: ["Categorized Question Sets", "JD-Specific Insights", "Customizable Focus Areas"],
       delay: 0.6
+    },
+     {
+      icon: ShieldCheckIcon, // Updated icon for authentication
+      title: "Secure Authentication & Access",
+      description: "Reliable user authentication to protect your data and provide personalized experiences. Sign up and log in securely.",
+      items: ["Email & Password Login", "Protected User Dashboards", "Secure Session Management"],
+      delay: 0.75 // Adjusted delay
     }
   ];
 
@@ -102,7 +108,7 @@ export default function LandingPage() {
                     transition={{ duration: 0.6, delay: 0.3 }}
                     className="max-w-[600px] text-foreground md:text-xl"
                   >
-                    Streamline your recruitment process with AI-powered resume screening, candidate ranking, and an ATS score checker. Make smarter hiring decisions, faster.
+                    Streamline your recruitment process with AI-powered resume screening, candidate ranking, an ATS score checker, and tailored interview question generation. Make smarter hiring decisions, faster.
                   </motion.p>
                 </div>
                 <motion.div
@@ -193,12 +199,12 @@ export default function LandingPage() {
                 </motion.p>
               </div>
             </motion.div>
-            <div className="mx-auto grid max-w-5xl gap-8 sm:grid-cols-2 md:gap-12 lg:grid-cols-3 lg:max-w-none mt-12">
+            <div className="mx-auto grid max-w-5xl items-stretch gap-8 sm:grid-cols-2 md:gap-12 lg:grid-cols-2 xl:grid-cols-4 lg:max-w-none mt-12">
               {features.map((feature, index) => (
                 <motion.div
                   key={index}
                   initial="initial"
-                  animate="initial"
+                  animate="initial" /* Ensures it respects the initial state of variants */
                   whileHover="hover"
                   variants={cardHoverVariants}
                   className="h-full" 
