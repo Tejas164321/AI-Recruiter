@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import Image from "next/image";
-import { ArrowRight, CheckCircle, BarChartBig, Users, Lock } from "lucide-react";
+import { ArrowRight, CheckCircle, BarChartBig, ScanSearch, MessageSquarePlus } from "lucide-react";
 import { motion } from "framer-motion";
 
 const sectionVariants = {
@@ -49,6 +49,30 @@ const cardHoverVariants = {
 
 
 export default function LandingPage() {
+  const features = [
+    {
+      icon: BarChartBig,
+      title: "AI-Powered Resume Ranking",
+      description: "Automatically rank candidates based on job description relevance. Get match scores and AI-generated feedback to quickly identify top talent.",
+      items: ["Intelligent Skill Matching", "ATS Compatibility Insights", "Customizable Filtering"],
+      delay: 0.3
+    },
+    {
+      icon: ScanSearch,
+      title: "ATS Score Finder",
+      description: "Analyze resumes for Applicant Tracking System (ATS) compatibility. Get scores and suggestions to optimize for automated screening.",
+      items: ["Resume Structure Analysis", "Keyword Optimization Tips", "Format Compatibility Check"],
+      delay: 0.45
+    },
+    {
+      icon: MessageSquarePlus,
+      title: "AI Interview Question Generator",
+      description: "Craft tailored interview questions from job descriptions. Get categorized questions (technical, behavioral, situational) to thoroughly assess candidates.",
+      items: ["Categorized Question Sets", "JD-Specific Insights", "Customizable Focus Areas"],
+      delay: 0.6
+    }
+  ];
+
   return (
     <div className="flex flex-col min-h-screen">
       <main className="flex-1">
@@ -78,7 +102,7 @@ export default function LandingPage() {
                     transition={{ duration: 0.6, delay: 0.3 }}
                     className="max-w-[600px] text-foreground md:text-xl"
                   >
-                    Streamline your recruitment process with AI-powered resume screening, candidate ranking, and an upcoming ATS score checker. Make smarter hiring decisions, faster.
+                    Streamline your recruitment process with AI-powered resume screening, candidate ranking, and an ATS score checker. Make smarter hiring decisions, faster.
                   </motion.p>
                 </div>
                 <motion.div
@@ -170,29 +194,7 @@ export default function LandingPage() {
               </div>
             </motion.div>
             <div className="mx-auto grid max-w-5xl items-start gap-8 sm:grid-cols-2 md:gap-12 lg:grid-cols-3 lg:max-w-none mt-12">
-              {[
-                {
-                  icon: BarChartBig,
-                  title: "AI-Powered Resume Ranking",
-                  description: "Automatically rank candidates based on job description relevance. Get match scores and AI-generated feedback to quickly identify top talent.",
-                  items: ["Intelligent Skill Matching", "ATS Compatibility Insights", "Customizable Filtering"],
-                  delay: 0.3
-                },
-                {
-                  icon: Users,
-                  title: "ATS Score Finder (Coming Soon)",
-                  description: "Get a detailed analysis of how well resumes are optimized for Applicant Tracking Systems. Improve your candidates' chances of getting noticed.",
-                  items: ["Resume Structure Analysis", "Keyword Optimization Tips", "Format Compatibility Check"],
-                  delay: 0.45
-                },
-                {
-                  icon: Lock,
-                  title: "Secure Authentication & Access",
-                  description: "Manage your recruitment data with robust user authentication and a personalized dashboard to access all your tools.",
-                  items: ["Secure Sign-Up & Login", "Personalized User Dashboard", "Role-Based Access (Future)"],
-                  delay: 0.6
-                }
-              ].map((feature, index) => (
+              {features.map((feature, index) => (
                 <motion.div
                   key={index}
                   initial="initial"
