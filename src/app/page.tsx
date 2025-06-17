@@ -193,7 +193,7 @@ export default function LandingPage() {
                 </motion.p>
               </div>
             </motion.div>
-            <div className="mx-auto grid max-w-5xl items-start gap-8 sm:grid-cols-2 md:gap-12 lg:grid-cols-3 lg:max-w-none mt-12">
+            <div className="mx-auto grid max-w-5xl gap-8 sm:grid-cols-2 md:gap-12 lg:grid-cols-3 lg:max-w-none mt-12">
               {features.map((feature, index) => (
                 <motion.div
                   key={index}
@@ -201,6 +201,7 @@ export default function LandingPage() {
                   animate="initial"
                   whileHover="hover"
                   variants={cardHoverVariants}
+                  className="h-full" 
                 >
                   <motion.div
                      variants={sectionVariants}
