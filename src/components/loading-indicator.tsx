@@ -1,7 +1,7 @@
 
 "use client";
 
-import { BrainCircuit, Users, Briefcase, BarChartBig } from "lucide-react";
+import { BrainCircuit } from "lucide-react";
 
 interface LoadingIndicatorProps {
   stage: "roles" | "screening" | "general";
@@ -28,14 +28,17 @@ export function LoadingIndicator({ stage }: LoadingIndicatorProps) {
         />
       </div>
 
+      {/* Removed secondary pulsing icons for simplicity */}
+      {/* 
       <div className="flex items-center space-x-6">
         <Briefcase className="w-10 h-10 text-muted-foreground animate-pulse [animation-delay:0ms] [animation-duration:1.5s]" />
         <Users className="w-10 h-10 text-muted-foreground animate-pulse [animation-delay:300ms] [animation-duration:1.5s]" />
         <BarChartBig className="w-10 h-10 text-muted-foreground animate-pulse [animation-delay:600ms] [animation-duration:1.5s]" />
-      </div>
+      </div> 
+      */}
 
       <div>
-        <p className="text-xl font-semibold text-primary mt-2">
+        <p className="text-xl font-semibold text-primary mt-6"> {/* Adjusted margin-top due to removed icons */}
           {message}
         </p>
         <p className="text-sm text-muted-foreground mt-2">
