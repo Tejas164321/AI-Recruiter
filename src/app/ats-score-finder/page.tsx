@@ -12,20 +12,22 @@ import { AtsScoreTable } from "@/components/ats-score-table";
 import { AtsFeedbackModal } from "@/components/ats-feedback-modal";
 import { BarChartBig, Loader2, ScanSearch, BrainCircuit } from "lucide-react";
 import { LoadingIndicator } from "@/components/loading-indicator";
-import { useLoading } from "@/contexts/loading-context"; // Import useLoading
+import { useLoading } from "@/contexts/loading-context";
+import { useAuth } from "@/contexts/auth-context";
+import { addAtsScoreResult, getAtsScoreResultsForUser } from "@/services/firestoreService";
+import type { Timestamp } from "firebase/firestore";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
-const MAX_FILES_ATS = 10; // Limit concurrent processing for stability
+const MAX_FILES_ATS = 10;
 
 export default function AtsScoreFinderPage() {
-  const { setIsPageLoading } = useLoading(); // Consume useLoading
-  useEffect(() => {
-    setIsPageLoading(false); // Signal page has loaded
-  }, [setIsPageLoading]);
+  const { setIsPageLoading: setAppIsLoading } = useLoading();
+  const { currentUser } = useAuth();
 
-  const [uploadedResumeFiles, setUploadedResumeFiles] = useState<ResumeFile[]>([]);
-  const [atsResults, setAtsResults] = useState<AtsScoreResult[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [uploadedResumeFiles, setUploadedResumeFiles] = useState<ResumeFile[]>([]); // For file input
+  const [atsResults, setAtsResults] = useState<AtsScoreResult[]>([]); // From Firestore
+  const [isProcessingAts, setIsProcessingAts] = useState<boolean>(false); // For AI processing + DB save
+  const [isLoadingResults, setIsLoadingResults] = useState<boolean>(false); // For loading from DB
   const [selectedResultForModal, setSelectedResultForModal] = useState<AtsScoreResult | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
@@ -33,38 +35,55 @@ export default function AtsScoreFinderPage() {
   const resultsSectionRef = useRef<HTMLDivElement | null>(null);
   const analyzeButtonRef = useRef<HTMLButtonElement | null>(null);
 
-  // Scroll to "Analyze Resumes" button when resumes are uploaded and not currently loading
   useEffect(() => {
-    if (uploadedResumeFiles.length > 0 && !isLoading && analyzeButtonRef.current) {
+    setAppIsLoading(false);
+    if (currentUser?.uid) {
+      loadUserAtsResults();
+    } else {
+      setAtsResults([]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.uid, setAppIsLoading]);
+
+  // Scroll to "Analyze Resumes" button
+  useEffect(() => {
+    if (uploadedResumeFiles.length > 0 && !isProcessingAts && analyzeButtonRef.current) {
       const timer = setTimeout(() => {
         analyzeButtonRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [uploadedResumeFiles, isLoading]);
+  }, [uploadedResumeFiles, isProcessingAts]);
 
-  // Scroll to results/loading section when loading starts
+  // Scroll to results/loading section
   useEffect(() => {
-    if (isLoading && resultsSectionRef.current) {
+    const shouldScroll = isProcessingAts || isLoadingResults || (!isProcessingAts && !isLoadingResults && atsResults.length > 0);
+    if (shouldScroll && resultsSectionRef.current) {
       const timer = setTimeout(() => {
         resultsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [isLoading]);
+  }, [isProcessingAts, isLoadingResults, atsResults]);
 
-  // Scroll to results when analysis is complete and results are available
-  useEffect(() => {
-    if (!isLoading && atsResults.length > 0 && resultsSectionRef.current) {
-        const timer = setTimeout(() => {
-            resultsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }, 100);
-        return () => clearTimeout(timer);
+  const loadUserAtsResults = useCallback(async () => {
+    if (!currentUser?.uid) return;
+    setIsLoadingResults(true);
+    try {
+      const resultsFromDb = await getAtsScoreResultsForUser(currentUser.uid);
+      setAtsResults(resultsFromDb.sort((a, b) => b.atsScore - a.atsScore));
+    } catch (error) {
+      toast({ title: "Error loading ATS results", description: String(error), variant: "destructive" });
+    } finally {
+      setIsLoadingResults(false);
     }
-  }, [isLoading, atsResults]);
-
+  }, [currentUser?.uid, toast]);
 
   const handleResumesUpload = useCallback(async (files: File[]) => {
+    if (!currentUser?.uid) {
+      toast({ title: "Not Authenticated", description: "Please log in to upload resumes.", variant: "destructive" });
+      return;
+    }
     if (files.length > MAX_FILES_ATS) {
         toast({
             title: "Too many files",
@@ -80,26 +99,28 @@ export default function AtsScoreFinderPage() {
         reader.onerror = (error) => reject(error);
         reader.readAsDataURL(file);
       });
-      return { id: crypto.randomUUID(), file, dataUri, name: file.name };
+      return { id: crypto.randomUUID(), file, dataUri, name: file.name }; // id is for local tracking before DB save
     });
     try {
       const newResumeFiles = await Promise.all(newResumeFilesPromises);
       setUploadedResumeFiles(newResumeFiles);
-      setAtsResults([]); // Clear previous results when new files are selected
+      // Don't clear atsResults here, allow new analysis to append or refresh
     } catch (error) {
       toast({ title: "Error processing resume files", description: String(error), variant: "destructive" });
     }
-  }, [toast]);
+  }, [toast, currentUser?.uid]);
 
   const handleAnalyzeResumes = useCallback(async () => {
+    if (!currentUser?.uid) {
+      toast({ title: "Not Authenticated", description: "Please log in to analyze resumes.", variant: "destructive" });
+      return;
+    }
     if (uploadedResumeFiles.length === 0) {
       toast({ title: "No Resumes Uploaded", description: "Please upload resume files to analyze.", variant: "destructive" });
       return;
     }
 
-    setIsLoading(true);
-    setAtsResults([]); // Clear previous results before new analysis
-    const results: AtsScoreResult[] = [];
+    setIsProcessingAts(true);
     let filesProcessedSuccessfully = 0;
 
     const processingPromises = uploadedResumeFiles.map(async (resumeFile) => {
@@ -109,14 +130,16 @@ export default function AtsScoreFinderPage() {
           originalResumeName: resumeFile.name,
         };
         const output: CalculateAtsScoreOutput = await calculateAtsScore(input);
-        results.push({
-          id: resumeFile.id,
+        
+        const resultToSave: Omit<AtsScoreResult, 'id' | 'userId' | 'createdAt'> = {
+          resumeId: resumeFile.id, // Keep original file ID for potential linking
           resumeName: resumeFile.name,
           candidateName: output.candidateName,
           atsScore: output.atsScore,
           atsFeedback: output.atsFeedback,
-          resumeDataUri: resumeFile.dataUri,
-        });
+          resumeDataUri: resumeFile.dataUri, // Storing for modal display, consider implications for large files
+        };
+        await addAtsScoreResult(currentUser.uid, resultToSave);
         filesProcessedSuccessfully++;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Unknown error during ATS analysis.";
@@ -126,28 +149,19 @@ export default function AtsScoreFinderPage() {
           description: `Could not get ATS score. ${errorMessage.substring(0,100)}`,
           variant: "destructive",
         });
-         results.push({ // Add a placeholder for failed items
-          id: resumeFile.id,
-          resumeName: resumeFile.name,
-          atsScore: 0,
-          atsFeedback: `Failed to process this resume. Error: ${errorMessage}`,
-          resumeDataUri: resumeFile.dataUri,
-        });
       }
     });
 
     await Promise.all(processingPromises);
-
-    results.sort((a, b) => b.atsScore - a.atsScore);
-    setAtsResults(results);
-    setIsLoading(false);
+    setIsProcessingAts(false);
+    setUploadedResumeFiles([]); // Clear upload area after processing
 
     if (filesProcessedSuccessfully > 0) {
         toast({
             title: "ATS Analysis Complete",
-            description: `${filesProcessedSuccessfully} of ${uploadedResumeFiles.length} resumes processed. Results are below.`,
+            description: `${filesProcessedSuccessfully} of ${uploadedResumeFiles.length} resumes processed and saved.`,
         });
-        // Scrolling to results is now handled by useEffect
+        await loadUserAtsResults(); // Refresh results from DB
     } else if (uploadedResumeFiles.length > 0) {
          toast({
             title: "ATS Analysis Failed",
@@ -155,7 +169,7 @@ export default function AtsScoreFinderPage() {
             variant: "destructive"
         });
     }
-  }, [uploadedResumeFiles, toast]);
+  }, [uploadedResumeFiles, toast, currentUser?.uid, loadUserAtsResults]);
 
   const handleViewInsights = (result: AtsScoreResult) => {
     setSelectedResultForModal(result);
@@ -170,89 +184,101 @@ export default function AtsScoreFinderPage() {
             <BarChartBig className="w-7 h-7 mr-3" /> ATS Score Analyzer
           </CardTitle>
           <CardDescription>
-            Upload resumes to analyze their compatibility with Applicant Tracking Systems. Get scores and actionable insights to help optimize them for automated screening.
+            Upload resumes to analyze their compatibility with Applicant Tracking Systems. Results are saved to your account.
           </CardDescription>
         </CardHeader>
       </Card>
-
-      <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
-        <CardHeader>
-          <CardTitle className="flex items-center text-xl font-headline">
-            Upload Resumes
-          </CardTitle>
-          <CardDescription>
-            Upload one or more resume files (PDF, DOCX, TXT). Max 5MB each. Up to {MAX_FILES_ATS} files at a time.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <FileUploadArea
-            onFilesUpload={handleResumesUpload}
-            acceptedFileTypes={{
-              "application/pdf": [".pdf"],
-              "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
-              "text/plain": [".txt"],
-              "application/msword": [".doc"],
-            }}
-            multiple
-            label={`PDF, DOCX, DOC, TXT files up to 5MB each (max ${MAX_FILES_ATS} files)`}
-            id="ats-resume-upload"
-            maxSizeInBytes={MAX_FILE_SIZE_BYTES}
-          />
-          <Button
-            ref={analyzeButtonRef}
-            onClick={handleAnalyzeResumes}
-            disabled={isLoading || uploadedResumeFiles.length === 0}
-            size="lg"
-            className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground shadow-md hover:shadow-lg transition-all"
-          >
-            {isLoading ? (
-              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-            ) : (
-              <ScanSearch className="w-5 h-5 mr-2" />
-            )}
-            Analyze Resumes for ATS Score
-          </Button>
-        </CardContent>
-      </Card>
-
-      <div ref={resultsSectionRef}>
-        {isLoading && (
-          <Card className="shadow-lg">
-            <CardContent className="pt-6">
-                <LoadingIndicator stage="screening" />
+      {!currentUser && (
+        <Card className="shadow-lg">
+            <CardContent className="pt-6 text-center">
+                <p className="text-lg text-muted-foreground">Please <a href="/login" className="text-primary underline">log in</a> to use the ATS Score Analyzer.</p>
             </CardContent>
-          </Card>
-        )}
-
-        {!isLoading && atsResults.length > 0 && (
+        </Card>
+      )}
+      {currentUser && (
+        <>
           <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
             <CardHeader>
-              <CardTitle className="text-xl font-headline text-primary flex items-center">
-                <BrainCircuit className="w-6 h-6 mr-2" /> ATS Score Results
+              <CardTitle className="flex items-center text-xl font-headline">
+                Upload Resumes
               </CardTitle>
               <CardDescription>
-                Resumes ranked by their ATS compatibility score. Click "View Insights" for detailed feedback.
+                Upload one or more resume files (PDF, DOCX, TXT). Max 5MB each. Up to {MAX_FILES_ATS} files.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <AtsScoreTable results={atsResults} onViewInsights={handleViewInsights} />
+            <CardContent className="space-y-6">
+              <FileUploadArea
+                onFilesUpload={handleResumesUpload}
+                acceptedFileTypes={{
+                  "application/pdf": [".pdf"],
+                  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
+                  "text/plain": [".txt"],
+                  "application/msword": [".doc"],
+                }}
+                multiple
+                label={`PDF, DOCX, DOC, TXT files up to 5MB each (max ${MAX_FILES_ATS} files)`}
+                id="ats-resume-upload"
+                maxSizeInBytes={MAX_FILE_SIZE_BYTES}
+              />
+              <Button
+                ref={analyzeButtonRef}
+                onClick={handleAnalyzeResumes}
+                disabled={isProcessingAts || isLoadingResults || uploadedResumeFiles.length === 0}
+                size="lg"
+                className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground shadow-md hover:shadow-lg transition-all"
+              >
+                {isProcessingAts ? (
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                ) : (
+                  <ScanSearch className="w-5 h-5 mr-2" />
+                )}
+                Analyze & Save ATS Scores
+              </Button>
             </CardContent>
           </Card>
-        )}
-         {!isLoading && atsResults.length === 0 && uploadedResumeFiles.length > 0 && (
-            <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
-                <CardContent className="pt-6">
-                     <p className="text-center text-muted-foreground py-8">Click "Analyze Resumes for ATS Score" to begin.</p>
-                </CardContent>
-            </Card>
-        )}
-      </div>
 
-      <AtsFeedbackModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        result={selectedResultForModal}
-      />
+          <div ref={resultsSectionRef}>
+            {(isProcessingAts || isLoadingResults) && (
+              <Card className="shadow-lg">
+                <CardContent className="pt-6">
+                    <LoadingIndicator stage={isProcessingAts ? "screening" : "general"} />
+                </CardContent>
+              </Card>
+            )}
+
+            {!isProcessingAts && !isLoadingResults && atsResults.length > 0 && (
+              <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
+                <CardHeader>
+                  <CardTitle className="text-xl font-headline text-primary flex items-center">
+                    <BrainCircuit className="w-6 h-6 mr-2" /> Saved ATS Score Results
+                  </CardTitle>
+                  <CardDescription>
+                    Your previously analyzed resumes, ranked by ATS score.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <AtsScoreTable results={atsResults} onViewInsights={handleViewInsights} />
+                </CardContent>
+              </Card>
+            )}
+            {!isProcessingAts && !isLoadingResults && atsResults.length === 0 && (
+                <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
+                    <CardContent className="pt-6">
+                        <p className="text-center text-muted-foreground py-8">
+                            {uploadedResumeFiles.length > 0 ? 'Click "Analyze & Save ATS Scores" to begin.' : 'Upload resumes to get started, or previous results will appear here.'}
+                        </p>
+                    </CardContent>
+                </Card>
+            )}
+          </div>
+
+          <AtsFeedbackModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            result={selectedResultForModal}
+          />
+        </>
+      )}
     </div>
   );
 }

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import type { Filters, ExtractedJobRole } from "@/lib/types";
-import { SlidersHorizontal, Search, Briefcase, Loader2 } from "lucide-react";
+import { SlidersHorizontal, Search, Briefcase, Loader2, Trash2, RotateCw } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -15,6 +15,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 interface FilterControlsProps {
   filters: Filters;
@@ -24,16 +35,20 @@ interface FilterControlsProps {
   selectedJobRoleId: string | null;
   onJobRoleChange: (roleId: string | null) => void;
   isLoadingRoles: boolean;
+  onDeleteJobRole: (roleId: string) => void;
+  onRefreshScreeningForRole: (roleId: string) => void;
 }
 
 export function FilterControls({
   filters,
   onFilterChange,
-  onResetFilters, // Changed from onResetFiltersAndRole
+  onResetFilters,
   extractedJobRoles,
   selectedJobRoleId,
   onJobRoleChange,
   isLoadingRoles,
+  onDeleteJobRole,
+  onRefreshScreeningForRole,
 }: FilterControlsProps) {
   const handleScoreChange = (value: number[]) => {
     onFilterChange({ scoreRange: [value[0], value[1]] });
@@ -47,25 +62,27 @@ export function FilterControls({
     onJobRoleChange(roleId === "none" ? null : roleId);
   };
 
+  const selectedRoleName = extractedJobRoles.find(r => r.id === selectedJobRoleId)?.name || "Selected Role";
+
   return (
     <div className="p-6 rounded-lg border shadow-sm space-y-6 bg-card">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         <h3 className="text-lg font-semibold text-foreground flex items-center">
           <SlidersHorizontal className="w-5 h-5 mr-2 text-primary" />
-          Filter Candidates
+          Filter & Manage Roles
         </h3>
         <Button variant="ghost" size="sm" onClick={onResetFilters} disabled={isLoadingRoles}>
           Reset Filters
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
         <div className="md:col-span-1">
           <Label htmlFor="jobRoleSelect" className="text-sm font-medium text-foreground">
-            Select Job Role
+            Active Job Role
           </Label>
           <div className="relative mt-1">
-             {isLoadingRoles ? (
+             {isLoadingRoles && !extractedJobRoles.length ? (
                 <div className="flex items-center justify-center h-10 border rounded-md bg-muted">
                     <Loader2 className="w-5 h-5 mr-2 animate-spin text-muted-foreground" />
                     <span className="text-muted-foreground">Loading Roles...</span>
@@ -76,7 +93,7 @@ export function FilterControls({
                 <Select
                     value={selectedJobRoleId || "none"}
                     onValueChange={handleJobRoleSelectChange}
-                    disabled={extractedJobRoles.length === 0}
+                    disabled={extractedJobRoles.length === 0 || isLoadingRoles}
                 >
                     <SelectTrigger id="jobRoleSelect" className="pl-10">
                     <SelectValue placeholder="Select a Job Role" />
@@ -84,7 +101,7 @@ export function FilterControls({
                     <SelectContent>
                     {extractedJobRoles.length === 0 && (
                         <SelectItem value="none" disabled>
-                            No job roles extracted. Upload JDs.
+                            No job roles. Upload JDs.
                         </SelectItem>
                     )}
                     {extractedJobRoles.map((role) => (
@@ -97,30 +114,58 @@ export function FilterControls({
                 </>
              )}
           </div>
+           {selectedJobRoleId && (
+            <div className="mt-2 flex gap-2">
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="text-destructive hover:text-destructive hover:border-destructive/50 flex-1" disabled={isLoadingRoles}>
+                            <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete Role
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                        <AlertDialogTitle>Delete "{selectedRoleName}"?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently delete the job role and all its associated screening results. This action cannot be undone.
+                        </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => onDeleteJobRole(selectedJobRoleId)} className="bg-destructive hover:bg-destructive/90">
+                            Delete
+                        </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+                 <Button variant="outline" size="sm" onClick={() => onRefreshScreeningForRole(selectedJobRoleId)} disabled={isLoadingRoles} className="flex-1">
+                    <RotateCw className="w-3.5 h-3.5 mr-1.5" /> Re-screen Role
+                </Button>
+            </div>
+            )}
         </div>
 
         <div className="md:col-span-1">
           <Label htmlFor="skillKeyword" className="text-sm font-medium text-foreground">
-            Search by Name/Skill
+            Search by Name/Skill/File
           </Label>
           <div className="relative mt-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               id="skillKeyword"
               type="text"
-              placeholder="e.g., React, Python, John Doe"
+              placeholder="e.g., React, John Doe, resume.pdf"
               value={filters.skillKeyword}
               onChange={handleKeywordChange}
               className="pl-10"
-              aria-label="Skill or name keyword filter"
-              disabled={isLoadingRoles}
+              aria-label="Skill, name, or filename keyword filter"
+              disabled={isLoadingRoles || !selectedJobRoleId}
             />
           </div>
         </div>
         
         <div className="md:col-span-1">
           <Label htmlFor="scoreRange" className="text-sm font-medium text-foreground">
-            Score Range: {filters.scoreRange[0]} - {filters.scoreRange[1]}
+            Match Score Range: {filters.scoreRange[0]} - {filters.scoreRange[1]}
           </Label>
           <Slider
             id="scoreRange"
@@ -131,11 +176,10 @@ export function FilterControls({
             onValueChange={handleScoreChange}
             className="mt-3 pt-1"
             aria-label="Score range filter"
-            disabled={isLoadingRoles}
+            disabled={isLoadingRoles || !selectedJobRoleId}
           />
         </div>
       </div>
     </div>
   );
 }
-
