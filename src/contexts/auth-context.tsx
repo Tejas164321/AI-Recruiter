@@ -4,32 +4,43 @@
 import type { ReactNode, Dispatch, SetStateAction } from 'react';
 import { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { auth } from '@/lib/firebase/config';
+import { auth as firebaseAuthModule } from '@/lib/firebase/config'; // Renamed import
 import { Loader2 } from 'lucide-react';
 
 interface AuthContextType {
   currentUser: User | null;
   isLoadingAuth: boolean;
-  setCurrentUser: Dispatch<SetStateAction<User | null>>; // Allow manual setting if needed elsewhere
+  setCurrentUser: Dispatch<SetStateAction<User | null>>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isLoadingAuth, setIsLoadingAuth] = useState(true); // Start true to check auth state
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
-      setIsLoadingAuth(false);
-    });
+    let unsubscribe: (() => void) | undefined;
 
-    // Cleanup subscription on unmount
-    return () => unsubscribe();
+    if (firebaseAuthModule) { // Check if Firebase Auth was initialized
+      unsubscribe = onAuthStateChanged(firebaseAuthModule, (user) => {
+        setCurrentUser(user);
+        setIsLoadingAuth(false);
+      });
+    } else {
+      // Firebase Auth is not available (likely due to missing config)
+      console.warn("AuthContext: Firebase Auth module not available. User authentication will not function.");
+      setCurrentUser(null);
+      setIsLoadingAuth(false);
+    }
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
 
-  // Show a full-page loader while checking auth status for the first time
   if (isLoadingAuth) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">

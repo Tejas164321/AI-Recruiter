@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useLoading } from "@/contexts/loading-context";
 import { useAuth } from "@/contexts/auth-context";
 import { signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase/config";
+import { auth as firebaseAuthModule } from "@/lib/firebase/config"; // Renamed import
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 
@@ -19,10 +19,18 @@ export function Header() {
   const { toast } = useToast();
 
   const handleSignOut = async () => {
+    if (!firebaseAuthModule) {
+      toast({
+        title: "Authentication Error",
+        description: "Firebase authentication is not configured. Cannot sign out.",
+        variant: "destructive",
+      });
+      return;
+    }
     try {
-      await signOut(auth);
+      await signOut(firebaseAuthModule);
       toast({ title: "Signed Out", description: "You have been successfully signed out." });
-      router.push('/'); // Redirect to home page after sign out
+      router.push('/'); 
     } catch (error) {
       console.error("Sign out error:", error);
       toast({ title: "Sign Out Failed", description: "Could not sign out. Please try again.", variant: "destructive" });
@@ -51,16 +59,16 @@ export function Header() {
                   <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
                 </Link>
               </Button>
-              <Button variant="ghost" onClick={handleSignOut}>
+              <Button variant="ghost" onClick={handleSignOut} disabled={!firebaseAuthModule}>
                 <LogOut className="mr-2 h-4 w-4" /> Sign Out
               </Button>
             </>
           ) : (
             <>
-              <Button variant="ghost" asChild>
+              <Button variant="ghost" asChild disabled={!firebaseAuthModule}>
                 <Link href="/login">Sign In</Link>
               </Button>
-              <Button asChild>
+              <Button asChild disabled={!firebaseAuthModule}>
                 <Link href="/signup">Sign Up</Link>
               </Button>
             </>

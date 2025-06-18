@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import React, { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase/config";
+import { auth as firebaseAuthModule } from "@/lib/firebase/config"; // Renamed import
 import { useRouter } from 'next/navigation';
 import { useAuth } from "@/contexts/auth-context";
 
@@ -50,14 +50,25 @@ export default function SignupPage() {
     }
 
     setIsLoading(true);
+
+    if (!firebaseAuthModule) {
+      toast({
+        title: "Authentication Error",
+        description: "Firebase authentication is not configured. Please contact support or check setup.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      await createUserWithEmailAndPassword(firebaseAuthModule, email, password);
       toast({
         title: "Sign Up Successful",
         description: "Your account has been created. Welcome!",
         variant: "default",
       });
-      router.push('/dashboard'); // Redirect to dashboard after successful signup
+      router.push('/dashboard'); 
     } catch (error: any) {
       console.error("Signup error:", error);
       let errorMessage = "Failed to create an account. Please try again.";
@@ -67,6 +78,8 @@ export default function SignupPage() {
         errorMessage = "Please enter a valid email address.";
       } else if (error.code === 'auth/weak-password') {
         errorMessage = "The password is too weak. Please choose a stronger password.";
+      } else if (error.code === 'auth/invalid-api-key') {
+        errorMessage = "Firebase configuration error. Please check API key.";
       }
       toast({
         title: "Sign Up Failed",
@@ -133,10 +146,13 @@ export default function SignupPage() {
                 disabled={isLoading}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full" disabled={isLoading || !firebaseAuthModule}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Sign Up
             </Button>
+            {!firebaseAuthModule && (
+              <p className="text-xs text-center text-destructive mt-2">Authentication service unavailable.</p>
+            )}
           </form>
           <div className="mt-4 text-center text-sm">
             Already have an account?{" "}

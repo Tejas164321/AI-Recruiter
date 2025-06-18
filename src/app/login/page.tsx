@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import React, { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase/config";
+import { auth as firebaseAuthModule } from "@/lib/firebase/config"; // Renamed import
 import { useRouter } from 'next/navigation';
 import { useAuth } from "@/contexts/auth-context";
 
@@ -24,7 +24,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
 
   useEffect(() => {
-    // Redirect if user is already logged in and auth state is loaded
     if (!isLoadingAuth && currentUser) {
       router.push('/dashboard');
     }
@@ -33,14 +32,25 @@ export default function LoginPage() {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsLoading(true);
+
+    if (!firebaseAuthModule) {
+      toast({
+        title: "Authentication Error",
+        description: "Firebase authentication is not configured. Please contact support or check setup.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(firebaseAuthModule, email, password);
       toast({
         title: "Login Successful",
         description: "Welcome back!",
         variant: "default", 
       });
-      router.push('/dashboard'); // Redirect to dashboard after successful login
+      router.push('/dashboard'); 
     } catch (error: any) {
       console.error("Login error:", error);
       let errorMessage = "Failed to sign in. Please check your credentials.";
@@ -48,6 +58,8 @@ export default function LoginPage() {
         errorMessage = "Invalid email or password.";
       } else if (error.code === 'auth/invalid-email') {
         errorMessage = "Please enter a valid email address.";
+      } else if (error.code === 'auth/invalid-api-key') {
+        errorMessage = "Firebase configuration error. Please check API key.";
       }
       toast({
         title: "Login Failed",
@@ -59,7 +71,6 @@ export default function LoginPage() {
     }
   };
   
-  // Show loading spinner or null while checking auth state initially
   if (isLoadingAuth) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -67,8 +78,6 @@ export default function LoginPage() {
       </div>
     );
   }
-  // If user is already logged in (and not loading auth), they'd be redirected by useEffect.
-  // So, render the login form only if no user and auth check is done.
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
@@ -103,10 +112,13 @@ export default function LoginPage() {
                 disabled={isLoading}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full" disabled={isLoading || !firebaseAuthModule}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Sign In
             </Button>
+             {!firebaseAuthModule && (
+              <p className="text-xs text-center text-destructive mt-2">Authentication service unavailable.</p>
+            )}
           </form>
           <div className="mt-4 text-center text-sm">
             Don&apos;t have an account?{" "}
