@@ -106,7 +106,10 @@ const extractJobRolesFlow = ai.defineFlow(
           documentDataUri: doc.dataUri,
           originalFileName: doc.name,
         };
+        console.log(`[extractJobRolesFlow] Attempting to segment document: ${doc.name}`);
         const { output: segmentedJdsOutput } = await segmentJobDescriptionsPrompt(segmentationInput);
+        console.log(`[extractJobRolesFlow] Successfully segmented document: ${doc.name}. Found ${segmentedJdsOutput?.length || 0} segments.`);
+
 
         if (segmentedJdsOutput && segmentedJdsOutput.length > 0) {
           segmentedJdsOutput.forEach((segmentedJd, index) => {
@@ -126,8 +129,7 @@ const extractJobRolesFlow = ai.defineFlow(
             });
           });
         } else {
-          // Fallback: if segmentation returns empty, treat the whole document as one job role
-          // using a generic name and not the original file name for display.
+          console.warn(`[extractJobRolesFlow] No segments found for document ${doc.name}. Treating whole doc as one role.`);
           allExtractedRoles.push({
             id: randomUUID(),
             name: "Untitled Job Role", 
@@ -154,6 +156,7 @@ const extractJobRolesFlow = ai.defineFlow(
     await Promise.all(segmentationPromises);
 
     if (allExtractedRoles.length === 0 && input.jobDescriptionDocuments.length > 0) {
+        console.warn(`[extractJobRolesFlow] No roles extracted after processing all documents. Creating fallbacks.`);
         input.jobDescriptionDocuments.forEach(doc => {
             allExtractedRoles.push({
                 id: randomUUID(),
