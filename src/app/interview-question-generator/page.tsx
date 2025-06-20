@@ -86,10 +86,21 @@ export default function InterviewQuestionGeneratorPage() {
         } else {
             setGeneratedQuestions(null); // Clear if no questions found for this title yet
         }
-    } catch (fetchError) {
-        const message = fetchError instanceof Error ? fetchError.message : String(fetchError);
-        setError(`Error loading saved questions: ${message.substring(0,100)}`);
-        toast({ title: "Error Loading Questions", description: message.substring(0,100), variant: "destructive" });
+    } catch (fetchError: any) {
+        let description = `Error loading saved questions for "${title}".`;
+        if (fetchError.code === 'failed-precondition') {
+            description = "Error loading questions. This may be a temporary problem. Please try again later.";
+            console.error(
+              "Firestore Error (getInterviewQuestionsSetByTitle): The query for interview questions requires an index. " +
+              "Please create the required composite index in your Firebase Firestore console. " +
+              "The original error message may contain a direct link to create it: ", fetchError.message
+            );
+        } else {
+            console.error("Error fetching interview questions:", fetchError);
+            description = String(fetchError.message || fetchError).substring(0,100);
+        }
+        setError(description); // Set error state for potential display
+        toast({ title: "Error Loading Questions", description, variant: "destructive" });
     } finally {
         setIsLoadingFromDB(false);
     }
@@ -329,7 +340,7 @@ export default function InterviewQuestionGeneratorPage() {
               </Card>
             )}
 
-            {error && (
+            {error && !isLoading && ( // Only show error if not in a loading state for questions
               <Alert variant="destructive" className="shadow-md">
                 <AlertTitle className="font-semibold">Error</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
@@ -382,7 +393,7 @@ export default function InterviewQuestionGeneratorPage() {
                 </div>
               </div>
             )}
-            {!isProcessing && !generatedQuestions && roleTitle.trim() && jobDescriptionFile && (
+            {!isProcessing && !generatedQuestions && roleTitle.trim() && jobDescriptionFile && !error && (
                  <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
                     <CardContent className="pt-6">
                         <p className="text-center text-muted-foreground py-8">
@@ -391,7 +402,7 @@ export default function InterviewQuestionGeneratorPage() {
                     </CardContent>
                 </Card>
             )}
-             {!isProcessing && !generatedQuestions && !roleTitle.trim() && (
+             {!isProcessing && !generatedQuestions && !roleTitle.trim() && !error &&(
                  <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
                     <CardContent className="pt-6">
                         <p className="text-center text-muted-foreground py-8">

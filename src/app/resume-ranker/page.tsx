@@ -73,8 +73,19 @@ export default function ResumeRankerPage() {
           }
         })
         .catch(err => {
-          console.error("Error fetching job roles:", err);
-          toast({ title: "Error Loading Job Roles", description: String(err).substring(0,100), variant: "destructive" });
+          let description = "Could not load job roles.";
+          if (err.code === 'failed-precondition') {
+            description = "Error loading job roles. This may be a temporary problem. Please try again later.";
+            console.error(
+              "Firestore Error (getExtractedJobRoles): The query requires an index. " +
+              "Please create the required composite index in your Firebase Firestore console. " +
+              "The original error message may contain a direct link to create it: ", err.message
+            );
+          } else {
+            console.error("Error fetching job roles:", err);
+            description = String(err.message || err).substring(0,100);
+          }
+          toast({ title: "Error Loading Job Roles", description, variant: "destructive" });
         })
         .finally(() => setIsLoadingJDsFromDB(false));
 
@@ -82,8 +93,19 @@ export default function ResumeRankerPage() {
       getAllJobScreeningResultsForUser()
         .then(results => setAllScreeningResults(results))
         .catch(err => {
-          console.error("Error fetching screening results:", err);
-          toast({ title: "Error Loading Screening Results", description: String(err).substring(0,100), variant: "destructive" });
+          let description = "Could not load previous screening results.";
+          if (err.code === 'failed-precondition') {
+            description = "Error loading screening results. This may be a temporary problem. Please try again later.";
+            console.error(
+              "Firestore Error (getAllJobScreeningResultsForUser): The query requires an index. " +
+              "Please create the required composite index in your Firebase Firestore console. " +
+              "The original error message may contain a direct link to create it: ", err.message
+            );
+          } else {
+            console.error("Error fetching screening results:", err);
+            description = String(err.message || err).substring(0,100);
+          }
+          toast({ title: "Error Loading Screening Results", description, variant: "destructive" });
         })
         .finally(() => setIsLoadingScreeningResultsFromDB(false));
     } else if (!currentUser || !isFirestoreAvailable) {

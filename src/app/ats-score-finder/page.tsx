@@ -44,8 +44,19 @@ export default function AtsScoreFinderPage() {
       getAtsScoreResults()
         .then(results => setAtsResults(results.sort((a,b) => b.atsScore - a.atsScore)))
         .catch(err => {
-          console.error("Error fetching ATS results:", err);
-          toast({ title: "Error Loading ATS Results", description: String(err).substring(0,100), variant: "destructive" });
+          let description = "Could not load saved ATS results.";
+          if (err.code === 'failed-precondition') {
+            description = "Error loading ATS results. This may be a temporary problem. Please try again later.";
+            console.error(
+              "Firestore Error (getAtsScoreResults): The query requires an index. " +
+              "Please create the required composite index in your Firebase Firestore console. " +
+              "The original error message may contain a direct link to create it: ", err.message
+            );
+          } else {
+            console.error("Error fetching ATS results:", err);
+            description = String(err.message || err).substring(0,100);
+          }
+          toast({ title: "Error Loading ATS Results", description, variant: "destructive" });
         })
         .finally(() => setIsLoadingResultsFromDB(false));
     } else if (!currentUser || !isFirestoreAvailable) {
@@ -159,7 +170,7 @@ export default function AtsScoreFinderPage() {
         } catch (dbError) {
             const message = dbError instanceof Error ? dbError.message : String(dbError);
             toast({ title: "Failed to Save ATS Results", description: `AI analysis complete, but could not save to database: ${message.substring(0,100)}`, variant: "destructive"});
-            // Optionally, show results in memory even if save fails
+            // Optionally, show results in memory if save fails
             // const inMemoryResults = aiResultsToSave.map(r => ({...r, id: crypto.randomUUID(), userId: currentUser.uid, createdAt: new Date()}) as AtsScoreResult);
             // setAtsResults(prev => [...prev, ...inMemoryResults].sort((a,b) => b.atsScore - a.atsScore));
         }
