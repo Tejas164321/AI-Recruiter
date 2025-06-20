@@ -149,15 +149,32 @@ export default function ResumeRankerPage() {
     return allScreeningResults.find(result => result.jobDescriptionId === String(selectedJobRoleId)) || null;
   }, [selectedJobRoleId, allScreeningResults]);
 
-  const handleJobDescriptionUploadAndExtraction = useCallback(async (jdUploads: JobDescriptionFile[]) => {
+  const handleJobDescriptionUploadAndExtraction = useCallback(async (initialJdUploads: JobDescriptionFile[]) => {
     if (!currentUser?.uid || !isFirestoreAvailable) {
       toast({ title: "Operation Unavailable", description: "Cannot process JDs. Please log in and ensure database is connected.", variant: "destructive" });
       return;
     }
-    if (jdUploads.length === 0) return;
+    if (initialJdUploads.length === 0) return;
     
     setIsLoadingJDExtraction(true);
     try {
+      const jdUploadsWithDataUriPromises = initialJdUploads.map(async (jdFile) => {
+        if (!jdFile.file) {
+            // This case should ideally not happen if the mapping from FileUploadArea is correct
+            console.error(`File object is missing for ${jdFile.name} during dataUri generation.`);
+            throw new Error(`File object is missing for ${jdFile.name}.`);
+        }
+        const dataUri = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = (error) => reject(error);
+          reader.readAsDataURL(jdFile.file);
+        });
+        return { ...jdFile, dataUri };
+      });
+
+      const jdUploads = await Promise.all(jdUploadsWithDataUriPromises);
+
       const aiInput: ExtractJobRolesAIInput = {
         jobDescriptionDocuments: jdUploads.map(jd => ({ name: jd.name, dataUri: jd.dataUri })),
       };
@@ -178,7 +195,8 @@ export default function ResumeRankerPage() {
                     updatedRoles.push(newRole);
                 }
             });
-            updatedRoles.sort((a,b) => (b.createdAt.toMillis() - a.createdAt.toMillis()));
+            // Sort by creation time, newest first. Ensure createdAt is a valid Timestamp.
+            updatedRoles.sort((a,b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
             return updatedRoles;
         });
         toast({ title: "Job Roles Extracted & Saved", description: `${savedRoles.length} role(s) processed and saved.` });
@@ -188,10 +206,11 @@ export default function ResumeRankerPage() {
       } else {
          toast({ title: "No New Job Roles Extracted", description: "AI could not extract new job roles from the provided files.", variant: "default" });
       }
-      setUploadedJobDescriptionFiles([]);
+      setUploadedJobDescriptionFiles([]); // Clear the local state for JD uploads
 
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      console.error("Job Role Extraction Full Error:", error);
       toast({ title: "Job Role Extraction Failed", description: message.substring(0,100), variant: "destructive" });
     } finally {
       setIsLoadingJDExtraction(false);
@@ -258,7 +277,7 @@ export default function ResumeRankerPage() {
             updatedResults.push(newResult); // Add
           }
         });
-        updatedResults.sort((a,b) => (b.createdAt.toMillis() - a.createdAt.toMillis()));
+        updatedResults.sort((a,b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
         return updatedResults;
       });
       
@@ -272,6 +291,7 @@ export default function ResumeRankerPage() {
       setUploadedResumeFiles([]); // Clear uploaded resumes after processing
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      console.error("Bulk Screening Full Error:", error);
       toast({ title: "Bulk Screening Failed", description: message.substring(0,100), variant: "destructive" });
     } finally {
       setIsLoadingScreening(false);
@@ -534,3 +554,5 @@ export default function ResumeRankerPage() {
     </div>
   );
 }
+
+    
