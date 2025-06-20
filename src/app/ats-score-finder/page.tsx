@@ -10,12 +10,12 @@ import { calculateAtsScore, type CalculateAtsScoreInput, type CalculateAtsScoreO
 import type { ResumeFile, AtsScoreResult } from "@/lib/types";
 import { AtsScoreTable } from "@/components/ats-score-table";
 import { AtsFeedbackModal } from "@/components/ats-feedback-modal";
-import { BarChartBig, Loader2, ScanSearch, BrainCircuit } from "lucide-react";
+import { BarChartBig, Loader2, ScanSearch, BrainCircuit, ServerOff } from "lucide-react";
 import { LoadingIndicator } from "@/components/loading-indicator";
 import { useLoading } from "@/contexts/loading-context";
 import { useAuth } from "@/contexts/auth-context";
-// Firestore service imports removed
-// import type { Timestamp } from "firebase/firestore"; // No longer needed
+import { saveMultipleAtsScoreResults, getAtsScoreResults } from "@/services/firestoreService";
+import { db as firestoreDb } from "@/lib/firebase/config"; // Import db to check availability
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 const MAX_FILES_ATS = 10;
@@ -25,9 +25,9 @@ export default function AtsScoreFinderPage() {
   const { currentUser } = useAuth();
 
   const [uploadedResumeFiles, setUploadedResumeFiles] = useState<ResumeFile[]>([]);
-  const [atsResults, setAtsResults] = useState<AtsScoreResult[]>([]); // Managed in-memory
-  const [isProcessingAts, setIsProcessingAts] = useState<boolean>(false); // For AI processing
-  // const [isLoadingResults, setIsLoadingResults] = useState<boolean>(false); // No longer loading from DB
+  const [atsResults, setAtsResults] = useState<AtsScoreResult[]>([]);
+  const [isProcessingAts, setIsProcessingAts] = useState<boolean>(false);
+  const [isLoadingResultsFromDB, setIsLoadingResultsFromDB] = useState<boolean>(true);
   const [selectedResultForModal, setSelectedResultForModal] = useState<AtsScoreResult | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
@@ -35,12 +35,24 @@ export default function AtsScoreFinderPage() {
   const resultsSectionRef = useRef<HTMLDivElement | null>(null);
   const analyzeButtonRef = useRef<HTMLButtonElement | null>(null);
 
+  const isFirestoreAvailable = !!firestoreDb;
+
   useEffect(() => {
     setAppIsLoading(false);
-    if (!currentUser) {
-      setAtsResults([]); // Clear results if user logs out
+    if (currentUser && isFirestoreAvailable) {
+      setIsLoadingResultsFromDB(true);
+      getAtsScoreResults()
+        .then(results => setAtsResults(results.sort((a,b) => b.atsScore - a.atsScore)))
+        .catch(err => {
+          console.error("Error fetching ATS results:", err);
+          toast({ title: "Error Loading ATS Results", description: String(err).substring(0,100), variant: "destructive" });
+        })
+        .finally(() => setIsLoadingResultsFromDB(false));
+    } else if (!currentUser || !isFirestoreAvailable) {
+        setIsLoadingResultsFromDB(false);
+        setAtsResults([]);
     }
-  }, [currentUser, setAppIsLoading]);
+  }, [currentUser, toast, setAppIsLoading, isFirestoreAvailable]);
 
   useEffect(() => {
     if (uploadedResumeFiles.length > 0 && !isProcessingAts && analyzeButtonRef.current) {
@@ -52,14 +64,14 @@ export default function AtsScoreFinderPage() {
   }, [uploadedResumeFiles, isProcessingAts]);
 
   useEffect(() => {
-    const shouldScroll = isProcessingAts || (!isProcessingAts && atsResults.length > 0);
+    const shouldScroll = isProcessingAts || isLoadingResultsFromDB || (!isProcessingAts && !isLoadingResultsFromDB && atsResults.length > 0);
     if (shouldScroll && resultsSectionRef.current) {
       const timer = setTimeout(() => {
         resultsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [isProcessingAts, atsResults]);
+  }, [isProcessingAts, isLoadingResultsFromDB, atsResults]);
 
   const handleResumesUpload = useCallback(async (files: File[]) => {
     if (!currentUser?.uid) {
@@ -86,15 +98,15 @@ export default function AtsScoreFinderPage() {
     try {
       const newResumeFiles = await Promise.all(newResumeFilesPromises);
       setUploadedResumeFiles(newResumeFiles);
-      // setAtsResults([]); // Clear previous session results when new files are uploaded
     } catch (error) {
-      toast({ title: "Error processing resume files", description: String(error), variant: "destructive" });
+      const message = error instanceof Error ? error.message : String(error);
+      toast({ title: "Error processing resume files", description: message.substring(0,100), variant: "destructive" });
     }
   }, [toast, currentUser?.uid]);
 
   const handleAnalyzeResumes = useCallback(async () => {
-    if (!currentUser?.uid) {
-      toast({ title: "Not Authenticated", description: "Please log in to analyze resumes.", variant: "destructive" });
+    if (!currentUser?.uid || !isFirestoreAvailable) {
+      toast({ title: "Operation Unavailable", description: "Cannot analyze resumes. Please log in and ensure database is connected.", variant: "destructive" });
       return;
     }
     if (uploadedResumeFiles.length === 0) {
@@ -103,7 +115,7 @@ export default function AtsScoreFinderPage() {
     }
 
     setIsProcessingAts(true);
-    const newAtsResults: AtsScoreResult[] = [];
+    const aiResultsToSave: Array<Omit<AtsScoreResult, 'id' | 'userId' | 'createdAt'>> = [];
     let filesProcessedSuccessfully = 0;
 
     const processingPromises = uploadedResumeFiles.map(async (resumeFile) => {
@@ -114,15 +126,14 @@ export default function AtsScoreFinderPage() {
         };
         const output: CalculateAtsScoreOutput = await calculateAtsScore(input);
         
-        const result: AtsScoreResult = {
-          resumeId: resumeFile.id,
+        aiResultsToSave.push({
+          resumeId: resumeFile.id, // keep original client-side ID for reference
           resumeName: resumeFile.name,
           candidateName: output.candidateName,
           atsScore: output.atsScore,
           atsFeedback: output.atsFeedback,
           resumeDataUri: resumeFile.dataUri,
-        };
-        newAtsResults.push(result);
+        });
         filesProcessedSuccessfully++;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Unknown error during ATS analysis.";
@@ -136,28 +147,41 @@ export default function AtsScoreFinderPage() {
     });
 
     await Promise.all(processingPromises);
-    setIsProcessingAts(false);
-    setUploadedResumeFiles([]); // Clear upload area after processing
-
-    if (filesProcessedSuccessfully > 0) {
-        setAtsResults(prevResults => [...prevResults, ...newAtsResults].sort((a,b) => b.atsScore - a.atsScore)); // Append and sort
-        toast({
-            title: "ATS Analysis Complete",
-            description: `${filesProcessedSuccessfully} of ${uploadedResumeFiles.length} resumes processed. Results are for this session only.`,
-        });
-    } else if (uploadedResumeFiles.length > 0) {
+    
+    if (aiResultsToSave.length > 0) {
+        try {
+            const savedDbResults = await saveMultipleAtsScoreResults(aiResultsToSave);
+            setAtsResults(prevResults => [...prevResults, ...savedDbResults].sort((a,b) => b.atsScore - a.atsScore));
+            toast({
+                title: "ATS Analysis Complete & Saved",
+                description: `${savedDbResults.length} of ${uploadedResumeFiles.length} resumes processed and saved.`,
+            });
+        } catch (dbError) {
+            const message = dbError instanceof Error ? dbError.message : String(dbError);
+            toast({ title: "Failed to Save ATS Results", description: `AI analysis complete, but could not save to database: ${message.substring(0,100)}`, variant: "destructive"});
+            // Optionally, show results in memory even if save fails
+            // const inMemoryResults = aiResultsToSave.map(r => ({...r, id: crypto.randomUUID(), userId: currentUser.uid, createdAt: new Date()}) as AtsScoreResult);
+            // setAtsResults(prev => [...prev, ...inMemoryResults].sort((a,b) => b.atsScore - a.atsScore));
+        }
+    } else if (uploadedResumeFiles.length > 0 && filesProcessedSuccessfully === 0) {
          toast({
             title: "ATS Analysis Failed",
             description: "No resumes could be processed successfully.",
             variant: "destructive"
         });
     }
-  }, [uploadedResumeFiles, toast, currentUser?.uid]);
+    
+    setIsProcessingAts(false);
+    setUploadedResumeFiles([]);
+
+  }, [uploadedResumeFiles, toast, currentUser?.uid, isFirestoreAvailable]);
 
   const handleViewInsights = (result: AtsScoreResult) => {
     setSelectedResultForModal(result);
     setIsModalOpen(true);
   };
+  
+  const isProcessing = isProcessingAts || isLoadingResultsFromDB;
 
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-8">
@@ -167,18 +191,31 @@ export default function AtsScoreFinderPage() {
             <BarChartBig className="w-7 h-7 mr-3" /> ATS Score Analyzer
           </CardTitle>
           <CardDescription>
-            Upload resumes to analyze their compatibility with Applicant Tracking Systems. Results are available for this session.
+            Upload resumes to analyze their compatibility with Applicant Tracking Systems. Results are saved to your account.
           </CardDescription>
         </CardHeader>
       </Card>
-      {!currentUser && (
+
+      {!isFirestoreAvailable && (
+        <Card className="shadow-lg border-destructive">
+          <CardHeader>
+            <CardTitle className="text-destructive flex items-center"><ServerOff className="w-5 h-5 mr-2" /> Database Not Connected</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-destructive-foreground">The application could not connect to the database. Data saving and loading features are disabled. Please ensure Firebase is configured correctly.</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {!currentUser && isFirestoreAvailable && (
         <Card className="shadow-lg">
             <CardContent className="pt-6 text-center">
-                <p className="text-lg text-muted-foreground">Please <a href="/login" className="text-primary underline">log in</a> to use the ATS Score Analyzer.</p>
+                <p className="text-lg text-muted-foreground">Please <a href="/login" className="text-primary underline">log in</a> to use the ATS Score Analyzer and save your results.</p>
             </CardContent>
         </Card>
       )}
-      {currentUser && (
+
+      {currentUser && isFirestoreAvailable && (
         <>
           <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
             <CardHeader>
@@ -206,7 +243,7 @@ export default function AtsScoreFinderPage() {
               <Button
                 ref={analyzeButtonRef}
                 onClick={handleAnalyzeResumes}
-                disabled={isProcessingAts || uploadedResumeFiles.length === 0}
+                disabled={isProcessingAts || uploadedResumeFiles.length === 0 || isLoadingResultsFromDB}
                 size="lg"
                 className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground shadow-md hover:shadow-lg transition-all"
               >
@@ -215,13 +252,13 @@ export default function AtsScoreFinderPage() {
                 ) : (
                   <ScanSearch className="w-5 h-5 mr-2" />
                 )}
-                Analyze ATS Scores
+                Analyze & Save ATS Scores
               </Button>
             </CardContent>
           </Card>
 
           <div ref={resultsSectionRef}>
-            {isProcessingAts && (
+            {isProcessing && (
               <Card className="shadow-lg">
                 <CardContent className="pt-6">
                     <LoadingIndicator stage={"screening"} />
@@ -229,14 +266,14 @@ export default function AtsScoreFinderPage() {
               </Card>
             )}
 
-            {!isProcessingAts && atsResults.length > 0 && (
+            {!isProcessing && atsResults.length > 0 && (
               <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
                 <CardHeader>
                   <CardTitle className="text-xl font-headline text-primary flex items-center">
-                    <BrainCircuit className="w-6 h-6 mr-2" /> Session ATS Score Results
+                    <BrainCircuit className="w-6 h-6 mr-2" /> Saved ATS Score Results
                   </CardTitle>
                   <CardDescription>
-                    Analyzed resumes for this session, ranked by ATS score.
+                    Previously analyzed and saved resumes, ranked by ATS score.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -244,11 +281,11 @@ export default function AtsScoreFinderPage() {
                 </CardContent>
               </Card>
             )}
-            {!isProcessingAts && atsResults.length === 0 && (
+            {!isProcessing && atsResults.length === 0 && (
                 <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
                     <CardContent className="pt-6">
                         <p className="text-center text-muted-foreground py-8">
-                            {uploadedResumeFiles.length > 0 ? 'Click "Analyze ATS Scores" to begin.' : 'Upload resumes to get started. Results for this session will appear here.'}
+                            {uploadedResumeFiles.length > 0 ? 'Click "Analyze & Save ATS Scores" to begin.' : 'Upload resumes to get started. Your saved results will appear here.'}
                         </p>
                     </CardContent>
                 </Card>

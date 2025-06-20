@@ -2,7 +2,7 @@
 // src/lib/firebase/config.ts
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
 import { getAuth, connectAuthEmulator, type Auth } from "firebase/auth";
-// Firestore import removed: import { getFirestore, connectFirestoreEmulator, type Firestore } from "firebase/firestore";
+import { getFirestore, connectFirestoreEmulator, type Firestore } from "firebase/firestore";
 
 const firebaseConfigValues = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -15,7 +15,7 @@ const firebaseConfigValues = {
 
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
-// db variable removed: let db: Firestore | null = null;
+let db: Firestore | null = null;
 
 const allConfigPresent =
   firebaseConfigValues.apiKey && firebaseConfigValues.apiKey.trim() !== "" &&
@@ -40,12 +40,11 @@ if (allConfigPresent) {
     } catch (error) {
         console.error("Firebase Auth initialization error:", error);
     }
-    // Firestore initialization removed
-    // try {
-    //   db = getFirestore(app);
-    // } catch (error) {
-    //     console.error("Firebase Firestore initialization error:", error);
-    // }
+    try {
+      db = getFirestore(app);
+    } catch (error) {
+        console.error("Firebase Firestore initialization error:", error);
+    }
 
     const EMULATOR_HOST = process.env.NEXT_PUBLIC_EMULATOR_HOST;
     const USE_EMULATORS = process.env.NEXT_PUBLIC_USE_EMULATORS === 'true';
@@ -57,41 +56,40 @@ if (allConfigPresent) {
           console.log("Firebase Config: Using Firebase Emulators for Auth.");
         } catch (error) {
           console.error("Firebase Config: Error connecting to Firebase Auth Emulator:", error);
-          auth = null;
+          auth = null; // Nullify if connection fails
         }
       } else {
         console.warn("Firebase Config: Auth service not initialized, skipping emulator connection for Auth.");
       }
 
-      // Firestore emulator connection removed
-      // if (db) {
-      //   try {
-      //     connectFirestoreEmulator(db, EMULATOR_HOST, 8080);
-      //     console.log("Firebase Config: Using Firebase Emulators for Firestore.");
-      //   } catch (error) {
-      //     console.error("Firebase Config: Error connecting to Firebase Firestore Emulator:", error);
-      //     db = null;
-      //   }
-      // } else {
-      //    console.warn("Firebase Config: Firestore service not initialized, skipping emulator connection for Firestore.");
-      // }
+      if (db) {
+        try {
+          connectFirestoreEmulator(db, EMULATOR_HOST, 8080);
+          console.log("Firebase Config: Using Firebase Emulators for Firestore.");
+        } catch (error) {
+          console.error("Firebase Config: Error connecting to Firebase Firestore Emulator:", error);
+          db = null; // Nullify if connection fails
+        }
+      } else {
+         console.warn("Firebase Config: Firestore service not initialized, skipping emulator connection for Firestore.");
+      }
 
     } else if (USE_EMULATORS && !EMULATOR_HOST) {
       console.warn("Firebase Config: USE_EMULATORS is true, but NEXT_PUBLIC_EMULATOR_HOST is not set. Not connecting to emulators.");
     }
-  } else if (allConfigPresent) {
+  } else if (allConfigPresent) { // app initialization failed
     console.warn(
-      "Firebase Config: Firebase app initialization failed despite config being present. Firebase services (Auth, etc.) will not be available."
+      "Firebase Config: Firebase app initialization failed despite config being present. Firebase services (Auth, Firestore) will not be available."
     );
   }
 }
 
 if (!allConfigPresent) {
   console.warn(
-    "Firebase Config: Firebase configuration is incomplete or contains empty values in .env. Firebase services (including Auth) will not be initialized. " +
+    "Firebase Config: Firebase configuration is incomplete or contains empty values in .env. Firebase services (including Auth & Firestore) will not be initialized. " +
     "Please ensure all NEXT_PUBLIC_FIREBASE_ environment variables are correctly set in your .env or .env.local file for local development, " +
     "or ensure they are provided by the hosting environment upon deployment. "
   );
 }
 
-export { app, auth }; // db removed from exports
+export { app, auth, db };
