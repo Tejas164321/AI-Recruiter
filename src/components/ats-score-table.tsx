@@ -32,7 +32,6 @@ export function AtsScoreTable({ results, onViewInsights }: AtsScoreTableProps) {
         let valA = a[sortConfig.key];
         let valB = b[sortConfig.key];
 
-        // Handle undefined for candidateName
         if (sortConfig.key === "candidateName") {
           valA = valA || "";
           valB = valB || "";
@@ -40,14 +39,12 @@ export function AtsScoreTable({ results, onViewInsights }: AtsScoreTableProps) {
         
         if (valA === undefined || valB === undefined) return 0;
 
-
         if (valA < valB) {
           return sortConfig.direction === "ascending" ? -1 : 1;
         }
         if (valA > valB) {
           return sortConfig.direction === "ascending" ? 1 : -1;
         }
-        // If scores or names are equal, maintain original relative order or sort by resume name as a secondary criterion
         if (sortConfig.key === "atsScore" || sortConfig.key === "candidateName") {
             return a.resumeName.localeCompare(b.resumeName);
         }
@@ -86,7 +83,7 @@ export function AtsScoreTable({ results, onViewInsights }: AtsScoreTableProps) {
   };
 
   if (results.length === 0) {
-    return <p className="text-center text-muted-foreground py-8">No resumes processed yet. Upload resumes and click "Analyze" to see scores.</p>;
+    return <p className="text-center text-muted-foreground py-8">No resumes processed in this session. Upload resumes and click "Analyze" to see scores.</p>;
   }
 
   return (
@@ -119,7 +116,8 @@ export function AtsScoreTable({ results, onViewInsights }: AtsScoreTableProps) {
         </TableHeader>
         <TableBody>
           {sortedResults.map((result, index) => (
-            <TableRow key={result.id} className="transition-colors hover:bg-muted/50">
+            // Use resumeId for key as AtsScoreResult might not have a top-level 'id' field after reversion
+            <TableRow key={result.resumeId || index} className="transition-colors hover:bg-muted/50">
               <TableCell className="font-medium text-center">{index + 1}</TableCell>
               <TableCell className="font-medium truncate" title={result.resumeName}>{result.resumeName}</TableCell>
               <TableCell>{result.candidateName || <span className="text-muted-foreground italic">Not extracted</span>}</TableCell>

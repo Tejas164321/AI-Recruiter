@@ -10,15 +10,15 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { generateJDInterviewQuestions, type GenerateJDInterviewQuestionsInput, type GenerateJDInterviewQuestionsOutput } from "@/ai/flows/generate-jd-interview-questions";
 import { extractJobRoles as extractJobRolesAI, type ExtractJobRolesInput as ExtractJobRolesAIInput, type ExtractJobRolesOutput as ExtractJobRolesAIOutput } from "@/ai/flows/extract-job-roles";
-import type { JobDescriptionFile, InterviewQuestionsSet } from "@/lib/types"; // Added InterviewQuestionsSet
+import type { JobDescriptionFile, InterviewQuestionsSet } from "@/lib/types";
 import { HelpCircle, Loader2, Lightbulb, FileText, ScrollText, Users, Brain, SearchCheck } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { motion } from "framer-motion";
 import { useLoading } from "@/contexts/loading-context";
 import { useAuth } from "@/contexts/auth-context";
-import { addInterviewQuestionsSet, getInterviewQuestionsSetForRole } from "@/services/firestoreService";
-import type { Timestamp } from "firebase/firestore";
+// Firestore service imports removed
+// import type { Timestamp } from "firebase/firestore"; // No longer needed
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
@@ -31,24 +31,28 @@ export default function InterviewQuestionGeneratorPage() {
   const { setIsPageLoading: setAppIsLoading } = useLoading();
   const { currentUser } = useAuth();
 
-  const [jobDescriptionFile, setJobDescriptionFile] = useState<JobDescriptionFile | null>(null); // For file input
+  const [jobDescriptionFile, setJobDescriptionFile] = useState<JobDescriptionFile | null>(null);
   const [roleTitle, setRoleTitle] = useState<string>("");
   const [focusAreas, setFocusAreas] = useState<string>("");
   
-  const [generatedQuestions, setGeneratedQuestions] = useState<InterviewQuestionsSet | null>(null); // From Firestore or new generation
-  const [isLoading, setIsLoading] = useState<boolean>(false); // General loading (AI + DB)
+  const [generatedQuestions, setGeneratedQuestions] = useState<InterviewQuestionsSet | null>(null); // Managed in-memory
+  const [isLoading, setIsLoading] = useState<boolean>(false); // For AI processing
   const [isExtractingTitle, setIsExtractingTitle] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   const { toast } = useToast();
   const resultsSectionRef = useRef<HTMLDivElement | null>(null);
 
-
   useEffect(() => {
     setAppIsLoading(false);
-  }, [setAppIsLoading]);
+    if (!currentUser) {
+        setGeneratedQuestions(null); // Clear if user logs out
+        setJobDescriptionFile(null);
+        setRoleTitle("");
+        setFocusAreas("");
+    }
+  }, [setAppIsLoading, currentUser]);
 
-  // Scroll to results
   useEffect(() => {
     if ((isLoading || generatedQuestions) && resultsSectionRef.current) {
         const timer = setTimeout(() => {
@@ -58,25 +62,7 @@ export default function InterviewQuestionGeneratorPage() {
     }
   }, [isLoading, generatedQuestions]);
 
-  const fetchSavedQuestions = useCallback(async (title: string) => {
-    if (!currentUser?.uid || !title.trim()) return;
-    setIsLoading(true);
-    setError(null);
-    try {
-      const savedQs = await getInterviewQuestionsSetForRole(currentUser.uid, title.trim());
-      if (savedQs) {
-        setGeneratedQuestions(savedQs);
-        toast({ title: "Loaded Saved Questions", description: `Found previously generated questions for "${title}".` });
-      } else {
-        setGeneratedQuestions(null); // Explicitly clear if not found for this title
-      }
-    } catch (err) {
-      console.error("Error fetching saved questions:", err);
-      // Don't toast error here, as it might be normal not to find questions
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentUser?.uid, toast]);
+  // Removed fetchSavedQuestions and related useEffect
 
   const handleJobDescriptionUpload = useCallback(async (files: File[]) => {
      if (!currentUser?.uid) {
@@ -100,11 +86,11 @@ export default function InterviewQuestionGeneratorPage() {
     
     const newJdFile = { id: crypto.randomUUID(), file, dataUri, name: file.name };
     setJobDescriptionFile(newJdFile);
-    setGeneratedQuestions(null);
+    setGeneratedQuestions(null); // Clear previous questions on new JD
     setError(null);
     
     setIsExtractingTitle(true);
-    setRoleTitle(""); // Clear previous title
+    setRoleTitle("");
     try {
       const extractionInput: ExtractJobRolesAIInput = {
         jobDescriptionDocuments: [{ name: newJdFile.name, dataUri: newJdFile.dataUri }],
@@ -116,7 +102,6 @@ export default function InterviewQuestionGeneratorPage() {
         const extractedTitle = extractionOutput[0].name;
         setRoleTitle(extractedTitle);
         toast({ title: "Role Title Suggested", description: `Extracted "${extractedTitle}" from the document. You can edit if needed.`});
-        await fetchSavedQuestions(extractedTitle); // Attempt to fetch questions for this new title
       } else {
          toast({ title: "Role Title Not Found", description: "Could not automatically extract a specific role title. Please enter manually.", variant: "default"});
       }
@@ -126,20 +111,7 @@ export default function InterviewQuestionGeneratorPage() {
     } finally {
       setIsExtractingTitle(false);
     }
-  }, [toast, fetchSavedQuestions, currentUser?.uid]);
-
-  // Debounced fetching of saved questions when roleTitle changes manually
-  useEffect(() => {
-    if (!roleTitle.trim() || isExtractingTitle) { // Don't fetch if title is being auto-extracted
-        if (!isExtractingTitle) setGeneratedQuestions(null); // Clear questions if title is cleared manually
-        return;
-    }
-    const handler = setTimeout(() => {
-        fetchSavedQuestions(roleTitle);
-    }, 500); // Debounce for 500ms
-    return () => clearTimeout(handler);
-  }, [roleTitle, fetchSavedQuestions, isExtractingTitle]);
-
+  }, [toast, currentUser?.uid]);
 
   const handleGenerateQuestions = useCallback(async () => {
     if (!currentUser?.uid) {
@@ -157,7 +129,7 @@ export default function InterviewQuestionGeneratorPage() {
 
     setIsLoading(true);
     setError(null);
-    // setGeneratedQuestions(null); // Keep existing if user is just re-generating, will be overwritten
+    // setGeneratedQuestions(null); // Clear previous, or allow re-generation to overwrite
 
     try {
       const input: GenerateJDInterviewQuestionsInput = {
@@ -167,16 +139,15 @@ export default function InterviewQuestionGeneratorPage() {
       };
       const aiOutput = await generateJDInterviewQuestions(input);
       
-      const questionsToSave: Omit<InterviewQuestionsSet, 'id' | 'userId' | 'createdAt'> = {
+      const questionsSet: InterviewQuestionsSet = {
         roleTitle: roleTitle.trim(),
-        jobDescriptionDataUri: jobDescriptionFile.dataUri, // Save the JD content for reference
+        jobDescriptionDataUri: jobDescriptionFile.dataUri,
         focusAreas: focusAreas.trim() || undefined,
         ...aiOutput,
       };
 
-      const docId = await addInterviewQuestionsSet(currentUser.uid, questionsToSave);
-      setGeneratedQuestions({ ...questionsToSave, id: docId, userId: currentUser.uid, createdAt: new Date() as unknown as Timestamp }); // Optimistic update
-      toast({ title: "Questions Generated & Saved", description: "Interview questions are ready below and saved to your account." });
+      setGeneratedQuestions(questionsSet);
+      toast({ title: "Questions Generated", description: "Interview questions are ready below for this session." });
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
@@ -202,7 +173,7 @@ export default function InterviewQuestionGeneratorPage() {
             <SearchCheck className="w-7 h-7 mr-3" /> AI Interview Question Generator
           </CardTitle>
           <CardDescription>
-            Upload a job description, confirm role title, and generate tailored interview questions. Your generated questions are saved.
+            Upload a job description, confirm role title, and generate tailored interview questions for your current session.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -221,7 +192,7 @@ export default function InterviewQuestionGeneratorPage() {
                 <FileText className="w-6 h-6 mr-2 text-primary" />
                 Job Description & Context
               </CardTitle>
-              <CardDescription>Provide job details. We'll try to auto-fill the title and load saved questions if available.</CardDescription>
+              <CardDescription>Provide job details. We'll try to auto-fill the title.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
@@ -252,7 +223,7 @@ export default function InterviewQuestionGeneratorPage() {
                   disabled={isLoading || isExtractingTitle}
                   className={isExtractingTitle ? "bg-muted/50" : ""}
                 />
-                <p className="text-xs text-muted-foreground">Confirm or enter the job title. We&apos;ll try to extract it and load saved questions.</p>
+                <p className="text-xs text-muted-foreground">Confirm or enter the job title. We&apos;ll try to extract it.</p>
               </div>
 
               <div className="space-y-2">
@@ -273,14 +244,12 @@ export default function InterviewQuestionGeneratorPage() {
                 size="lg"
                 className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground shadow-md hover:shadow-lg transition-all"
               >
-                {isLoading && generatedQuestions ? ( // Special case for re-generating
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                ) : isLoading ? (
+                {isLoading ? (
                   <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                 ) : (
                   <Lightbulb className="w-5 h-5 mr-2" />
                 )}
-                {generatedQuestions ? "Re-generate & Save" : "Generate & Save Questions"}
+                {generatedQuestions ? "Re-generate Questions" : "Generate Questions"}
               </Button>
             </CardContent>
           </Card>
@@ -310,12 +279,12 @@ export default function InterviewQuestionGeneratorPage() {
                   Interview Questions for <span className="text-primary">{generatedQuestions.roleTitle}</span>
                 </h2>
                  <p className="text-sm text-muted-foreground text-center md:text-left">
-                    {generatedQuestions.id ? "These questions are saved to your account." : "Generating..."}
+                    Generated questions for this session.
                     {generatedQuestions.focusAreas && ` Focusing on: ${generatedQuestions.focusAreas}.`}
                  </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {questionCategories.map(({key, title, icon: Icon}) => {
-                    const questions = generatedQuestions[key as keyof GenerateJDInterviewQuestionsOutput]; // Type assertion
+                    const questions = generatedQuestions[key as keyof GenerateJDInterviewQuestionsOutput];
                     if (questions && Array.isArray(questions) && questions.length > 0) {
                       return (
                         <motion.div
@@ -352,7 +321,7 @@ export default function InterviewQuestionGeneratorPage() {
                  <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
                     <CardContent className="pt-6">
                         <p className="text-center text-muted-foreground py-8">
-                           Click "Generate & Save Questions" for "{roleTitle}".
+                           Click "Generate Questions" for "{roleTitle}".
                         </p>
                     </CardContent>
                 </Card>
