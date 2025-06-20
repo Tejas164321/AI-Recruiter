@@ -84,7 +84,9 @@ export async function extractJobRoles(input: ExtractJobRolesInput): Promise<Extr
     return await extractJobRolesFlow(input);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('Error in extractJobRoles function (server action entry):', message, error instanceof Error ? error.stack : undefined);
+    // Log the full error object here too for top-level errors from the flow
+    console.error('[extractJobRoles function] DETAILED ERROR:', error);
+    console.error('[extractJobRoles function (server action entry)] Error message:', message, error instanceof Error ? error.stack : undefined);
     throw new Error(`Job role extraction process failed: ${message}`);
   }
 }
@@ -135,12 +137,15 @@ const extractJobRolesFlow = ai.defineFlow(
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        console.error(`[extractJobRolesFlow] Error segmenting document ${doc.name}: ${message}`, error instanceof Error ? error.stack : undefined);
+        // Log the full error object for more details, especially for API errors
+        console.error(`[extractJobRolesFlow] DETAILED ERROR segmenting document ${doc.name}:`, error);
+        console.error(`[extractJobRolesFlow] Error segmenting document ${doc.name} (message only): ${message}`, error instanceof Error ? error.stack : undefined);
+        
         // Fallback on error during segmentation for a specific file
         allExtractedRoles.push({
           id: randomUUID(),
-          name: "Untitled Job Role",
-          contentDataUri: doc.dataUri,
+          name: "Untitled Job Role (Extraction Error)", // Indicate error in the name
+          contentDataUri: doc.dataUri, // Keep original data URI
           originalDocumentName: doc.name,
         });
       }
@@ -152,7 +157,7 @@ const extractJobRolesFlow = ai.defineFlow(
         input.jobDescriptionDocuments.forEach(doc => {
             allExtractedRoles.push({
                 id: randomUUID(),
-                name: "Untitled Job Role",
+                name: "Untitled Job Role (No Segments)", // Indicate no segments found
                 contentDataUri: doc.dataUri,
                 originalDocumentName: doc.name,
             });
@@ -161,3 +166,4 @@ const extractJobRolesFlow = ai.defineFlow(
     return allExtractedRoles;
   }
 );
+
