@@ -217,9 +217,12 @@ export default function ResumeRankerPage() {
             return updatedRoles;
         });
         toast({ title: "Job Roles Extracted & Saved", description: `${savedRoles.length} role(s) processed and saved.` });
-        if (!selectedJobRoleId && savedRoles.length > 0) {
+        
+        // Always select the newest uploaded role
+        if (savedRoles.length > 0) {
             setSelectedJobRoleId(savedRoles[0].id);
         }
+
       } else {
          toast({ title: "No New Job Roles Extracted", description: "AI could not extract new job roles from the provided files.", variant: "default" });
       }
@@ -247,7 +250,7 @@ export default function ResumeRankerPage() {
     } finally {
       setIsLoadingJDExtraction(false);
     }
-  }, [currentUser?.uid, toast, selectedJobRoleId, isFirestoreAvailable]);
+  }, [currentUser?.uid, toast, isFirestoreAvailable]);
 
   const handleDeleteJobRole = async (roleIdToDelete: string) => {
     if (!currentUser?.uid || !isFirestoreAvailable) return;
