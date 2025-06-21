@@ -13,11 +13,13 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth as firebaseAuthModule } from "@/lib/firebase/config"; // Renamed import
 import { useRouter } from 'next/navigation';
 import { useAuth } from "@/contexts/auth-context";
+import { useLoading } from "@/contexts/loading-context";
 
 export default function SignupPage() {
   const { toast } = useToast();
   const router = useRouter();
   const { currentUser, isLoadingAuth } = useAuth();
+  const { setIsPageLoading } = useLoading();
 
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -68,6 +70,7 @@ export default function SignupPage() {
         description: "Your account has been created. Welcome!",
         variant: "default",
       });
+      setIsPageLoading(true);
       router.push('/dashboard'); 
     } catch (error: any) {
       console.error("Signup error:", error);
@@ -86,9 +89,9 @@ export default function SignupPage() {
         description: errorMessage,
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Only set loading to false on error
     }
+    // Do not set isLoading to false on success, as the page will navigate away
   };
   
   if (isLoadingAuth) {

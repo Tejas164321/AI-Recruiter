@@ -5,7 +5,6 @@ import { BrainCircuit, Loader2, LogOut, LayoutDashboard } from "lucide-react";
 import { ThemeToggleButton } from "@/components/theme-toggle-button";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { useLoading } from "@/contexts/loading-context";
 import { useAuth } from "@/contexts/auth-context";
 import { signOut } from "firebase/auth";
 import { auth as firebaseAuthModule } from "@/lib/firebase/config"; // Renamed import
@@ -13,7 +12,6 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 
 export function Header() {
-  const { isPageLoading } = useLoading();
   const { currentUser, isLoadingAuth } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
@@ -41,11 +39,7 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
         <Link href="/" className="mr-auto flex items-center cursor-pointer" aria-label="Go to homepage">
-          {isPageLoading ? (
-            <Loader2 className="h-8 w-8 mr-2 text-primary animate-spin" />
-          ) : (
-            <BrainCircuit className="h-8 w-8 mr-2 text-primary" />
-          )}
+          <BrainCircuit className="h-8 w-8 mr-2 text-primary" />
           <span className="text-2xl font-bold text-primary font-headline">ResumeRank AI</span>
         </Link>
         

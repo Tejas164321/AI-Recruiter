@@ -16,29 +16,14 @@ export function LoadingIndicator({ stage }: LoadingIndicatorProps) {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center space-y-8 py-10 text-center">
-      <div className="relative w-16 h-16"> {/* Container for the icon and its specific pulse effect */}
-        {/* Pulsing effect - a circle of the same size, behind the icon, pulsing opacity */}
-        <div
-          className="absolute inset-0 bg-primary rounded-full animate-pulse [animation-duration:2s] opacity-30"
-        ></div>
-        {/* The Icon itself, spinning, on top */}
-        <BrainCircuit
-          className="absolute inset-0 w-full h-full text-primary animate-spin [animation-duration:3s] [animation-timing-function:linear]"
-        />
+    <div className="flex flex-col items-center justify-center space-y-6 py-10 text-center">
+      <div className="relative w-16 h-16">
+        <div className="absolute inset-0 bg-primary rounded-full animate-pulse opacity-30"></div>
+        <BrainCircuit className="absolute inset-0 w-full h-full text-primary animate-spin" />
       </div>
 
-      {/* Removed secondary pulsing icons for simplicity */}
-      {/* 
-      <div className="flex items-center space-x-6">
-        <Briefcase className="w-10 h-10 text-muted-foreground animate-pulse [animation-delay:0ms] [animation-duration:1.5s]" />
-        <Users className="w-10 h-10 text-muted-foreground animate-pulse [animation-delay:300ms] [animation-duration:1.5s]" />
-        <BarChartBig className="w-10 h-10 text-muted-foreground animate-pulse [animation-delay:600ms] [animation-duration:1.5s]" />
-      </div> 
-      */}
-
       <div>
-        <p className="text-xl font-semibold text-primary mt-6"> {/* Adjusted margin-top due to removed icons */}
+        <p className="text-xl font-semibold text-primary">
           {message}
         </p>
         <p className="text-sm text-muted-foreground mt-2">
