@@ -161,15 +161,21 @@ export default function ResumeRankerPage() {
         const rolesToSave = aiOutput.map(role => ({
           ...role,
         }));
-        const savedRoles = await saveMultipleExtractedJobRoles(rolesToSave as any); // Cast needed due to TS type mismatch with Omit
-        setExtractedJobRoles(prev => [...savedRoles, ...prev].sort((a,b) => b.createdAt.toMillis() - a.createdAt.toMillis()));
-        toast({ title: "Job Roles Extracted & Saved", description: `${savedRoles.length} role(s) processed and saved.` });
+        const savedRoles = await saveMultipleExtractedJobRoles(rolesToSave as any);
+        
         if (savedRoles.length > 0) {
-           setSelectedJobRoleId(savedRoles[0].id);
-           setSelectedHistoryId(null);
+            setExtractedJobRoles(prev => [...savedRoles, ...prev].sort((a,b) => b.createdAt.toMillis() - a.createdAt.toMillis()));
+            toast({ title: "New Job Roles Saved", description: `${savedRoles.length} new role(s) were extracted and saved.` });
+            if (savedRoles.length > 0) {
+               setSelectedJobRoleId(savedRoles[0].id);
+               setSelectedHistoryId(null);
+            }
+        } else {
+            toast({ title: "No New Roles Found", description: "The roles extracted from the document(s) already exist in your saved roles.", variant: "default" });
         }
+
       } else {
-         toast({ title: "No Job Roles Extracted", description: "AI could not extract roles from the files.", variant: "default" });
+         toast({ title: "No Job Roles Extracted", description: "AI could not extract any roles from the provided file(s).", variant: "default" });
       }
     } catch (error: any) {
       const message = error.message || String(error);
@@ -530,7 +536,3 @@ export default function ResumeRankerPage() {
     </div>
   );
 }
-
-    
-
-    

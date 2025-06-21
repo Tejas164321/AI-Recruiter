@@ -40,18 +40,36 @@ export const saveExtractedJobRole = async (jobRoleData: Omit<ExtractedJobRole, '
 export const saveMultipleExtractedJobRoles = async (jobRolesData: Array<Omit<ExtractedJobRole, 'id' | 'userId' | 'createdAt'>>): Promise<ExtractedJobRole[]> => {
   if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
   const userId = auth.currentUser.uid;
+  
+  // 1. Fetch all existing role names for the current user to check for duplicates.
+  const existingRolesQuery = query(collection(db, "extractedJobRoles"), where("userId", "==", userId));
+  const querySnapshot = await getDocs(existingRolesQuery);
+  const existingRoleNames = new Set(querySnapshot.docs.map(doc => doc.data().name));
+
+  // 2. Filter out any roles from the input that already exist by name.
+  const newRolesToSave = jobRolesData.filter(roleData => !existingRoleNames.has(roleData.name));
+  
+  // If there are no new roles to save, return an empty array.
+  if (newRolesToSave.length === 0) {
+    return [];
+  }
+
   const savedRoles: ExtractedJobRole[] = [];
   const now = Timestamp.now();
+  const promises: Promise<void>[] = [];
 
-  const promises = jobRolesData.map(async (roleData) => {
-    const docRef = await addDoc(collection(db, "extractedJobRoles"), {
+  // 3. Create and save only the new, unique roles.
+  for (const roleData of newRolesToSave) {
+    const promise = addDoc(collection(db, "extractedJobRoles"), {
       ...roleData,
       userId,
       createdAt: serverTimestamp(),
+    }).then(docRef => {
+      // Create a complete ExtractedJobRole object for the return value.
+      savedRoles.push({ ...roleData, id: docRef.id, userId, createdAt: now } as ExtractedJobRole);
     });
-    // Return a hydrated object immediately, assuming server timestamp will be close to `now`
-    savedRoles.push({ ...roleData, id: docRef.id, userId, createdAt: now } as ExtractedJobRole);
-  });
+    promises.push(promise);
+  }
 
   await Promise.all(promises);
   return savedRoles;
@@ -224,5 +242,3 @@ export const getAllInterviewQuestionsSetsForUser = async (): Promise<InterviewQu
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InterviewQuestionsSet));
 };
-
-    
