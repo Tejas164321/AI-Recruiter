@@ -52,48 +52,59 @@ const cardHoverVariants = {
 
 // --- Proximity-based Text Animation Components ---
 
-const Letter = ({ children, mouseX, letterRef }) => {
-    const [position, setPosition] = useState({ left: 0, width: 0 });
+const Letter = ({ children, mouse, letterRef }) => {
+    const [position, setPosition] = useState({ top: 0, left: 0, width: 0, height: 0 });
 
     useEffect(() => {
         if (letterRef.current) {
             setPosition({
+                top: letterRef.current.offsetTop,
                 left: letterRef.current.offsetLeft,
                 width: letterRef.current.offsetWidth,
+                height: letterRef.current.offsetHeight,
             });
         }
     }, [letterRef]);
 
-    const distance = useTransform(mouseX, (val) => {
-        if (val === Infinity || position.width === 0) {
+    const distance = useTransform(mouse, (mousePos) => {
+        if (mousePos.x === Infinity || position.width === 0) {
             return Infinity;
         }
-        return Math.abs(val - (position.left + position.width / 2));
+
+        // Only apply effect if mouse is vertically aligned with the letter's line
+        if (mousePos.y < position.top || mousePos.y > position.top + position.height) {
+            return Infinity;
+        }
+
+        // Calculate horizontal distance from the center of the letter
+        return Math.abs(mousePos.x - (position.left + position.width / 2));
     });
 
-    const scale = useTransform(distance, [0, 25, 60, 100], [1.5, 1.25, 1.1, 1]);
-    const y = useTransform(distance, [0, 25, 60, 100], [-12, -7, -3, 0]);
+    // Reduced intensity for a more professional feel
+    const scale = useTransform(distance, [0, 30, 90], [1.2, 1.1, 1]);
+    const y = useTransform(distance, [0, 30, 90], [-6, -3, 0]);
 
     return (
         <motion.span
             ref={letterRef}
             style={{ scale, y }}
             className="inline-block"
-            transition={{ type: "spring", stiffness: 400, damping: 15 }}
+            // Smoother spring physics
+            transition={{ type: "spring", stiffness: 350, damping: 20 }}
         >
             {children}
         </motion.span>
     );
 };
 
-const AnimatedText = ({ text, mouseX, isSpecial = false }) => {
+const AnimatedText = ({ text, mouse, isSpecial = false }) => {
     const letters = text.split("");
-    const letterRefs = useRef(letters.map(() => React.createRef())).current;
+    const letterRefs = useRef(letters.map(() => React.createRef<HTMLSpanElement>())).current;
 
     return (
         <span className={isSpecial ? "text-primary relative inline-block" : "relative inline-block"} style={isSpecial ? { filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.8))" } : {}}>
             {letters.map((char, index) => (
-                <Letter key={`${char}-${index}`} mouseX={mouseX} letterRef={letterRefs[index]}>
+                <Letter key={`${char}-${index}`} mouse={mouse} letterRef={letterRefs[index]}>
                     <span style={{ whiteSpace: "pre" }}>{char}</span>
                 </Letter>
             ))}
@@ -103,7 +114,7 @@ const AnimatedText = ({ text, mouseX, isSpecial = false }) => {
 
 const HeroHeading = ({ text, specialText }) => {
     const ref = useRef<HTMLHeadingElement>(null);
-    const mouseX = useMotionValue(Infinity);
+    const mouse = useMotionValue({x: Infinity, y: Infinity});
 
     return (
         <motion.h1
@@ -111,17 +122,17 @@ const HeroHeading = ({ text, specialText }) => {
             onMouseMove={(e) => {
                 if (ref.current) {
                     const rect = ref.current.getBoundingClientRect();
-                    mouseX.set(e.clientX - rect.left);
+                    mouse.set({ x: e.clientX - rect.left, y: e.clientY - rect.top });
                 }
             }}
             onMouseLeave={() => {
-                mouseX.set(Infinity);
+                mouse.set({x: Infinity, y: Infinity});
             }}
             className="text-4xl font-bold tracking-tight sm:text-5xl xl:text-6xl/none font-headline"
             aria-label={text + specialText}
         >
-            <AnimatedText text={text} mouseX={mouseX} />
-            <AnimatedText text={specialText} mouseX={mouseX} isSpecial={true} />
+            <AnimatedText text={text} mouse={mouse} />
+            <AnimatedText text={specialText} mouse={mouse} isSpecial={true} />
         </motion.h1>
     );
 }
@@ -417,4 +428,6 @@ export function PrivacyPage() {
     </div>
   );
 }
+    
+
     
