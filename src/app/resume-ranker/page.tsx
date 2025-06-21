@@ -13,9 +13,6 @@ import { performBulkScreening, type PerformBulkScreeningInput, type PerformBulkS
 import { extractJobRoles as extractJobRolesAI, type ExtractJobRolesInput as ExtractJobRolesAIInput, type ExtractJobRolesOutput as ExtractJobRolesAIOutput } from "@/ai/flows/extract-job-roles";
 import type { ResumeFile, RankedCandidate, Filters, JobDescriptionFile, JobScreeningResult, ExtractedJobRole } from "@/lib/types";
 import {
-  saveMultipleExtractedJobRoles,
-  getExtractedJobRoles,
-  deleteExtractedJobRole,
   saveJobScreeningResult,
   getAllJobScreeningResultsForUser,
 } from "@/services/firestoreService";
@@ -25,6 +22,7 @@ import { LoadingIndicator } from "@/components/loading-indicator";
 import { useLoading } from "@/contexts/loading-context";
 import { useAuth } from "@/contexts/auth-context";
 import { db as firestoreDb } from "@/lib/firebase/config";
+import { Timestamp } from "firebase/firestore";
 
 const initialFilters: Filters = {
   scoreRange: [0, 100],
@@ -41,7 +39,7 @@ export default function ResumeRankerPage() {
   // State for file uploads
   const [uploadedResumeFiles, setUploadedResumeFiles] = useState<ResumeFile[]>([]);
   
-  // State for data from Firestore
+  // State for data from Firestore and local session
   const [extractedJobRoles, setExtractedJobRoles] = useState<ExtractedJobRole[]>([]);
   const [allScreeningResults, setAllScreeningResults] = useState<JobScreeningResult[]>([]);
   
@@ -69,11 +67,29 @@ export default function ResumeRankerPage() {
     setAppIsLoading(false);
     if (currentUser && isFirestoreAvailable) {
       setIsLoadingFromDB(true);
-      Promise.all([getExtractedJobRoles(), getAllJobScreeningResultsForUser()])
-        .then(([roles, results]) => {
-          setExtractedJobRoles(roles);
+      getAllJobScreeningResultsForUser()
+        .then((results) => {
           setAllScreeningResults(results);
-          setSelectedJobRoleId(null); // Don't auto-select a role on load
+
+          // Derive unique job roles from the screening history
+          const uniqueRolesMap = new Map<string, ExtractedJobRole>();
+          results.forEach(result => {
+            if (!uniqueRolesMap.has(result.jobDescriptionId)) {
+              uniqueRolesMap.set(result.jobDescriptionId, {
+                id: result.jobDescriptionId,
+                name: result.jobDescriptionName,
+                contentDataUri: result.jobDescriptionDataUri,
+                originalDocumentName: '', 
+                userId: currentUser.uid,
+                createdAt: result.createdAt,
+              });
+            }
+          });
+          const derivedRoles = Array.from(uniqueRolesMap.values())
+             .sort((a,b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+
+          setExtractedJobRoles(derivedRoles);
+          setSelectedJobRoleId(null); 
           setSelectedHistoryId(null);
         })
         .catch(err => {
@@ -133,7 +149,7 @@ export default function ResumeRankerPage() {
   }, [selectedHistoryId, allScreeningResults]);
 
   const handleJobDescriptionUploadAndExtraction = useCallback(async (initialJdUploads: JobDescriptionFile[]) => {
-    if (!currentUser?.uid || !isFirestoreAvailable) {
+    if (!currentUser?.uid) {
       toast({ title: "Not Authenticated", description: "Please log in to process job descriptions.", variant: "destructive" });
       return;
     }
@@ -158,20 +174,17 @@ export default function ResumeRankerPage() {
       const aiOutput: ExtractJobRolesAIOutput = await extractJobRolesAI(aiInput);
       
       if (aiOutput.length > 0) {
-        const rolesToSave = aiOutput.map(role => ({
+        const tempRoles = aiOutput.map(role => ({
           ...role,
-        }));
-        const savedRoles = await saveMultipleExtractedJobRoles(rolesToSave as any);
+          userId: currentUser.uid,
+          createdAt: Timestamp.now(),
+        })) as ExtractedJobRole[];
         
-        if (savedRoles.length > 0) {
-            setExtractedJobRoles(prev => [...savedRoles, ...prev].sort((a,b) => b.createdAt.toMillis() - a.createdAt.toMillis()));
-            toast({ title: "New Job Roles Saved", description: `${savedRoles.length} new role(s) were extracted and saved.` });
-            if (savedRoles.length > 0) {
-               setSelectedJobRoleId(savedRoles[0].id);
-               setSelectedHistoryId(null);
-            }
-        } else {
-            toast({ title: "No New Roles Found", description: "The roles extracted from the document(s) already exist in your saved roles.", variant: "default" });
+        setExtractedJobRoles(prev => [...tempRoles, ...prev]);
+        toast({ title: "Job Roles Extracted", description: `${tempRoles.length} role(s) were extracted and are ready for screening.` });
+        if (tempRoles.length > 0) {
+           setSelectedJobRoleId(tempRoles[0].id);
+           setSelectedHistoryId(null);
         }
 
       } else {
@@ -179,24 +192,15 @@ export default function ResumeRankerPage() {
       }
     } catch (error: any) {
       const message = error.message || String(error);
-      if (message.includes("permission-denied") || message.includes("insufficient permissions") || error.code === 'permission-denied') {
-        toast({
-          title: "Firestore Permission Error",
-          description: "Could not save job roles. Please check your Firestore Security Rules to allow writes.",
+      toast({
+          title: "Job Role Extraction Failed",
+          description: `An unexpected error occurred: ${message.substring(0, 100)}`,
           variant: "destructive",
-          duration: 10000
-        });
-      } else {
-        toast({
-            title: "Job Role Extraction Failed",
-            description: `An unexpected error occurred: ${message.substring(0, 100)}`,
-            variant: "destructive",
-        });
-      }
+      });
     } finally {
       setIsLoadingJDExtraction(false);
     }
-  }, [currentUser?.uid, toast, isFirestoreAvailable]);
+  }, [currentUser?.uid, toast]);
 
   const startOrRefreshBulkScreening = useCallback(async (targetJobRoleId?: string) => {
     if (!currentUser?.uid || !isFirestoreAvailable) {
@@ -223,7 +227,7 @@ export default function ResumeRankerPage() {
         const resultToSave = outputFromAI[0];
         const savedResult = await saveJobScreeningResult(resultToSave as any); // Cast needed for Omit
         setAllScreeningResults(prev => [savedResult, ...prev]);
-        setSelectedHistoryId(savedResult.id); // Select the new result
+        setSelectedHistoryId(savedResult.id);
         toast({ title: "Screening Complete & Saved", description: "New screening session saved." });
       } else {
         toast({ title: "Screening Processed", description: "No new results were generated.", variant: "default"});
@@ -234,7 +238,6 @@ export default function ResumeRankerPage() {
       let description = message.substring(0, 100);
       let title = "Bulk Screening Failed";
 
-      // Check for Firestore's specific "missing index" error code
       if (error.code === 'failed-precondition' || message.toLowerCase().includes('index')) {
         title = "Database Index Required";
         description = "A one-time database setup is needed. Please open your browser's developer console (F12) to find a direct link to create the required Firestore index.";
@@ -247,7 +250,7 @@ export default function ResumeRankerPage() {
         title: title,
         description: description,
         variant: "destructive",
-        duration: 10000 // Make it stay longer
+        duration: 10000
       });
     } finally {
       setIsLoadingScreening(false);
@@ -275,7 +278,7 @@ export default function ResumeRankerPage() {
 
   const handleJobRoleChange = useCallback((roleId: string | null) => {
     setSelectedJobRoleId(roleId);
-    setSelectedHistoryId(null); // Reset history selection
+    setSelectedHistoryId(null);
     setFilters(initialFilters);
   }, []);
 
@@ -284,27 +287,6 @@ export default function ResumeRankerPage() {
     setFilters(initialFilters);
   }, []);
   
-  const handleDeleteRole = useCallback(async (roleId: string) => {
-    if(!isFirestoreAvailable) {
-        toast({ title: "Operation Unavailable", description: "Database is not connected.", variant: "destructive" });
-        return;
-    }
-    const roleName = extractedJobRoles.find(r => r.id === roleId)?.name || "the selected role";
-    if (window.confirm(`Are you sure you want to delete "${roleName}" and all its screening history? This cannot be undone.`)) {
-        try {
-            await deleteExtractedJobRole(roleId);
-            setExtractedJobRoles(prev => prev.filter(r => r.id !== roleId));
-            setAllScreeningResults(prev => prev.filter(r => r.jobDescriptionId !== roleId));
-            setSelectedJobRoleId(null);
-            setSelectedHistoryId(null);
-            toast({ title: "Role Deleted", description: `"${roleName}" has been removed.`});
-        } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            toast({ title: "Deletion Failed", description: message.substring(0, 100), variant: "destructive" });
-        }
-    }
-  }, [extractedJobRoles, toast, isFirestoreAvailable]);
-
   const handleViewFeedback = (candidate: RankedCandidate) => {
     if (currentScreeningResult) { 
       setSelectedCandidateForFeedback(candidate);
@@ -386,7 +368,7 @@ export default function ResumeRankerPage() {
                     1. Upload Job Descriptions
                   </CardTitle>
                   <CardDescription>
-                    Upload one or more JD files. Roles will be extracted and saved to your account.
+                    Upload one or more JD files. Roles will be extracted for this session.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -469,7 +451,6 @@ export default function ResumeRankerPage() {
                   selectedJobRoleId={selectedJobRoleId}
                   onJobRoleChange={handleJobRoleChange}
                   isLoading={isProcessing}
-                  onDeleteRole={handleDeleteRole}
                   screeningHistory={screeningHistoryForSelectedRole}
                   selectedHistoryId={selectedHistoryId}
                   onHistoryChange={handleHistoryChange}
@@ -513,7 +494,7 @@ export default function ResumeRankerPage() {
                   <p className="text-center text-muted-foreground py-8">Upload job descriptions to begin.</p>
                 )}
                 {extractedJobRoles.length > 0 && !selectedJobRoleId && (
-                   <p className="text-center text-muted-foreground py-8">Select a saved job role from the filters above.</p>
+                   <p className="text-center text-muted-foreground py-8">Select a job role from the dropdown above.</p>
                 )}
                 {selectedJobRoleId && screeningHistoryForSelectedRole.length === 0 && (
                     <p className="text-center text-muted-foreground py-8">Upload resumes and click "Screen Candidates" to create your first screening session for this role.</p>

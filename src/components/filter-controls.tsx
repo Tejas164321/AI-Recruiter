@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import type { Filters, ExtractedJobRole, JobScreeningResult } from "@/lib/types";
-import { SlidersHorizontal, Search, Briefcase, RotateCw, Trash2, History } from "lucide-react";
+import { SlidersHorizontal, Search, Briefcase, RotateCw, History } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -31,7 +31,6 @@ interface FilterControlsProps {
   selectedJobRoleId: string | null;
   onJobRoleChange: (roleId: string | null) => void;
   isLoading: boolean;
-  onDeleteRole: (roleId: string) => void;
   screeningHistory: JobScreeningResult[];
   selectedHistoryId: string | null;
   onHistoryChange: (historyId: string | null) => void;
@@ -46,7 +45,6 @@ export function FilterControls({
   selectedJobRoleId,
   onJobRoleChange,
   isLoading,
-  onDeleteRole,
   screeningHistory,
   selectedHistoryId,
   onHistoryChange,
@@ -73,7 +71,7 @@ export function FilterControls({
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         <h3 className="text-lg font-semibold text-foreground flex items-center">
           <SlidersHorizontal className="w-5 h-5 mr-2 text-primary" />
-          Filter & Manage Roles
+          Filter & Select Role
         </h3>
         <Button variant="ghost" size="sm" onClick={onResetFilters} disabled={isLoading}>
           Reset Filters
@@ -86,7 +84,7 @@ export function FilterControls({
         <div className="space-y-4">
            <div className="space-y-2">
             <Label htmlFor="jobRoleSelect" className="text-sm font-medium">
-              Saved Job Role
+              Job Role
             </Label>
             <div className="relative">
               <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
@@ -185,8 +183,8 @@ export function FilterControls({
             <Separator />
             <div className="space-y-2">
                 <Label className="text-sm font-medium">Role Actions</Label>
-                <p className="text-xs text-muted-foreground">Manage the selected job role or re-run screening with newly uploaded resumes.</p>
-                <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                <p className="text-xs text-muted-foreground">Re-run screening for the selected role with newly uploaded resumes.</p>
+                <div className="flex items-center gap-2 pt-1">
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -206,26 +204,6 @@ export function FilterControls({
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button 
-                                    variant="destructive" 
-                                    className="w-full sm:w-auto"
-                                    onClick={() => onDeleteRole(selectedJobRoleId!)} 
-                                    disabled={isLoading}
-                                    aria-label="Delete selected role"
-                                >
-                                    <Trash2 className="w-4 h-4 mr-2"/>
-                                    Delete Role
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Deletes this role and all its history.</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
                 </div>
             </div>
           </>
@@ -234,5 +212,3 @@ export function FilterControls({
     </div>
   );
 }
-
-    

@@ -8,92 +8,19 @@ import {
   query,
   where,
   serverTimestamp,
-  deleteDoc,
   doc,
   setDoc,
   orderBy,
   limit,
-  getDoc,
   Timestamp,
   writeBatch,
 } from 'firebase/firestore';
 
-import type { ExtractedJobRole, JobScreeningResult, AtsScoreResult, InterviewQuestionsSet, ResumeFile } from '@/lib/types';
+import type { JobScreeningResult, AtsScoreResult, InterviewQuestionsSet } from '@/lib/types';
 
 if (!db) {
   console.warn("Firestore service (db) is not available. Firestore operations will fail.");
 }
-
-// --- ExtractedJobRole Functions ---
-
-export const saveExtractedJobRole = async (jobRoleData: Omit<ExtractedJobRole, 'id' | 'userId' | 'createdAt'>): Promise<ExtractedJobRole> => {
-  if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
-  const userId = auth.currentUser.uid;
-  const docRef = await addDoc(collection(db, "extractedJobRoles"), {
-    ...jobRoleData,
-    userId,
-    createdAt: serverTimestamp(),
-  });
-  return { ...jobRoleData, id: docRef.id, userId, createdAt: Timestamp.now() } as ExtractedJobRole;
-};
-
-export const saveMultipleExtractedJobRoles = async (jobRolesData: Array<Omit<ExtractedJobRole, 'id' | 'userId' | 'createdAt'>>): Promise<ExtractedJobRole[]> => {
-  if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
-  const userId = auth.currentUser.uid;
-  
-  // 1. Fetch all existing role names for the current user to check for duplicates.
-  const existingRolesQuery = query(collection(db, "extractedJobRoles"), where("userId", "==", userId));
-  const querySnapshot = await getDocs(existingRolesQuery);
-  const existingRoleNames = new Set(querySnapshot.docs.map(doc => doc.data().name));
-
-  // 2. Filter out any roles from the input that already exist by name.
-  const newRolesToSave = jobRolesData.filter(roleData => !existingRoleNames.has(roleData.name));
-  
-  // If there are no new roles to save, return an empty array.
-  if (newRolesToSave.length === 0) {
-    return [];
-  }
-
-  const savedRoles: ExtractedJobRole[] = [];
-  const now = Timestamp.now();
-  const promises: Promise<void>[] = [];
-
-  // 3. Create and save only the new, unique roles.
-  for (const roleData of newRolesToSave) {
-    const promise = addDoc(collection(db, "extractedJobRoles"), {
-      ...roleData,
-      userId,
-      createdAt: serverTimestamp(),
-    }).then(docRef => {
-      // Create a complete ExtractedJobRole object for the return value.
-      savedRoles.push({ ...roleData, id: docRef.id, userId, createdAt: now } as ExtractedJobRole);
-    });
-    promises.push(promise);
-  }
-
-  await Promise.all(promises);
-  return savedRoles;
-};
-
-
-export const getExtractedJobRoles = async (): Promise<ExtractedJobRole[]> => {
-  if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
-  const userId = auth.currentUser.uid;
-  const q = query(collection(db, "extractedJobRoles"), where("userId", "==", userId), orderBy("createdAt", "desc"));
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ExtractedJobRole));
-};
-
-export const deleteExtractedJobRole = async (roleId: string): Promise<void> => {
-  if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
-  // Also delete associated screening results
-  const screeningResultsQuery = query(collection(db, "jobScreeningResults"), where("jobDescriptionId", "==", roleId), where("userId", "==", auth.currentUser.uid));
-  const screeningResultsSnapshot = await getDocs(screeningResultsQuery);
-  const deletePromises = screeningResultsSnapshot.docs.map(docSnapshot => deleteDoc(doc(db, "jobScreeningResults", docSnapshot.id)));
-  await Promise.all(deletePromises);
-
-  await deleteDoc(doc(db, "extractedJobRoles", roleId));
-};
 
 // --- JobScreeningResult Functions ---
 
