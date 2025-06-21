@@ -111,5 +111,5 @@ body {
 /* Special class for the landing page's unique background */
 .landing-page-gradient {
   background-color: #010313;
-  background-image: radial-gradient(ellipse 80% 80% at 50% -20%,rgba(120,119,198,0.3), hsla(0,0%,100%,0));
+  background-image: radial-gradient(ellipse 50% 70% at 25% 50%, rgba(120, 119, 198, 0.25), hsla(0, 0%, 100%, 0));
 }

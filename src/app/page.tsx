@@ -89,12 +89,6 @@ export default function LandingPage() {
       <main className="flex-1">
         {/* Hero Section */}
         <section className="relative w-full py-24 md:py-32 lg:py-40">
-           {/* Animated background elements */}
-          <div className="absolute inset-0 z-0 opacity-50">
-            <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-primary rounded-full filter blur-3xl animate-pulse" />
-            <div className="absolute bottom-1/4 right-1/4 w-32 h-32 bg-secondary rounded-full filter blur-3xl animate-pulse animation-delay-2000" />
-          </div>
-
           <div className="container px-4 md:px-6 relative z-10">
             <div className="grid gap-10 lg:grid-cols-2 lg:gap-12 xl:gap-24 items-center">
               <motion.div 
@@ -161,7 +155,7 @@ export default function LandingPage() {
                   src="/hero-hologram.png"
                   width="600"
                   height="400"
-                  alt="A business professional analyzing resumes on a futuristic holographic interface"
+                  alt="AI brain analyzing resumes and interview questions"
                   className="mx-auto overflow-hidden rounded-xl object-cover sm:w-full lg:order-last shadow-2xl shadow-primary/20"
                   priority
                 />
