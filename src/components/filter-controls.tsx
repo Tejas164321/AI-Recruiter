@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
-import type { Filters, ExtractedJobRole } from "@/lib/types";
-import { SlidersHorizontal, Search, Briefcase, Loader2, Trash2, RotateCw } from "lucide-react";
+import type { Filters, ExtractedJobRole, JobScreeningResult } from "@/lib/types";
+import { SlidersHorizontal, Search, Briefcase, Loader2, Trash2, RotateCw, Database } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -32,6 +32,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type { Timestamp } from "firebase/firestore";
 
 
 interface FilterControlsProps {
@@ -44,6 +45,9 @@ interface FilterControlsProps {
   isLoadingRoles: boolean;
   onDeleteJobRole: (roleId: string) => void;
   onRefreshScreeningForRole: (roleId: string) => void;
+  screeningsForRole: JobScreeningResult[];
+  selectedScreeningId: string | null;
+  onScreeningChange: (screeningId: string | null) => void;
 }
 
 export function FilterControls({
@@ -56,6 +60,9 @@ export function FilterControls({
   isLoadingRoles,
   onDeleteJobRole,
   onRefreshScreeningForRole,
+  screeningsForRole,
+  selectedScreeningId,
+  onScreeningChange,
 }: FilterControlsProps) {
   const handleScoreChange = (value: number[]) => {
     onFilterChange({ scoreRange: [value[0], value[1]] });
@@ -83,12 +90,13 @@ export function FilterControls({
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-        <div className="md:col-span-1">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
+        {/* Job Role Selector */}
+        <div className="space-y-1">
           <Label htmlFor="jobRoleSelect" className="text-sm font-medium text-foreground">
             Active Job Role
           </Label>
-          <div className="relative mt-1">
+          <div className="relative">
              {isLoadingRoles && !extractedJobRoles.length ? (
                 <div className="flex items-center justify-center h-10 border rounded-md bg-muted">
                     <Loader2 className="w-5 h-5 mr-2 animate-spin text-muted-foreground" />
@@ -160,16 +168,49 @@ export function FilterControls({
             )}
         </div>
 
-        <div className="md:col-span-1">
+        {/* Screening History Selector */}
+        <div className="space-y-1">
+            <Label htmlFor="screeningHistorySelect" className="text-sm font-medium text-foreground">
+                Screening History
+            </Label>
+            <div className="relative">
+                <Database className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
+                <Select
+                    value={selectedScreeningId || "none"}
+                    onValueChange={(val) => onScreeningChange(val === "none" ? null : val)}
+                    disabled={isLoadingRoles || screeningsForRole.length === 0}
+                >
+                    <SelectTrigger id="screeningHistorySelect" className="pl-10">
+                        <SelectValue placeholder="Select a screening..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {screeningsForRole.length === 0 ? (
+                            <SelectItem value="none" disabled>
+                                {selectedJobRoleId ? "No history for this role." : "Select a role first."}
+                            </SelectItem>
+                        ) : (
+                            screeningsForRole.map((screening) => (
+                                <SelectItem key={screening.id} value={screening.id}>
+                                    {new Date((screening.createdAt as Timestamp).seconds * 1000).toLocaleString()} ({screening.candidates.length} candidates)
+                                </SelectItem>
+                            ))
+                        )}
+                    </SelectContent>
+                </Select>
+            </div>
+        </div>
+
+        {/* Search by Keyword */}
+        <div className="space-y-1">
           <Label htmlFor="skillKeyword" className="text-sm font-medium text-foreground">
             Search by Name/Skill/File
           </Label>
-          <div className="relative mt-1">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               id="skillKeyword"
               type="text"
-              placeholder="e.g., React, John Doe, resume.pdf"
+              placeholder="e.g., React, John Doe"
               value={filters.skillKeyword}
               onChange={handleKeywordChange}
               className="pl-10"
@@ -179,7 +220,8 @@ export function FilterControls({
           </div>
         </div>
         
-        <div className="md:col-span-1">
+        {/* Score Range Slider */}
+        <div className="space-y-1">
           <Label htmlFor="scoreRange" className="text-sm font-medium text-foreground">
             Match Score Range: {filters.scoreRange[0]} - {filters.scoreRange[1]}
           </Label>

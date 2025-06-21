@@ -78,33 +78,13 @@ export const saveJobScreeningResult = async (resultData: Omit<JobScreeningResult
   if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
   const userId = auth.currentUser.uid;
   
-  // Check if a result for this jobDescriptionId already exists for this user
-  const q = query(
-    collection(db, "jobScreeningResults"),
-    where("userId", "==", userId),
-    where("jobDescriptionId", "==", resultData.jobDescriptionId),
-    limit(1)
-  );
-  const existingDocs = await getDocs(q);
-
-  if (!existingDocs.empty) {
-    // Update existing document
-    const docToUpdate = existingDocs.docs[0];
-    await setDoc(doc(db, "jobScreeningResults", docToUpdate.id), {
-      ...resultData,
-      userId,
-      createdAt: serverTimestamp(), // Or keep original createdAt and add an updatedAt field
-    }, { merge: true });
-    return { ...resultData, id: docToUpdate.id, userId, createdAt: Timestamp.now() } as JobScreeningResult;
-  } else {
-    // Add new document
-    const docRef = await addDoc(collection(db, "jobScreeningResults"), {
-      ...resultData,
-      userId,
-      createdAt: serverTimestamp(),
-    });
-    return { ...resultData, id: docRef.id, userId, createdAt: Timestamp.now() } as JobScreeningResult;
-  }
+  // Always add a new document for each screening, creating a historical record.
+  const docRef = await addDoc(collection(db, "jobScreeningResults"), {
+    ...resultData,
+    userId,
+    createdAt: serverTimestamp(),
+  });
+  return { ...resultData, id: docRef.id, userId, createdAt: Timestamp.now() } as JobScreeningResult;
 };
 
 export const getAllJobScreeningResultsForUser = async (): Promise<JobScreeningResult[]> => {
