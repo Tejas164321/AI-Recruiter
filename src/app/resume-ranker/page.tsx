@@ -160,7 +160,6 @@ export default function ResumeRankerPage() {
     try {
       const jdUploadsWithDataUriPromises = initialJdUploads.map(async (jdFile) => {
         if (!jdFile.file) {
-            // This case should ideally not happen if the mapping from FileUploadArea is correct
             console.error(`File object is missing for ${jdFile.name} during dataUri generation.`);
             throw new Error(`File object is missing for ${jdFile.name}.`);
         }
@@ -210,8 +209,23 @@ export default function ResumeRankerPage() {
 
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      console.error("Job Role Extraction Full Error:", error);
-      toast({ title: "Job Role Extraction Failed", description: message.substring(0,100), variant: "destructive" });
+      const lowerCaseMessage = message.toLowerCase();
+      console.error("Job Role Extraction or Save Full Error:", error);
+
+      if (lowerCaseMessage.includes("permission-denied") || lowerCaseMessage.includes("insufficient permissions")) {
+          toast({
+              title: "Firestore Permission Error",
+              description: "Could not save Job Roles. This is likely a Firestore Security Rule issue. Please ensure your rules allow 'create' operations.",
+              variant: "destructive",
+              duration: 12000,
+          });
+      } else {
+          toast({
+              title: "Job Role Extraction Failed",
+              description: `An unexpected error occurred: ${message.substring(0, 100)}`,
+              variant: "destructive",
+          });
+      }
     } finally {
       setIsLoadingJDExtraction(false);
     }
@@ -554,5 +568,3 @@ export default function ResumeRankerPage() {
     </div>
   );
 }
-
-    
