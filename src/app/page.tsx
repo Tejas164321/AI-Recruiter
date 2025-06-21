@@ -159,8 +159,7 @@ export default function LandingPage() {
               >
                 <div className="absolute -inset-2 bg-primary/20 rounded-2xl blur-xl opacity-50"></div>
                 <Image
-                  data-ai-hint="holographic analysis"
-                  src="https://placehold.co/600x400.png"
+                  src="/hero-hologram.png"
                   width="600"
                   height="400"
                   alt="A business professional analyzing resumes on a futuristic holographic interface"
