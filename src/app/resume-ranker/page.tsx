@@ -71,23 +71,25 @@ export default function ResumeRankerPage() {
         .then((results) => {
           setAllScreeningResults(results);
 
-          // Derive unique job roles from the screening history
+          // NEW LOGIC: De-duplicate job roles based on NAME
           const uniqueRolesMap = new Map<string, ExtractedJobRole>();
-          results.forEach(result => {
-            if (!uniqueRolesMap.has(result.jobDescriptionId)) {
-              uniqueRolesMap.set(result.jobDescriptionId, {
-                id: result.jobDescriptionId,
+          // Sort results by date so the representative role is the most recent one
+          const sortedResults = [...results].sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+
+          sortedResults.forEach(result => {
+            if (!uniqueRolesMap.has(result.jobDescriptionName)) {
+              uniqueRolesMap.set(result.jobDescriptionName, {
+                id: result.jobDescriptionId, // The ID of the most recent screening for this role name
                 name: result.jobDescriptionName,
                 contentDataUri: result.jobDescriptionDataUri,
-                originalDocumentName: '', 
+                originalDocumentName: '', // This info is part of the specific screening, not the role itself
                 userId: currentUser.uid,
                 createdAt: result.createdAt,
               });
             }
           });
-          const derivedRoles = Array.from(uniqueRolesMap.values())
-             .sort((a,b) => b.createdAt.toMillis() - a.createdAt.toMillis());
-
+          const derivedRoles = Array.from(uniqueRolesMap.values());
+          
           setExtractedJobRoles(derivedRoles);
           setSelectedJobRoleId(null); 
           setSelectedHistoryId(null);
@@ -136,18 +138,25 @@ export default function ResumeRankerPage() {
     }
   }, [isLoadingScreening]);
 
+  // NEW LOGIC: Filter history by the NAME of the selected role
   const screeningHistoryForSelectedRole = useMemo(() => {
     if (!selectedJobRoleId) return [];
+    // Find the representative role object to get its name
+    const selectedRole = extractedJobRoles.find(r => r.id === selectedJobRoleId);
+    if (!selectedRole) return [];
+    
+    // Filter all screening results by the selected role's name
     return allScreeningResults
-      .filter(r => r.jobDescriptionId === selectedJobRoleId)
+      .filter(r => r.jobDescriptionName === selectedRole.name)
       .sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
-  }, [selectedJobRoleId, allScreeningResults]);
+  }, [selectedJobRoleId, allScreeningResults, extractedJobRoles]);
 
   const currentScreeningResult = useMemo(() => {
     if (!selectedHistoryId) return null;
     return allScreeningResults.find(result => result.id === selectedHistoryId) || null;
   }, [selectedHistoryId, allScreeningResults]);
 
+  // NEW LOGIC: Handle de-duplication on upload
   const handleJobDescriptionUploadAndExtraction = useCallback(async (initialJdUploads: JobDescriptionFile[]) => {
     if (!currentUser?.uid) {
       toast({ title: "Not Authenticated", description: "Please log in to process job descriptions.", variant: "destructive" });
@@ -179,14 +188,24 @@ export default function ResumeRankerPage() {
           userId: currentUser.uid,
           createdAt: Timestamp.now(),
         })) as ExtractedJobRole[];
-        
-        setExtractedJobRoles(prev => [...tempRoles, ...prev]);
-        toast({ title: "Job Roles Extracted", description: `${tempRoles.length} role(s) were extracted and are ready for screening.` });
-        if (tempRoles.length > 0) {
-           setSelectedJobRoleId(tempRoles[0].id);
-           setSelectedHistoryId(null);
-        }
 
+        const existingRoleNames = new Set(extractedJobRoles.map(r => r.name));
+        const trulyNewRoles = tempRoles.filter(r => !existingRoleNames.has(r.name));
+
+        if (trulyNewRoles.length > 0) {
+          setExtractedJobRoles(prev => [...trulyNewRoles, ...prev]);
+          setSelectedJobRoleId(trulyNewRoles[0].id); // Select the first new role
+          setSelectedHistoryId(null);
+          toast({ title: "New Job Role(s) Extracted", description: `${trulyNewRoles.length} new role(s) were extracted and are ready for screening.` });
+        } else {
+           // All extracted roles already exist. Select the first one found.
+          const firstExistingRole = extractedJobRoles.find(r => r.name === tempRoles[0].name);
+          if (firstExistingRole) {
+            setSelectedJobRoleId(firstExistingRole.id);
+            setSelectedHistoryId(null);
+          }
+          toast({ title: "Job Role Exists", description: `The role "${tempRoles[0].name}" already exists and has been selected.` });
+        }
       } else {
          toast({ title: "No Job Roles Extracted", description: "AI could not extract any roles from the provided file(s).", variant: "default" });
       }
@@ -200,7 +219,7 @@ export default function ResumeRankerPage() {
     } finally {
       setIsLoadingJDExtraction(false);
     }
-  }, [currentUser?.uid, toast]);
+  }, [currentUser?.uid, toast, extractedJobRoles]);
 
   const handleScreening = useCallback(async (targetJobRoleId?: string) => {
     if (!currentUser?.uid || !isFirestoreAvailable) {
@@ -225,7 +244,7 @@ export default function ResumeRankerPage() {
       
       if (outputFromAI.length > 0 && outputFromAI[0]) {
         const resultToSave = outputFromAI[0];
-        const savedResult = await saveJobScreeningResult(resultToSave as any); // Cast needed for Omit
+        const savedResult = await saveJobScreeningResult(resultToSave as any);
         setAllScreeningResults(prev => [savedResult, ...prev]);
         setSelectedHistoryId(savedResult.id);
         toast({ title: "Screening Complete & Saved", description: "New screening session saved." });
@@ -324,6 +343,20 @@ export default function ResumeRankerPage() {
   }
   
   const isProcessing = isLoadingJDExtraction || isLoadingScreening || isLoadingFromDB;
+
+  const uniqueJobRolesForDropdown = useMemo(() => {
+    // This ensures that even temporary session roles are displayed uniquely
+    const roleMap = new Map<string, ExtractedJobRole>();
+    // Sort by date to show the most recently used roles first in the dropdown
+    const sortedRoles = [...extractedJobRoles].sort((a,b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+
+    sortedRoles.forEach(role => {
+        if(!roleMap.has(role.name)) {
+            roleMap.set(role.name, role);
+        }
+    });
+    return Array.from(roleMap.values());
+  }, [extractedJobRoles]);
 
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-8">
@@ -447,7 +480,7 @@ export default function ResumeRankerPage() {
                   filters={filters} 
                   onFilterChange={handleFilterChange} 
                   onResetFilters={resetFilters}
-                  extractedJobRoles={extractedJobRoles}
+                  extractedJobRoles={uniqueJobRolesForDropdown}
                   selectedJobRoleId={selectedJobRoleId}
                   onJobRoleChange={handleJobRoleChange}
                   isLoading={isProcessing}
