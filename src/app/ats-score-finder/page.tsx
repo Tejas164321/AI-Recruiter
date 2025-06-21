@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileUploadArea } from "@/components/file-upload-area";
@@ -10,15 +10,23 @@ import { calculateAtsScore, type CalculateAtsScoreInput, type CalculateAtsScoreO
 import type { ResumeFile, AtsScoreResult } from "@/lib/types";
 import { AtsScoreTable } from "@/components/ats-score-table";
 import { AtsFeedbackModal } from "@/components/ats-feedback-modal";
-import { BarChartBig, Loader2, ScanSearch, BrainCircuit, ServerOff } from "lucide-react";
+import { BarChartBig, Loader2, ScanSearch, BrainCircuit, ServerOff, ListFilter } from "lucide-react";
 import { LoadingIndicator } from "@/components/loading-indicator";
 import { useLoading } from "@/contexts/loading-context";
 import { useAuth } from "@/contexts/auth-context";
 import { saveMultipleAtsScoreResults, getAtsScoreResults } from "@/services/firestoreService";
 import { db as firestoreDb } from "@/lib/firebase/config"; // Import db to check availability
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 const MAX_FILES_ATS = 10;
+type SortOption = 'score-desc' | 'score-asc' | 'date-desc';
+
 
 export default function AtsScoreFinderPage() {
   const { setIsPageLoading: setAppIsLoading } = useLoading();
@@ -30,6 +38,7 @@ export default function AtsScoreFinderPage() {
   const [isLoadingResultsFromDB, setIsLoadingResultsFromDB] = useState<boolean>(true);
   const [selectedResultForModal, setSelectedResultForModal] = useState<AtsScoreResult | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [sortOption, setSortOption] = useState<SortOption>('score-desc');
 
   const { toast } = useToast();
   const resultsSectionRef = useRef<HTMLDivElement | null>(null);
@@ -42,7 +51,7 @@ export default function AtsScoreFinderPage() {
     if (currentUser && isFirestoreAvailable) {
       setIsLoadingResultsFromDB(true);
       getAtsScoreResults()
-        .then(results => setAtsResults(results)) // Results are pre-sorted by date from service
+        .then(results => setAtsResults(results))
         .catch(err => {
           let description = "Could not load saved ATS results.";
           if (err.code === 'failed-precondition') {
@@ -83,6 +92,20 @@ export default function AtsScoreFinderPage() {
       return () => clearTimeout(timer);
     }
   }, [isProcessingAts, isLoadingResultsFromDB, atsResults]);
+  
+  const sortedAtsResults = useMemo(() => {
+    return [...atsResults].sort((a, b) => {
+      switch (sortOption) {
+        case 'score-asc':
+          return a.atsScore - b.atsScore;
+        case 'date-desc':
+          return b.createdAt.toMillis() - a.createdAt.toMillis();
+        case 'score-desc':
+        default:
+          return b.atsScore - a.atsScore;
+      }
+    });
+  }, [atsResults, sortOption]);
 
   const handleResumesUpload = useCallback(async (files: File[]) => {
     if (!currentUser?.uid) {
@@ -277,15 +300,38 @@ export default function AtsScoreFinderPage() {
             {!isProcessing && atsResults.length > 0 && (
               <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
                 <CardHeader>
-                  <CardTitle className="text-xl font-headline text-primary flex items-center">
-                    <BrainCircuit className="w-6 h-6 mr-2" /> Saved ATS Score Results
-                  </CardTitle>
-                  <CardDescription>
-                    Previously analyzed and saved resumes. Click headers to sort.
-                  </CardDescription>
+                  <div className="flex justify-between items-center">
+                     <div className="flex-1">
+                      <CardTitle className="text-xl font-headline text-primary flex items-center">
+                        <BrainCircuit className="w-6 h-6 mr-2" /> Saved ATS Score Results
+                      </CardTitle>
+                      <CardDescription>
+                        Previously analyzed and saved resumes.
+                      </CardDescription>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="ml-4">
+                          <ListFilter className="w-4 h-4 mr-2" />
+                          Sort
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setSortOption('score-desc')}>
+                          Highest Score
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setSortOption('score-asc')}>
+                          Lowest Score
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setSortOption('date-desc')}>
+                          Most Recent
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <AtsScoreTable results={atsResults} onViewInsights={handleViewInsights} />
+                  <AtsScoreTable results={sortedAtsResults} onViewInsights={handleViewInsights} />
                 </CardContent>
               </Card>
             )}
