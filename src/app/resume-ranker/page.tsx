@@ -365,7 +365,7 @@ export default function ResumeRankerPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center text-2xl font-headline">
                     <Briefcase className="w-7 h-7 mr-3 text-primary" />
-                    1. Upload Job Descriptions
+                    Upload Job Descriptions
                   </CardTitle>
                   <CardDescription>
                     Upload one or more JD files. Roles will be extracted for this session.
@@ -391,7 +391,7 @@ export default function ResumeRankerPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center text-2xl font-headline">
                     <Users className="w-7 h-7 mr-3 text-primary" />
-                    2. Upload Resumes
+                    Upload Resumes
                   </CardTitle>
                   <CardDescription>
                     Upload candidate resumes to be processed against the selected job role.
