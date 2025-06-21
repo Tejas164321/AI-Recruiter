@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import Image from "next/image";
 import { ArrowRight, CheckCircle, BarChartBig, ScanSearch, MessageSquarePlus, ShieldCheckIcon } from "lucide-react";
 import { motion } from "framer-motion";
+import { useAuth } from "@/contexts/auth-context";
 
 const sectionVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -48,6 +49,9 @@ const cardHoverVariants = {
 };
 
 export default function LandingPage() {
+  const { currentUser } = useAuth();
+  const getStartedLink = currentUser ? "/dashboard" : "/signup";
+
   const features = [
     {
       icon: BarChartBig,
@@ -120,10 +124,10 @@ export default function LandingPage() {
                   <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}>
                     <Button asChild size="lg">
                       <Link
-                        href="/signup"
+                        href={getStartedLink}
                         prefetch={false}
                       >
-                        Get Started
+                        {currentUser ? "Go to Dashboard" : "Get Started"}
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Link>
                     </Button>
@@ -287,10 +291,10 @@ export default function LandingPage() {
               <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}>
                 <Button asChild size="lg" className="w-full shadow-lg hover:shadow-primary/40 transition-all duration-300">
                     <Link
-                    href="/signup"
+                    href={getStartedLink}
                     prefetch={false}
                     >
-                    Sign Up for Free
+                    {currentUser ? "Go to Dashboard" : "Sign Up for Free"}
                     </Link>
                 </Button>
               </motion.div>
