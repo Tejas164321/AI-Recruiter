@@ -159,11 +159,11 @@ export default function LandingPage() {
               >
                 <div className="absolute -inset-2 bg-primary/20 rounded-2xl blur-xl opacity-50"></div>
                 <Image
-                  data-ai-hint="holographic interface"
+                  data-ai-hint="holographic analysis"
                   src="https://placehold.co/600x400.png"
                   width="600"
                   height="400"
-                  alt="ResumeRank AI Hero"
+                  alt="A business professional analyzing resumes on a futuristic holographic interface"
                   className="mx-auto aspect-video overflow-hidden rounded-xl object-cover sm:w-full lg:order-last border-2 border-primary/20 shadow-2xl shadow-primary/20"
                   priority
                 />
