@@ -10,43 +10,44 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/auth-context";
 
 const sectionVariants = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 50 },
   visible: (delay: number = 0) => ({
     opacity: 1,
     y: 0,
     transition: {
       type: "spring",
-      damping: 15,
+      damping: 30,
       stiffness: 100,
+      delay,
+      duration: 0.8,
+    },
+  }),
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: (delay: number = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
       delay,
       duration: 0.5,
     },
   }),
 };
 
-const itemVariants = {
-  hidden: { opacity: 0, x: -10 },
-  visible: (delay: number = 0) => ({
-    opacity: 1,
-    x: 0,
-    transition: {
-      delay,
-      duration: 0.3,
-    },
-  }),
-};
-
 const cardHoverVariants = {
   hover: {
-    scale: 1.03,
-    boxShadow: "0px 10px 30px -5px hsl(var(--primary)/0.2)", 
-    transition: { type: "spring", stiffness: 300, damping: 10 }
+    y: -8,
+    boxShadow: "0px 20px 40px -10px hsl(var(--primary)/0.3)", 
+    transition: { type: "spring", stiffness: 300, damping: 15 }
   },
   initial: {
-    scale: 1,
-    boxShadow: "0px 5px 15px hsl(var(--primary)/0.05)" 
+    y: 0,
+    boxShadow: "0px 5px 15px hsl(var(--primary)/0.0)"
   }
 };
+
 
 export default function LandingPage() {
   const { currentUser } = useAuth();
@@ -75,42 +76,48 @@ export default function LandingPage() {
       delay: 0.6
     },
      {
-      icon: ShieldCheckIcon, // Updated icon for authentication
+      icon: ShieldCheckIcon,
       title: "Secure Authentication & Access",
       description: "Reliable user authentication to protect your data and provide personalized experiences. Sign up and log in securely.",
       items: ["Email & Password Login", "Protected User Dashboards", "Secure Session Management"],
-      delay: 0.75 // Adjusted delay
+      delay: 0.75
     }
   ];
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen overflow-x-hidden">
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-b from-primary/10 to-primary/5">
-          <div className="container px-4 md:px-6">
-            <div className="grid gap-6 lg:grid-cols-2 lg:gap-12 xl:gap-24 items-center">
+        <section className="relative w-full py-24 md:py-32 lg:py-40">
+           {/* Animated background elements */}
+          <div className="absolute inset-0 z-0 opacity-50">
+            <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-primary rounded-full filter blur-3xl animate-pulse" />
+            <div className="absolute bottom-1/4 right-1/4 w-32 h-32 bg-secondary rounded-full filter blur-3xl animate-pulse animation-delay-2000" />
+          </div>
+
+          <div className="container px-4 md:px-6 relative z-10">
+            <div className="grid gap-10 lg:grid-cols-2 lg:gap-12 xl:gap-24 items-center">
               <motion.div 
-                className="flex flex-col justify-center space-y-4"
+                className="flex flex-col justify-center space-y-6"
                 initial="hidden"
                 animate="visible"
                 variants={sectionVariants}
                 custom={0}
               >
-                <div className="space-y-2">
+                <div className="space-y-4">
                   <motion.h1
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.1 }}
-                    className="text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none font-headline text-primary"
+                    transition={{ duration: 0.8, delay: 0.2 }}
+                    className="text-4xl font-bold tracking-tight sm:text-5xl xl:text-6xl/none font-headline"
                   >
-                    Unlock Your Hiring Potential with ResumeRank AI
+                    Unlock Your Hiring Potential with <span className="text-primary" style={{filter: 'drop-shadow(0 0 10px hsl(var(--primary)/0.8))'}}>ResumeRank AI</span>
                   </motion.h1>
                   <motion.p
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.3 }}
-                    className="max-w-[600px] text-foreground md:text-xl"
+                    transition={{ duration: 0.8, delay: 0.4 }}
+                    className="max-w-[600px] text-muted-foreground md:text-xl"
                   >
                     Streamline your recruitment process with AI-powered resume screening, candidate ranking, an ATS score checker, and tailored interview question generation. Make smarter hiring decisions, faster.
                   </motion.p>
@@ -118,22 +125,22 @@ export default function LandingPage() {
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.5 }}
-                  className="flex flex-col gap-2 min-[400px]:flex-row"
+                  transition={{ duration: 0.8, delay: 0.6 }}
+                  className="flex flex-col gap-4 min-[400px]:flex-row"
                 >
-                  <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}>
-                    <Button asChild size="lg">
+                  <motion.div whileHover={{ scale: 1.05, y: -2, transition: {type: 'spring', stiffness: 300} }} whileTap={{ scale: 0.95 }}>
+                    <Button asChild size="lg" className="w-full min-[400px]:w-auto glowing-btn">
                       <Link
                         href={getStartedLink}
                         prefetch={false}
                       >
                         {currentUser ? "Go to Dashboard" : "Get Started"}
-                        <ArrowRight className="ml-2 h-4 w-4" />
+                        <ArrowRight className="ml-2 h-5 w-5" />
                       </Link>
                     </Button>
                   </motion.div>
-                  <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}>
-                     <Button variant="outline" size="lg" asChild>
+                   <motion.div whileHover={{ scale: 1.05, y: -2, transition: {type: 'spring', stiffness: 300} }} whileTap={{ scale: 0.95 }}>
+                     <Button variant="secondary" size="lg" asChild className="w-full min-[400px]:w-auto">
                         <Link
                           href="/#features"
                           prefetch={false}
@@ -145,16 +152,19 @@ export default function LandingPage() {
                 </motion.div>
               </motion.div>
               <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
+                initial={{ opacity: 0, scale: 0.8, y: 50 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ type: 'spring', stiffness: 100, damping: 20, delay: 0.3 }}
+                className="relative"
               >
+                <div className="absolute -inset-2 bg-primary/20 rounded-2xl blur-xl opacity-50"></div>
                 <Image
-                  src="/landingpage.png"
+                  data-ai-hint="holographic interface"
+                  src="https://placehold.co/600x400.png"
                   width="600"
                   height="400"
                   alt="ResumeRank AI Hero"
-                  className="mx-auto aspect-video overflow-hidden rounded-xl object-cover sm:w-full lg:order-last shadow-[0_20px_40px_-10px_hsl(var(--primary)/0.25)]"
+                  className="mx-auto aspect-video overflow-hidden rounded-xl object-cover sm:w-full lg:order-last border-2 border-primary/20 shadow-2xl shadow-primary/20"
                   priority
                 />
               </motion.div>
@@ -163,7 +173,7 @@ export default function LandingPage() {
         </section>
 
         {/* Features Section */}
-        <section id="features" className="w-full py-12 md:py-24 lg:py-32 bg-background">
+        <section id="features" className="w-full py-12 md:py-24 lg:py-32">
           <div className="container px-4 md:px-6">
             <motion.div
               className="flex flex-col items-center justify-center space-y-4 text-center"
@@ -190,14 +200,14 @@ export default function LandingPage() {
                   transition={{ duration:0.5, delay:0.4 }}
                   className="text-3xl font-bold tracking-tighter sm:text-5xl font-headline"
                 >
-                  Everything You Need to Optimize Recruitment
+                  Optimize Your Recruitment Workflow
                 </motion.h2>
                 <motion.p
                   initial={{ opacity:0, y:20 }}
                   whileInView={{ opacity:1, y:0 }}
                   viewport={{ once: true, amount: 0.3 }}
                   transition={{ duration:0.5, delay:0.5 }}
-                  className="max-w-[900px] text-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed"
+                  className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed"
                 >
                   Our platform offers a suite of tools designed to make your hiring process more efficient and effective.
                 </motion.p>
@@ -207,54 +217,53 @@ export default function LandingPage() {
               {features.map((feature, index) => (
                 <motion.div
                   key={index}
-                  initial="initial"
-                  animate="initial" /* Ensures it respects the initial state of variants */
-                  whileHover="hover"
-                  variants={cardHoverVariants}
-                  className="h-full" 
+                  variants={sectionVariants}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true, amount: 0.2 }}
+                  custom={feature.delay}
+                  className="h-full"
                 >
                   <motion.div
-                     variants={sectionVariants}
-                     initial="hidden"
-                     whileInView="visible"
-                     viewport={{ once: true, amount: 0.2 }}
-                     custom={feature.delay}
+                     initial="initial"
+                     whileHover="hover"
+                     variants={cardHoverVariants}
                      className="h-full"
                   >
-                  <Card className="shadow-lg h-full flex flex-col border border-transparent hover:border-primary/30 transition-colors duration-300">
-                    <CardHeader className="pb-4">
-                      <motion.div 
-                        initial={{ opacity: 0, scale: 0.5 }}
-                        whileInView={{ opacity: 1, scale: 1 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.4, delay: feature.delay + 0.1}}
-                        className="flex items-center justify-center bg-primary/10 rounded-full w-12 h-12 mb-4 border-2 border-primary/20"
-                      >
-                        <feature.icon className="h-6 w-6 text-primary" />
-                      </motion.div>
-                      <CardTitle className="font-headline">{feature.title}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex flex-col flex-grow">
-                      <CardDescription>
-                        {feature.description}
-                      </CardDescription>
-                      <motion.ul className="mt-4 space-y-2 text-sm flex-grow">
-                        {feature.items.map((item, itemIndex) => (
-                          <motion.li
-                            key={itemIndex}
-                            custom={feature.delay + 0.2 + itemIndex * 0.1}
-                            initial="hidden"
-                            whileInView="visible"
-                            viewport={{ once: true }}
-                            variants={itemVariants}
-                            className="flex items-center"
-                          >
-                            <CheckCircle className="mr-2 h-4 w-4 text-accent" />{item}
-                          </motion.li>
-                        ))}
-                      </motion.ul>
-                    </CardContent>
-                  </Card>
+                    <Card className="shadow-lg h-full flex flex-col bg-card/50 backdrop-blur-sm border-white/10 transition-colors duration-300">
+                      <CardHeader className="pb-4">
+                        <motion.div 
+                          initial={{ opacity: 0, scale: 0.5 }}
+                          whileInView={{ opacity: 1, scale: 1 }}
+                          viewport={{ once: true }}
+                          transition={{ duration: 0.4, delay: feature.delay + 0.1}}
+                          className="flex items-center justify-center bg-primary/10 rounded-full w-12 h-12 mb-4 border-2 border-primary/20"
+                        >
+                          <feature.icon className="h-6 w-6 text-primary" />
+                        </motion.div>
+                        <CardTitle className="font-headline">{feature.title}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="flex flex-col flex-grow">
+                        <CardDescription className="text-muted-foreground">
+                          {feature.description}
+                        </CardDescription>
+                        <motion.ul className="mt-4 space-y-2 text-sm flex-grow">
+                          {feature.items.map((item, itemIndex) => (
+                            <motion.li
+                              key={itemIndex}
+                              custom={feature.delay + 0.2 + itemIndex * 0.1}
+                              initial="hidden"
+                              whileInView="visible"
+                              viewport={{ once: true }}
+                              variants={itemVariants}
+                              className="flex items-center"
+                            >
+                              <CheckCircle className="mr-2 h-4 w-4 text-accent" />{item}
+                            </motion.li>
+                          ))}
+                        </motion.ul>
+                      </CardContent>
+                    </Card>
                   </motion.div>
                 </motion.div>
               ))}
@@ -276,7 +285,7 @@ export default function LandingPage() {
               <h2 className="text-3xl font-bold tracking-tighter md:text-4xl/tight font-headline">
                 Ready to Revolutionize Your Hiring?
               </h2>
-              <p className="mx-auto max-w-[600px] text-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+              <p className="mx-auto max-w-[600px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
                 Join ResumeRank AI today and start making data-driven hiring decisions.
               </p>
             </motion.div>
@@ -288,7 +297,7 @@ export default function LandingPage() {
               variants={sectionVariants}
               custom={0.4}
             >
-              <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}>
+              <motion.div whileHover={{ scale: 1.05, transition: {type: 'spring', stiffness: 300} }} whileTap={{ scale: 0.95 }}>
                 <Button asChild size="lg" className="w-full shadow-lg hover:shadow-primary/40 transition-all duration-300">
                     <Link
                     href={getStartedLink}
@@ -306,13 +315,13 @@ export default function LandingPage() {
         </section>
       </main>
 
-      <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t">
+      <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t border-white/10 bg-transparent">
         <p className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} ResumeRank AI. All rights reserved.</p>
         <nav className="sm:ml-auto flex gap-4 sm:gap-6">
-          <Link href="/terms" className="text-xs hover:underline underline-offset-4" prefetch={false}>
+          <Link href="/terms" className="text-xs text-muted-foreground hover:text-primary transition-colors" prefetch={false}>
             Terms of Service
           </Link>
-          <Link href="/privacy" className="text-xs hover:underline underline-offset-4" prefetch={false}>
+          <Link href="/privacy" className="text-xs text-muted-foreground hover:text-primary transition-colors" prefetch={false}>
             Privacy Policy
           </Link>
         </nav>

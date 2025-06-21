@@ -55,48 +55,40 @@ body {
   }
 
   .dark {
-    --background: 0 0% 0%; /* True Black for AMOLED */
-    --foreground: 213 33% 95%; /* Light text for contrast */
+    --background: 224 71% 4%; /* Deep Navy */
+    --foreground: 210 40% 98%; /* Soft White */
 
-    --card: 215 20% 7%; /* Very dark grey, near black */
-    --card-foreground: 213 33% 95%;
+    --card: 222 84% 4.9%; /* Near Black */
+    --card-foreground: 210 40% 98%;
 
-    --popover: 215 20% 7%; /* Match card background */
-    --popover-foreground: 213 33% 95%;
+    --popover: 222 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 215 100% 60%; /* Brighter blue for AMOLED */
-    --primary-foreground: 210 100% 10%; /* Very dark blue/black text on primary */
+    --primary: 217 91% 60%; /* Electric Blue */
+    --primary-foreground: 222 47% 11.2%; /* Dark Blue */
 
-    --secondary: 215 20% 15%; /* Darker grey for secondary elements */
-    --secondary-foreground: 213 33% 85%; /* Slightly less bright text */
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 215 20% 12%; /* Even darker for muted elements */
-    --muted-foreground: 215 20% 55%; /* Subtle grey text */
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65.1%;
 
-    --accent: 163 70% 45%; /* Brighter/more saturated teal for AMOLED */
-    --accent-foreground: 160 100% 10%; /* Very dark green/black text on accent */
+    --accent: 163 70% 45%;
+    --accent-foreground: 160 100% 10%;
 
-    --destructive: 0 70% 50%; /* Adjusted destructive for dark */
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 215 15% 20%; /* Subtle border, visible on dark card/bg */
-    --input: 215 15% 22%; /* Input field bg */
-    --ring: 215 100% 60%; /* Match new primary for focus rings */
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 217 91% 60%;
+    --radius: 0.5rem;
 
-    --chart-1: 220 70% 55%; /* Adjusted chart colors for AMOLED */
+    --chart-1: 220 70% 55%;
     --chart-2: 160 60% 50%;
     --chart-3: 30 80% 60%;
     --chart-4: 280 65% 65%;
     --chart-5: 340 75% 60%;
-    
-    --sidebar-background: 0 0% 0%; /* True Black for sidebar */
-    --sidebar-foreground: 213 33% 95%;
-    --sidebar-primary: 215 100% 60%;
-    --sidebar-primary-foreground: 210 100% 10%;
-    --sidebar-accent: 163 70% 45%;
-    --sidebar-accent-foreground: 160 100% 10%;
-    --sidebar-border: 215 15% 15%; /* Very subtle border */
-    --sidebar-ring: 215 100% 60%;
   }
 }
 
@@ -104,7 +96,19 @@ body {
   * {
     @apply border-border;
   }
+  .dark body {
+    @apply bg-background text-foreground;
+    background-color: #010313;
+    background-image: radial-gradient(ellipse 80% 80% at 50% -20%,rgba(120,119,198,0.3), hsla(0,0%,100%,0));
+  }
   body {
     @apply bg-background text-foreground;
   }
+}
+
+.glowing-btn {
+  @apply relative;
+  -webkit-box-shadow: 0 0 40px theme('colors.primary.DEFAULT');
+  -moz-box-shadow: 0 0 40px theme('colors.primary.DEFAULT');
+  box-shadow: 0 0 40px theme('colors.primary.DEFAULT');
 }
