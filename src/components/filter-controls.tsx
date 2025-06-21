@@ -26,6 +26,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
 
 interface FilterControlsProps {
   filters: Filters;
@@ -137,9 +144,18 @@ export function FilterControls({
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
-                 <Button variant="outline" size="sm" onClick={() => onRefreshScreeningForRole(selectedJobRoleId)} disabled={isLoadingRoles} className="flex-1">
-                    <RotateCw className="w-3.5 h-3.5 mr-1.5" /> Re-screen Role
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="sm" onClick={() => onRefreshScreeningForRole(selectedJobRoleId)} disabled={isLoadingRoles} className="flex-1">
+                          <RotateCw className="w-3.5 h-3.5 mr-1.5" /> Re-screen Role
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Screen newly uploaded resumes against this role.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
             </div>
             )}
         </div>
