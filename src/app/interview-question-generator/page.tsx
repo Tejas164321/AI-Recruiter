@@ -64,13 +64,15 @@ export default function InterviewQuestionGeneratorPage() {
   }, [sessionEntries, selectedEntryId]);
 
   useEffect(() => {
-    if ((isLoading || currentEntry?.questions) && resultsSectionRef.current) {
+    // Only scroll when the AI is actively processing.
+    // This prevents the page from jumping when just selecting an existing entry.
+    if (isLoading && resultsSectionRef.current) {
         const timer = setTimeout(() => {
             resultsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start'});
         }, 100);
         return () => clearTimeout(timer);
     }
-  }, [isLoading, currentEntry]);
+  }, [isLoading]);
   
   const handleInputChange = (field: keyof Omit<SessionEntry, 'id' | 'questions'>, value: string) => {
     setSessionEntries(prev => prev.map(entry => 
@@ -429,3 +431,5 @@ export default function InterviewQuestionGeneratorPage() {
     </div>
   );
 }
+
+    
