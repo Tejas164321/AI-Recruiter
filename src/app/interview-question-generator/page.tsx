@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileUploadArea } from "@/components/file-upload-area";
@@ -11,13 +11,15 @@ import { useToast } from "@/hooks/use-toast";
 import { generateJDInterviewQuestions, type GenerateJDInterviewQuestionsInput } from "@/ai/flows/generate-jd-interview-questions";
 import { extractJobRoles as extractJobRolesAI, type ExtractJobRolesInput as ExtractJobRolesAIInput, type ExtractJobRolesOutput as ExtractJobRolesAIOutput } from "@/ai/flows/extract-job-roles";
 import type { InterviewQuestionsSet } from "@/lib/types";
-import { HelpCircle, Loader2, Lightbulb, FileText, ScrollText, Users, Brain, SearchCheck, UploadCloud } from "lucide-react";
+import { HelpCircle, Loader2, Lightbulb, FileText, ScrollText, Users, Brain, SearchCheck, UploadCloud, PlusCircle, Trash2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { motion } from "framer-motion";
 import { useLoading } from "@/contexts/loading-context";
 import { useAuth } from "@/contexts/auth-context";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
@@ -26,41 +28,76 @@ const cardHoverVariants = {
   initial: { scale: 1, y: 0, boxShadow: "0px 6px 18px hsla(var(--primary), 0.1)" }
 };
 
-export default function InterviewQuestionGeneratorPage() {
-  const { setIsPageLoading: setAppIsLoading } = useLoading();
-  const { currentUser } = useAuth();
+interface SessionEntry {
+  id: string; // client-side UUID
+  jdContent: string;
+  roleTitle: string;
+  focusAreas: string;
+  questions: Omit<InterviewQuestionsSet, 'id' | 'userId' | 'createdAt'> | null;
+}
 
-  const [jdContent, setJdContent] = useState<string>("");
-  const [roleTitle, setRoleTitle] = useState<string>("");
-  const [focusAreas, setFocusAreas] = useState<string>("");
+export default function InterviewQuestionGeneratorPage() {
+  const { setAppIsLoading } = useLoading();
+  const { currentUser } = useAuth();
+  const { toast } = useToast();
   
-  const [generatedQuestions, setGeneratedQuestions] = useState<Omit<InterviewQuestionsSet, 'id'|'userId'|'createdAt'> | null>(null);
+  const [sessionEntries, setSessionEntries] = useState<SessionEntry[]>([]);
+  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
+  
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { toast } = useToast();
   const resultsSectionRef = useRef<HTMLDivElement | null>(null);
-
+  
+  // Initialize with a single blank entry on first load
   useEffect(() => {
     setAppIsLoading(false);
-  }, [setAppIsLoading]);
+    if (sessionEntries.length === 0) {
+      const newId = crypto.randomUUID();
+      setSessionEntries([{ id: newId, jdContent: '', roleTitle: '', focusAreas: '', questions: null }]);
+      setSelectedEntryId(newId);
+    }
+  }, [setAppIsLoading, sessionEntries.length]);
+
+  const currentEntry = useMemo(() => {
+    return sessionEntries.find(e => e.id === selectedEntryId);
+  }, [sessionEntries, selectedEntryId]);
 
   useEffect(() => {
-    if ((isLoading || generatedQuestions) && resultsSectionRef.current) {
+    if ((isLoading || currentEntry?.questions) && resultsSectionRef.current) {
         const timer = setTimeout(() => {
             resultsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start'});
         }, 100);
         return () => clearTimeout(timer);
     }
-  }, [isLoading, generatedQuestions]);
+  }, [isLoading, currentEntry]);
   
+  const handleInputChange = (field: keyof Omit<SessionEntry, 'id' | 'questions'>, value: string) => {
+    setSessionEntries(prev => prev.map(entry => 
+      entry.id === selectedEntryId ? { ...entry, [field]: value } : entry
+    ));
+  };
+  
+  const handleAddNewEntry = () => {
+    const newId = crypto.randomUUID();
+    const newEntry: SessionEntry = { id: newId, jdContent: '', roleTitle: '', focusAreas: '', questions: null };
+    setSessionEntries(prev => [...prev, newEntry]);
+    setSelectedEntryId(newId);
+  };
+  
+  const handleDeleteEntry = () => {
+    if (sessionEntries.length <= 1 || !selectedEntryId) return; // Cannot delete the last entry
+    const newEntries = sessionEntries.filter(e => e.id !== selectedEntryId);
+    setSessionEntries(newEntries);
+    setSelectedEntryId(newEntries[0]?.id || null);
+  };
 
   const handleJobDescriptionUpload = useCallback(async (files: File[]) => {
      if (!currentUser?.uid) {
       toast({ title: "Not Authenticated", description: "Please log in to upload files.", variant: "destructive" });
       return;
     }
-    if (files.length === 0) return;
+    if (files.length === 0 || !selectedEntryId) return;
 
     const file = files[0];
     const dataUri = await new Promise<string>((resolve, reject) => {
@@ -71,8 +108,8 @@ export default function InterviewQuestionGeneratorPage() {
     });
     
     setIsLoading(true);
-    setGeneratedQuestions(null);
     setError(null);
+    setSessionEntries(prev => prev.map(e => e.id === selectedEntryId ? {...e, questions: null} : e));
 
     try {
       const extractionInput: ExtractJobRolesAIInput = {
@@ -80,43 +117,47 @@ export default function InterviewQuestionGeneratorPage() {
       };
       const extractionOutput: ExtractJobRolesAIOutput = await extractJobRolesAI(extractionInput);
       
+      let newJdContent = "";
+      let newRoleTitle = "";
+
       if (extractionOutput.length > 0 && extractionOutput[0].contentDataUri) {
         const firstRole = extractionOutput[0];
         
         const base64 = firstRole.contentDataUri.split(',')[1];
         if (base64) {
-            // Using Buffer to handle potential UTF-8 characters, common in Node.js/Next.js envs
             const decodedText = Buffer.from(base64, 'base64').toString('utf-8');
-            setJdContent(decodedText);
+            newJdContent = decodedText;
         }
         
         if (firstRole.name && firstRole.name !== "Untitled Job Role" && !firstRole.name.startsWith("Job Role")) {
-          setRoleTitle(firstRole.name);
+          newRoleTitle = firstRole.name;
           toast({ title: "Content & Title Extracted", description: `Extracted JD content and suggested role title: "${firstRole.name}".`});
         } else {
-          setRoleTitle("");
           toast({ title: "Content Extracted", description: "JD content has been extracted. Please provide a role title if needed." });
         }
       } else {
-         setJdContent("");
          toast({ title: "Extraction Failed", description: "Could not extract content from the document.", variant: "destructive"});
       }
+      
+      setSessionEntries(prev => prev.map(entry =>
+        entry.id === selectedEntryId ? { ...entry, jdContent: newJdContent, roleTitle: newRoleTitle } : entry
+      ));
+
     } catch (extractError) {
       const message = extractError instanceof Error ? extractError.message : String(extractError);
       console.error("Failed to extract content:", extractError);
-      setJdContent("");
       toast({ title: "File Processing Failed", description: message.substring(0,100), variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
-  }, [toast, currentUser?.uid]);
+  }, [toast, currentUser?.uid, selectedEntryId]);
 
   const handleGenerateQuestions = useCallback(async () => {
     if (!currentUser?.uid) {
       toast({ title: "Not Authenticated", description: "Please log in to generate questions.", variant: "destructive" });
       return;
     }
-    if (!jdContent.trim()) {
+    if (!currentEntry || !currentEntry.jdContent.trim()) {
       toast({ title: "Missing Job Description", description: "Please enter or upload a job description.", variant: "destructive" });
       return;
     }
@@ -125,13 +166,13 @@ export default function InterviewQuestionGeneratorPage() {
     setError(null);
 
     try {
-      const trimmedFocusAreas = focusAreas.trim();
+      const { jdContent, roleTitle, focusAreas } = currentEntry;
       const contentDataUri = `data:text/plain;charset=utf-8;base64,${Buffer.from(jdContent).toString('base64')}`;
 
       const input: GenerateJDInterviewQuestionsInput = {
         jobDescriptionDataUri: contentDataUri,
         roleTitle: roleTitle.trim() || undefined,
-        focusAreas: trimmedFocusAreas || undefined,
+        focusAreas: focusAreas.trim() || undefined,
       };
       const aiOutput = await generateJDInterviewQuestions(input);
       
@@ -139,10 +180,10 @@ export default function InterviewQuestionGeneratorPage() {
         roleTitle: roleTitle.trim(),
         jobDescriptionDataUri: contentDataUri,
         ...aiOutput,
-        ...(trimmedFocusAreas && { focusAreas: trimmedFocusAreas }),
+        ...(focusAreas.trim() && { focusAreas: focusAreas.trim() }),
       };
       
-      setGeneratedQuestions(questionsSet);
+      setSessionEntries(prev => prev.map(e => e.id === selectedEntryId ? {...e, questions: questionsSet} : e));
       toast({ title: "Questions Generated", description: "Your interview questions are ready." });
 
     } catch (err) {
@@ -152,7 +193,7 @@ export default function InterviewQuestionGeneratorPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [jdContent, roleTitle, focusAreas, toast, currentUser?.uid]);
+  }, [currentEntry, toast, currentUser?.uid, selectedEntryId]);
 
   const questionCategories: Array<{key: keyof Omit<InterviewQuestionsSet, 'id'|'userId'|'createdAt'|'roleTitle'>, title: string, icon: React.ElementType}> = [
     { key: "technicalQuestions", title: "Technical Questions", icon: Brain },
@@ -171,11 +212,11 @@ export default function InterviewQuestionGeneratorPage() {
             <SearchCheck className="w-7 h-7 mr-3" /> AI Interview Question Generator
           </CardTitle>
           <CardDescription>
-            Provide the job description by typing/pasting or uploading a file. The AI will then generate tailored interview questions.
+            Manage multiple job descriptions in a single session. Upload or paste a JD, generate questions, and switch between them. Data is cleared on page refresh.
           </CardDescription>
         </CardHeader>
       </Card>
-
+      
        {!currentUser && (
         <Card className="shadow-lg">
             <CardContent className="pt-6 text-center">
@@ -186,8 +227,31 @@ export default function InterviewQuestionGeneratorPage() {
 
       {currentUser && (
         <>
+          <Card className="p-4 shadow-lg">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="session-select" className="text-sm font-medium whitespace-nowrap">Current JD:</Label>
+              <Select value={selectedEntryId || ''} onValueChange={setSelectedEntryId} disabled={isProcessing}>
+                <SelectTrigger id="session-select" className="flex-grow">
+                  <SelectValue placeholder="Select a job description..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {sessionEntries.map((entry, index) => (
+                    <SelectItem key={entry.id} value={entry.id}>
+                      {entry.roleTitle.trim() || `Untitled JD ${index + 1}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="icon" onClick={handleAddNewEntry} disabled={isProcessing} aria-label="Add new job description">
+                <PlusCircle className="w-5 h-5"/>
+              </Button>
+              <Button variant="outline" size="icon" onClick={handleDeleteEntry} disabled={isProcessing || sessionEntries.length <= 1} aria-label="Delete current job description">
+                <Trash2 className="w-5 h-5"/>
+              </Button>
+            </div>
+          </Card>
+
           <div className="flex flex-col md:flex-row gap-8">
-            {/* Left Card: Manual Input */}
             <div className="flex-1">
               <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl h-full">
                 <CardHeader>
@@ -204,8 +268,8 @@ export default function InterviewQuestionGeneratorPage() {
                     <Label htmlFor="job-description-content" className="font-medium text-foreground">Job Description Content</Label>
                     <Textarea
                       id="job-description-content"
-                      value={jdContent}
-                      onChange={(e) => setJdContent(e.target.value)}
+                      value={currentEntry?.jdContent || ''}
+                      onChange={(e) => handleInputChange('jdContent', e.target.value)}
                       placeholder="Paste the full job description here..."
                       className="min-h-[200px]"
                       disabled={isProcessing}
@@ -217,8 +281,8 @@ export default function InterviewQuestionGeneratorPage() {
                       <Label htmlFor="roleTitle" className="font-medium text-foreground">Role Title (Optional)</Label>
                       <Input 
                         id="roleTitle" 
-                        value={roleTitle} 
-                        onChange={(e) => setRoleTitle(e.target.value)} 
+                        value={currentEntry?.roleTitle || ''} 
+                        onChange={(e) => handleInputChange('roleTitle', e.target.value)} 
                         placeholder="e.g., Senior Software Engineer"
                         disabled={isProcessing}
                       />
@@ -229,8 +293,8 @@ export default function InterviewQuestionGeneratorPage() {
                       <Label htmlFor="focusAreas" className="font-medium text-foreground">Key Focus Areas/Skills (Optional)</Label>
                       <Input 
                         id="focusAreas" 
-                        value={focusAreas} 
-                        onChange={(e) => setFocusAreas(e.target.value)} 
+                        value={currentEntry?.focusAreas || ''} 
+                        onChange={(e) => handleInputChange('focusAreas', e.target.value)} 
                         placeholder="e.g., JavaScript, Team Leadership"
                         disabled={isProcessing}
                       />
@@ -240,8 +304,6 @@ export default function InterviewQuestionGeneratorPage() {
                 </CardContent>
               </Card>
             </div>
-
-            {/* Right Card: File Upload */}
             <div className="flex-1">
               <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl h-full">
                 <CardHeader>
@@ -273,7 +335,7 @@ export default function InterviewQuestionGeneratorPage() {
           <div className="flex justify-center pt-4">
             <Button 
               onClick={handleGenerateQuestions} 
-              disabled={isProcessing || !jdContent.trim()}
+              disabled={isProcessing || !currentEntry?.jdContent.trim()}
               size="lg"
               className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground shadow-md hover:shadow-lg transition-all"
             >
@@ -287,7 +349,7 @@ export default function InterviewQuestionGeneratorPage() {
           </div>
 
           <div ref={resultsSectionRef}>
-            {isProcessing && !generatedQuestions && (
+            {isProcessing && !currentEntry?.questions && (
               <Card className="shadow-lg bg-card">
                 <CardContent className="pt-6 flex flex-col items-center justify-center space-y-4 min-h-[200px]">
                   <Loader2 className="w-12 h-12 animate-spin text-primary" />
@@ -306,20 +368,20 @@ export default function InterviewQuestionGeneratorPage() {
               </Alert>
             )}
 
-            {generatedQuestions && !isLoading && (
+            {currentEntry?.questions && !isLoading && (
               <div className="space-y-6 mt-8">
                 <Separator />
                 <h2 className="text-xl font-semibold text-foreground font-headline text-center md:text-left">
-                  Interview Questions for {generatedQuestions.roleTitle ? <span className="text-primary">{generatedQuestions.roleTitle}</span> : 'the Provided Job Description'}
+                  Interview Questions for {currentEntry.questions.roleTitle ? <span className="text-primary">{currentEntry.questions.roleTitle}</span> : 'the Provided Job Description'}
                 </h2>
-                 {generatedQuestions.focusAreas && (
+                 {currentEntry.questions.focusAreas && (
                   <p className="text-sm text-muted-foreground text-center md:text-left">
-                    Focusing on: {generatedQuestions.focusAreas}
+                    Focusing on: {currentEntry.questions.focusAreas}
                   </p>
                  )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {questionCategories.map(({key, title, icon: Icon}) => {
-                    const questions = generatedQuestions[key as keyof typeof generatedQuestions];
+                    const questions = currentEntry.questions?.[key as keyof typeof currentEntry.questions];
                     if (questions && Array.isArray(questions) && questions.length > 0) {
                       return (
                         <motion.div
@@ -352,7 +414,7 @@ export default function InterviewQuestionGeneratorPage() {
                 </div>
               </div>
             )}
-             {!isProcessing && !generatedQuestions && !error && (
+             {!isProcessing && !currentEntry?.questions && !error && (
                  <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
                     <CardContent className="pt-6">
                         <p className="text-center text-muted-foreground py-8">
@@ -367,7 +429,3 @@ export default function InterviewQuestionGeneratorPage() {
     </div>
   );
 }
-
-    
-
-    
