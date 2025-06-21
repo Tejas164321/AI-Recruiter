@@ -20,7 +20,6 @@ import { useAuth } from "@/contexts/auth-context";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
@@ -51,7 +50,6 @@ export default function InterviewQuestionGeneratorPage() {
   const [error, setError] = useState<string | null>(null);
 
   const resultsSectionRef = useRef<HTMLDivElement | null>(null);
-  const resultsPdfRef = useRef<HTMLDivElement | null>(null);
   
   // Initialize with a single blank entry on first load
   useEffect(() => {
@@ -202,43 +200,93 @@ export default function InterviewQuestionGeneratorPage() {
   }, [currentEntry, toast, currentUser?.uid, selectedEntryId]);
 
   const handleDownloadPdf = () => {
-    const input = resultsPdfRef.current;
-    if (!input || !currentEntry?.questions) return;
-    
+    if (!currentEntry?.questions) return;
     setIsDownloading(true);
 
-    html2canvas(input, { scale: 2, useCORS: true })
-      .then(canvas => {
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const imgProps = pdf.getImageProperties(imgData);
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-        
-        let heightLeft = pdfHeight;
-        let position = 0;
-        const pageMargin = 10;
+    try {
+        const pdf = new jsPDF('p', 'pt', 'a4');
+        const { questions } = currentEntry;
+        const pageMargin = 40;
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const contentWidth = pageWidth - (pageMargin * 2);
+        let yPos = pageMargin;
 
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-        heightLeft -= pdf.internal.pageSize.getHeight();
+        const checkPageBreak = (neededHeight: number) => {
+            if (yPos + neededHeight > pageHeight - pageMargin) {
+                pdf.addPage();
+                yPos = pageMargin;
+            }
+        };
 
-        while (heightLeft > 0) {
-            position = heightLeft - pdfHeight + pageMargin;
-            pdf.addPage();
-            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-            heightLeft -= pdf.internal.pageSize.getHeight();
+        // Main Title
+        pdf.setFontSize(22);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor('#006FFF'); // Primary color HSL(215, 100%, 45%)
+        pdf.text(`Interview Questions`, pageWidth / 2, yPos, { align: 'center' });
+        yPos += 30;
+
+        pdf.setFontSize(16);
+        pdf.setTextColor('#000000');
+        pdf.text(`Role: ${questions.roleTitle || 'General'}`, pageWidth / 2, yPos, { align: 'center' });
+        yPos += 20;
+
+        if (questions.focusAreas) {
+            pdf.setFontSize(12);
+            pdf.setFont('helvetica', 'italic');
+            pdf.setTextColor('#555555');
+            pdf.text(`Focus Areas: ${questions.focusAreas}`, pageWidth / 2, yPos, { align: 'center' });
+            yPos += 25;
         }
+
+        pdf.setDrawColor('#cccccc');
+        pdf.line(pageMargin, yPos, pageWidth - pageMargin, yPos);
+        yPos += 20;
+
+        const questionCategoriesToRender: Array<{key: keyof typeof questions, title: string}> = [
+            { key: "technicalQuestions", title: "Technical Questions" },
+            { key: "behavioralQuestions", title: "Behavioral Questions" },
+            { key: "situationalQuestions", title: "Situational Questions" },
+            { key: "roleSpecificQuestions", title: "Role-Specific Questions" },
+        ];
         
-        const fileName = `Interview_Questions_${currentEntry.questions.roleTitle.replace(/\s+/g, '_') || 'General'}.pdf`;
+        pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor('#333333');
+
+        questionCategoriesToRender.forEach(({ key, title }) => {
+            const questionList = questions[key];
+            if (questionList && Array.isArray(questionList) && questionList.length > 0) {
+                checkPageBreak(30); 
+                pdf.setFontSize(14);
+                pdf.setFont('helvetica', 'bold');
+                pdf.setTextColor('#1A8C6A'); // Accent color HSL(163, 70%, 38%)
+                pdf.text(title, pageMargin, yPos);
+                yPos += 20;
+                
+                pdf.setFontSize(11);
+                pdf.setFont('helvetica', 'normal');
+                pdf.setTextColor('#000000');
+
+                questionList.forEach(q => {
+                    const questionText = `•  ${q}`;
+                    const splitText = pdf.splitTextToSize(questionText, contentWidth - 10);
+                    checkPageBreak(splitText.length * 12);
+                    pdf.text(splitText, pageMargin + 10, yPos);
+                    yPos += splitText.length * 12 + 5;
+                });
+                yPos += 15;
+            }
+        });
+
+        const fileName = `Interview_Questions_${(questions.roleTitle || 'General').replace(/\s+/g, '_')}.pdf`;
         pdf.save(fileName);
-      })
-      .catch(err => {
+
+    } catch (err) {
         console.error("PDF Generation Error:", err);
         toast({ title: "PDF Generation Failed", description: "An unexpected error occurred while creating the PDF.", variant: "destructive" });
-      })
-      .finally(() => {
+    } finally {
         setIsDownloading(false);
-      });
+    }
   };
 
   const questionCategories: Array<{key: keyof Omit<InterviewQuestionsSet, 'id'|'userId'|'createdAt'|'roleTitle'>, title: string, icon: React.ElementType}> = [
@@ -421,7 +469,7 @@ export default function InterviewQuestionGeneratorPage() {
 
             {currentEntry?.questions && !isLoading && (
               <div className="space-y-6 mt-8">
-                <div ref={resultsPdfRef} className="p-4 bg-background">
+                <div className="p-4 bg-background">
                   <Separator />
                   <div className="flex justify-between items-center py-4">
                     <h2 className="text-xl font-semibold text-foreground font-headline text-center md:text-left">
