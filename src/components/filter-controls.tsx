@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import type { Filters, ExtractedJobRole, JobScreeningResult } from "@/lib/types";
-import { SlidersHorizontal, Search, Briefcase, RotateCw, History } from "lucide-react";
+import { SlidersHorizontal, Search, Briefcase, RotateCw, History, Trash2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -21,7 +21,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Separator } from "@/components/ui/separator";
 
 interface FilterControlsProps {
   filters: Filters;
@@ -34,6 +33,7 @@ interface FilterControlsProps {
   screeningHistory: JobScreeningResult[];
   selectedHistoryId: string | null;
   onHistoryChange: (historyId: string | null) => void;
+  onDeleteHistory: (historyId: string) => void;
 }
 
 export function FilterControls({
@@ -47,6 +47,7 @@ export function FilterControls({
   screeningHistory,
   selectedHistoryId,
   onHistoryChange,
+  onDeleteHistory,
 }: FilterControlsProps) {
   const handleScoreChange = (value: number[]) => {
     onFilterChange({ scoreRange: [value[0], value[1]] });
@@ -72,6 +73,7 @@ export function FilterControls({
           Filter & Select Role
         </h3>
         <Button variant="ghost" size="sm" onClick={onResetFilters} disabled={isLoading}>
+          <RotateCw className="w-4 h-4 mr-2" />
           Reset Filters
         </Button>
       </div>
@@ -111,27 +113,52 @@ export function FilterControls({
              <Label htmlFor="historySelect" className="text-sm font-medium">
               Screening History
             </Label>
-            <div className="relative">
-              <History className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
-              <Select
-                  value={selectedHistoryId || "none"}
-                  onValueChange={handleHistorySelectChange}
-                  disabled={isLoading || screeningHistory.length === 0}
-              >
-                  <SelectTrigger id="historySelect" className="pl-10">
-                  <SelectValue placeholder="Select a session..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                   <SelectItem value="none" disabled>
-                      Select a session...
-                    </SelectItem>
-                  {screeningHistory.map((hist) => (
-                      <SelectItem key={hist.id} value={hist.id}>
-                      {hist.createdAt.toDate().toLocaleString()}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-grow">
+                <History className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
+                <Select
+                    value={selectedHistoryId || "none"}
+                    onValueChange={handleHistorySelectChange}
+                    disabled={isLoading || screeningHistory.length === 0}
+                >
+                    <SelectTrigger id="historySelect" className="pl-10">
+                    <SelectValue placeholder="Select a session..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                    <SelectItem value="none" disabled>
+                        Select a session...
                       </SelectItem>
-                  ))}
-                  </SelectContent>
-              </Select>
+                    {screeningHistory.map((hist) => (
+                        <SelectItem key={hist.id} value={hist.id}>
+                        {hist.createdAt.toDate().toLocaleString()}
+                        </SelectItem>
+                    ))}
+                    </SelectContent>
+                </Select>
+              </div>
+               <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                            if (selectedHistoryId) {
+                                onDeleteHistory(selectedHistoryId)
+                            }
+                        }}
+                        disabled={!selectedHistoryId || isLoading}
+                        className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/50"
+                        aria-label="Delete selected history session"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                      <p>Delete selected session</p>
+                  </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
             </div>
           </div>
         </div>
@@ -152,7 +179,7 @@ export function FilterControls({
                 onChange={handleKeywordChange}
                 className="pl-10"
                 aria-label="Skill, name, or filename keyword filter"
-                disabled={isLoading || !selectedJobRoleId}
+                disabled={isLoading || !selectedHistoryId}
               />
             </div>
           </div>
@@ -170,7 +197,7 @@ export function FilterControls({
               onValueChange={handleScoreChange}
               className="pt-2"
               aria-label="Score range filter"
-              disabled={isLoading || !selectedJobRoleId}
+              disabled={isLoading || !selectedHistoryId}
             />
           </div>
         </div>

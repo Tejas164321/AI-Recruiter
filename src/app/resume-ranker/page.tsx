@@ -15,14 +15,26 @@ import type { ResumeFile, RankedCandidate, Filters, JobDescriptionFile, JobScree
 import {
   saveJobScreeningResult,
   getAllJobScreeningResultsForUser,
+  deleteJobScreeningResult,
 } from "@/services/firestoreService";
-import { Users, ScanSearch, Briefcase, BrainCircuit, ServerOff } from "lucide-react";
+import { Users, ScanSearch, Briefcase, BrainCircuit, ServerOff, Trash2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { LoadingIndicator } from "@/components/loading-indicator";
 import { useLoading } from "@/contexts/loading-context";
 import { useAuth } from "@/contexts/auth-context";
 import { db as firestoreDb } from "@/lib/firebase/config";
 import { Timestamp } from "firebase/firestore";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 
 const initialFilters: Filters = {
   scoreRange: [0, 100],
@@ -56,6 +68,8 @@ export default function ResumeRankerPage() {
   // State for modals
   const [selectedCandidateForFeedback, setSelectedCandidateForFeedback] = useState<RankedCandidate | null>(null);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState<boolean>(false);
+  const [historyToDelete, setHistoryToDelete] = useState<JobScreeningResult | null>(null);
+
 
   const resultsSectionRef = useRef<HTMLDivElement | null>(null);
   const processButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -305,6 +319,43 @@ export default function ResumeRankerPage() {
     setSelectedHistoryId(historyId);
     setFilters(initialFilters);
   }, []);
+
+  const handleOpenDeleteHistoryDialog = (historyId: string) => {
+    const result = allScreeningResults.find(r => r.id === historyId);
+    if (result) {
+        setHistoryToDelete(result);
+    }
+  };
+
+  const handleConfirmDeleteHistory = async () => {
+    if (!historyToDelete) return;
+    try {
+        await deleteJobScreeningResult(historyToDelete.id);
+        
+        toast({
+            title: "History Deleted",
+            description: `Screening session from ${historyToDelete.createdAt.toDate().toLocaleString()} has been deleted.`,
+        });
+
+        // Optimistic UI update
+        setAllScreeningResults(prev => prev.filter(r => r.id !== historyToDelete.id));
+
+        // If the deleted history was the one being viewed, clear the view
+        if (selectedHistoryId === historyToDelete.id) {
+            setSelectedHistoryId(null);
+        }
+
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        toast({
+            title: "Deletion Failed",
+            description: message.substring(0,100),
+            variant: "destructive",
+        });
+    } finally {
+        setHistoryToDelete(null);
+    }
+  };
   
   const handleViewFeedback = (candidate: RankedCandidate) => {
     if (currentScreeningResult) { 
@@ -487,6 +538,7 @@ export default function ResumeRankerPage() {
                   screeningHistory={screeningHistoryForSelectedRole}
                   selectedHistoryId={selectedHistoryId}
                   onHistoryChange={handleHistoryChange}
+                  onDeleteHistory={handleOpenDeleteHistoryDialog}
                 />
               </>
             )}
@@ -537,6 +589,28 @@ export default function ResumeRankerPage() {
               </>
             )}
           </div>
+
+          <AlertDialog open={!!historyToDelete} onOpenChange={(open) => !open && setHistoryToDelete(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete the screening session from
+                  <span className="font-semibold"> {historyToDelete?.createdAt.toDate().toLocaleString()}</span>.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setHistoryToDelete(null)}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleConfirmDeleteHistory}
+                  className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
           <FeedbackModal
             isOpen={isFeedbackModalOpen}

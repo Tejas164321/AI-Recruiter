@@ -73,6 +73,13 @@ export const getAllJobScreeningResultsForUser = async (): Promise<JobScreeningRe
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as JobScreeningResult));
 };
 
+export const deleteJobScreeningResult = async (resultId: string): Promise<void> => {
+  if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
+  const docRef = doc(db, "jobScreeningResults", resultId);
+  // Firestore rules should enforce that the user owns this document.
+  await deleteDoc(docRef);
+};
+
 
 // --- AtsScoreResult Functions ---
 
