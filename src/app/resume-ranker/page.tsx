@@ -70,9 +70,7 @@ export default function ResumeRankerPage() {
       getExtractedJobRoles()
         .then(roles => {
           setExtractedJobRoles(roles);
-          if (roles.length > 0 && !selectedJobRoleId) {
-            setSelectedJobRoleId(roles[0].id);
-          }
+          // No longer auto-selecting the first role to give user a clean start.
         })
         .catch(err => {
           let description = "Could not load job roles.";
