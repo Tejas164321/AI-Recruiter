@@ -87,27 +87,6 @@ export default function LandingPage() {
   const headingText = "Unlock Your Hiring Potential with ";
   const headingSpecialText = "ResumeRank AI";
 
-  const headingContainerVariants = {
-    hover: {
-      transition: {
-        staggerChildren: 0.025,
-      },
-    },
-  };
-
-  const headingLetterVariants = {
-    initial: {
-      y: 0,
-      scale: 1,
-    },
-    hover: {
-      y: -8,
-      scale: 1.1,
-      transition: { type: "spring", stiffness: 350, damping: 10 },
-    },
-  };
-
-
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden landing-page-gradient">
       <main className="flex-1">
@@ -128,18 +107,13 @@ export default function LandingPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8, delay: 0.2 }}
                     className="text-4xl font-bold tracking-tight sm:text-5xl xl:text-6xl/none font-headline"
+                    aria-label={headingText + headingSpecialText}
                   >
-                    <motion.span
-                      variants={headingContainerVariants}
-                      whileHover="hover"
-                      initial="initial"
-                      aria-label={headingText + headingSpecialText}
-                      className="relative"
-                    >
+                    <span className="relative">
                       {headingText.split("").map((char, index) => (
                         <motion.span
                           key={`char-${index}`}
-                          variants={headingLetterVariants}
+                          whileHover={{ y: -8, scale: 1.1, transition: { type: "spring", stiffness: 350, damping: 10 } }}
                           className="inline-block"
                           style={{ whiteSpace: "pre" }}
                         >
@@ -155,7 +129,7 @@ export default function LandingPage() {
                         {headingSpecialText.split("").map((char, index) => (
                           <motion.span
                             key={`char2-${index}`}
-                            variants={headingLetterVariants}
+                            whileHover={{ y: -8, scale: 1.1, transition: { type: "spring", stiffness: 350, damping: 10 } }}
                             className="inline-block"
                             style={{ whiteSpace: "pre" }}
                           >
@@ -163,7 +137,7 @@ export default function LandingPage() {
                           </motion.span>
                         ))}
                       </span>
-                    </motion.span>
+                    </span>
                   </motion.h1>
                   <motion.p
                     initial={{ opacity: 0, y: 20 }}
@@ -323,7 +297,7 @@ export default function LandingPage() {
         </section>
 
         {/* Call to Action Section */}
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-t from-background/10 via-background/5 to-transparent border-t border-white/10">
+        <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-b from-transparent via-background/5 to-background/10 border-t border-white/10">
           <div className="container grid items-center justify-center gap-4 px-4 text-center md:px-6">
             <motion.div
               className="space-y-3"
