@@ -229,30 +229,6 @@ export default function InterviewQuestionGeneratorPage() {
 
       {currentUser && (
         <>
-          <Card className="p-4 shadow-lg">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="session-select" className="text-sm font-medium whitespace-nowrap">Current JD:</Label>
-              <Select value={selectedEntryId || ''} onValueChange={setSelectedEntryId} disabled={isProcessing}>
-                <SelectTrigger id="session-select" className="flex-grow">
-                  <SelectValue placeholder="Select a job description..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {sessionEntries.map((entry, index) => (
-                    <SelectItem key={entry.id} value={entry.id}>
-                      {entry.roleTitle.trim() || `Untitled JD ${index + 1}`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button variant="outline" size="icon" onClick={handleAddNewEntry} disabled={isProcessing} aria-label="Add new job description">
-                <PlusCircle className="w-5 h-5"/>
-              </Button>
-              <Button variant="outline" size="icon" onClick={handleDeleteEntry} disabled={isProcessing || sessionEntries.length <= 1} aria-label="Delete current job description">
-                <Trash2 className="w-5 h-5"/>
-              </Button>
-            </div>
-          </Card>
-
           <div className="flex flex-col md:flex-row gap-8">
             <div className="flex-1">
               <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl h-full">
@@ -333,23 +309,51 @@ export default function InterviewQuestionGeneratorPage() {
               </Card>
             </div>
           </div>
-          
-          <div className="flex justify-center pt-4">
-            <Button 
-              onClick={handleGenerateQuestions} 
-              disabled={isProcessing || !currentEntry?.jdContent.trim()}
-              size="lg"
-              className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground shadow-md hover:shadow-lg transition-all"
-            >
-              {isLoading ? (
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-              ) : (
-                <Lightbulb className="w-5 h-5 mr-2" />
-              )}
-              Generate Questions
-            </Button>
-          </div>
 
+          <Card className="p-6 shadow-lg">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="session-select" className="text-sm font-medium whitespace-nowrap">Current JD Session:</Label>
+                <Select value={selectedEntryId || ''} onValueChange={setSelectedEntryId} disabled={isProcessing}>
+                  <SelectTrigger id="session-select" className="flex-grow">
+                    <SelectValue placeholder="Select a job description..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sessionEntries.map((entry, index) => (
+                      <SelectItem key={entry.id} value={entry.id}>
+                        {entry.roleTitle.trim() || `Untitled JD ${index + 1}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="icon" onClick={handleAddNewEntry} disabled={isProcessing} aria-label="Add new job description session">
+                  <PlusCircle className="w-5 h-5"/>
+                </Button>
+                <Button variant="outline" size="icon" onClick={handleDeleteEntry} disabled={isProcessing || sessionEntries.length <= 1} aria-label="Delete current job description session">
+                  <Trash2 className="w-5 h-5"/>
+                </Button>
+              </div>
+
+              <Separator />
+
+              <div className="flex justify-center pt-2">
+                <Button 
+                  onClick={handleGenerateQuestions} 
+                  disabled={isProcessing || !currentEntry?.jdContent.trim()}
+                  size="lg"
+                  className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground shadow-md hover:shadow-lg transition-all"
+                >
+                  {isLoading ? (
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  ) : (
+                    <Lightbulb className="w-5 h-5 mr-2" />
+                  )}
+                  Generate Questions
+                </Button>
+              </div>
+            </div>
+          </Card>
+          
           <div ref={resultsSectionRef}>
             {isProcessing && !currentEntry?.questions && (
               <Card className="shadow-lg bg-card">
@@ -431,5 +435,3 @@ export default function InterviewQuestionGeneratorPage() {
     </div>
   );
 }
-
-    
