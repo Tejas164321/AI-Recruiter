@@ -202,7 +202,7 @@ export default function ResumeRankerPage() {
     }
   }, [currentUser?.uid, toast]);
 
-  const startOrRefreshBulkScreening = useCallback(async (targetJobRoleId?: string) => {
+  const handleScreening = useCallback(async (targetJobRoleId?: string) => {
     if (!currentUser?.uid || !isFirestoreAvailable) {
         toast({ title: "Not Authenticated", description: "Please log in to screen candidates.", variant: "destructive" });
         return;
@@ -417,7 +417,7 @@ export default function ResumeRankerPage() {
           <div className="flex justify-center pt-4">
             <Button
               ref={processButtonRef}
-              onClick={() => startOrRefreshBulkScreening(selectedJobRoleId || undefined)}
+              onClick={() => handleScreening(selectedJobRoleId || undefined)}
               disabled={isProcessing || !selectedJobRoleId || uploadedResumeFiles.length === 0}
               size="lg"
               className="bg-accent hover:bg-accent/90 text-accent-foreground text-base px-8 py-6 shadow-md hover:shadow-lg transition-all duration-150 hover:scale-105 active:scale-95"
@@ -427,7 +427,7 @@ export default function ResumeRankerPage() {
               ) : (
                 <ScanSearch className="w-5 h-5 mr-2" />
               )}
-              3. Screen Candidates & Save Session
+              Resume Ranking & Screening
             </Button>
           </div>
           
@@ -454,7 +454,6 @@ export default function ResumeRankerPage() {
                   screeningHistory={screeningHistoryForSelectedRole}
                   selectedHistoryId={selectedHistoryId}
                   onHistoryChange={handleHistoryChange}
-                  onRefreshScreeningForRole={startOrRefreshBulkScreening}
                 />
               </>
             )}

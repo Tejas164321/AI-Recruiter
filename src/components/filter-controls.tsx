@@ -34,7 +34,6 @@ interface FilterControlsProps {
   screeningHistory: JobScreeningResult[];
   selectedHistoryId: string | null;
   onHistoryChange: (historyId: string | null) => void;
-  onRefreshScreeningForRole: (roleId: string) => void;
 }
 
 export function FilterControls({
@@ -48,7 +47,6 @@ export function FilterControls({
   screeningHistory,
   selectedHistoryId,
   onHistoryChange,
-  onRefreshScreeningForRole,
 }: FilterControlsProps) {
   const handleScoreChange = (value: number[]) => {
     onFilterChange({ scoreRange: [value[0], value[1]] });
@@ -177,38 +175,6 @@ export function FilterControls({
           </div>
         </div>
       </div>
-      
-      {selectedJobRoleId && (
-          <>
-            <Separator />
-            <div className="space-y-2">
-                <Label className="text-sm font-medium">Role Actions</Label>
-                <p className="text-xs text-muted-foreground">Re-run screening for the selected role with newly uploaded resumes.</p>
-                <div className="flex items-center gap-2 pt-1">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            className="w-full sm:w-auto"
-                            onClick={() => onRefreshScreeningForRole(selectedJobRoleId!)} 
-                            disabled={isLoading}
-                            aria-label="Re-screen selected role with new resumes"
-                          >
-                              <RotateCw className="w-4 h-4 mr-2" />
-                              Re-screen Role
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Screens newly uploaded resumes against this role.</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                </div>
-            </div>
-          </>
-      )}
-
     </div>
   );
 }
