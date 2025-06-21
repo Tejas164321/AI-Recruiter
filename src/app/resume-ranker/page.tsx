@@ -171,9 +171,9 @@ export default function ResumeRankerPage() {
       } else {
          toast({ title: "No Job Roles Extracted", description: "AI could not extract roles from the files.", variant: "default" });
       }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (message.includes("permission-denied") || message.includes("insufficient permissions")) {
+    } catch (error: any) {
+      const message = error.message || String(error);
+      if (message.includes("permission-denied") || message.includes("insufficient permissions") || error.code === 'permission-denied') {
         toast({
           title: "Firestore Permission Error",
           description: "Could not save job roles. Please check your Firestore Security Rules to allow writes.",
@@ -223,9 +223,26 @@ export default function ResumeRankerPage() {
         toast({ title: "Screening Processed", description: "No new results were generated.", variant: "default"});
       }
       setUploadedResumeFiles([]);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      toast({ title: "Bulk Screening Failed", description: message.substring(0,100), variant: "destructive" });
+    } catch (error: any) {
+      const message = error.message || String(error);
+      let description = message.substring(0, 100);
+      let title = "Bulk Screening Failed";
+
+      // Check for Firestore's specific "missing index" error code
+      if (error.code === 'failed-precondition' || message.toLowerCase().includes('index')) {
+        title = "Database Index Required";
+        description = "A one-time database setup is needed. Please open your browser's developer console (F12) to find a direct link to create the required Firestore index.";
+        console.error("FIRESTORE: A composite index is required for this query. Please create it using the link that should be provided in the full error message below.", error);
+      } else {
+        console.error("Bulk screening error:", error);
+      }
+
+      toast({
+        title: title,
+        description: description,
+        variant: "destructive",
+        duration: 10000 // Make it stay longer
+      });
     } finally {
       setIsLoadingScreening(false);
     }
@@ -513,5 +530,7 @@ export default function ResumeRankerPage() {
     </div>
   );
 }
+
+    
 
     
