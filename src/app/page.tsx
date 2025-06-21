@@ -239,14 +239,14 @@ export default function LandingPage() {
                 initial={{ opacity: 0, scale: 0.8, y: 50 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 transition={{ type: 'spring', stiffness: 100, damping: 20, delay: 0.3 }}
-                className="relative"
+                className="relative sparkle-border-container"
               >
                 <Image
                   src="/hero-hologram.png"
                   width="600"
                   height="400"
                   alt="A futuristic 3D isometric illustration of a business professional analyzing resumes on a holographic interface."
-                  className="mx-auto overflow-hidden object-cover sm:w-full lg:order-last"
+                  className="mx-auto block rounded-[1.375rem] overflow-hidden object-cover sm:w-full lg:order-last"
                   style={{ filter: "drop-shadow(0 0 25px hsl(var(--primary)/0.3))" }}
                   priority
                 />
@@ -355,7 +355,7 @@ export default function LandingPage() {
         </section>
 
         {/* Call to Action Section */}
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-b from-background/5 via-background/5 to-transparent border-t border-white/10">
+        <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-t from-background/5 via-background/5 to-transparent border-t border-white/10">
           <div className="container grid items-center justify-center gap-4 px-4 text-center md:px-6">
             <motion.div
               className="space-y-3"

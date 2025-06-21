@@ -113,3 +113,55 @@ body {
   background-color: #010313;
   background-image: radial-gradient(ellipse 50% 70% at 25% 50%, rgba(120, 119, 198, 0.25), hsla(0, 0%, 100%, 0));
 }
+
+@keyframes rotate-sparkle {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sparkle-border-container {
+  position: relative;
+  padding: 2px; /* This controls the thickness of the glowing border */
+  border-radius: 1.5rem; /* Match the rounding of the image */
+  overflow: hidden; /* Important to contain the pseudo-elements */
+}
+
+.sparkle-border-container::before {
+  content: '';
+  position: absolute;
+  z-index: -2;
+  left: -50%;
+  top: -50%;
+  width: 200%;
+  height: 200%;
+  background-color: hsl(var(--background));
+  background-repeat: no-repeat;
+  background-size: 50% 50%, 50% 50%;
+  background-position: 0 0, 100% 0, 100% 100%, 0 100%;
+  /* A bright, focused point in the gradient */
+  background-image: conic-gradient(
+    from 90deg at 50% 50%, 
+    transparent 0%, 
+    hsl(var(--primary)) 2%, 
+    transparent 10%
+  );
+  animation: rotate-sparkle 6s linear infinite;
+}
+
+.sparkle-border-container::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  left: 2px;
+  top: 2px;
+  right: 2px;
+  bottom: 2px;
+  background: hsl(var(--background)); /* The color of the page background */
+  border-radius: 1.375rem; /* slightly less than the container's radius */
+}
+
+.sparkle-border-container > * {
+  position: relative;
+  z-index: 1; /* Ensure the image is on top of the ::after mask */
+}
