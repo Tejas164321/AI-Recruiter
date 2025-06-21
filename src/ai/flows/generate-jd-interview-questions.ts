@@ -17,7 +17,7 @@ const GenerateJDInterviewQuestionsInputSchema = z.object({
     .describe(
       "The job description as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
-  roleTitle: z.string().describe('The title of the job role (e.g., "Senior Software Engineer").'),
+  roleTitle: z.string().optional().describe('The title of the job role (e.g., "Senior Software Engineer"). This is optional but helps generate more specific questions.'),
   focusAreas: z.string().optional().describe('Optional comma-separated key areas or skills to focus on for questions.'),
 });
 export type GenerateJDInterviewQuestionsInput = z.infer<typeof GenerateJDInterviewQuestionsInputSchema>;
@@ -38,7 +38,7 @@ const prompt = ai.definePrompt({
   name: 'generateJDInterviewQuestionsPrompt',
   input: {schema: GenerateJDInterviewQuestionsInputSchema},
   output: {schema: GenerateJDInterviewQuestionsOutputSchema},
-  prompt: `You are an expert hiring assistant. Your task is to generate insightful interview questions based on the provided job description for the role of '{{{roleTitle}}}'.
+  prompt: `You are an expert hiring assistant. Your task is to generate insightful interview questions based on the provided job description{{#if roleTitle}} for the role of '{{{roleTitle}}}'{{/if}}.
 
 Job Description:
 {{media url=jobDescriptionDataUri}}

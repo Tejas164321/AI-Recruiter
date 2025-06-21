@@ -120,22 +120,17 @@ export default function InterviewQuestionGeneratorPage() {
       toast({ title: "Missing Job Description", description: "Please enter or upload a job description.", variant: "destructive" });
       return;
     }
-    if (!roleTitle.trim()) {
-      toast({ title: "Missing Role Title", description: "Please enter a role title.", variant: "destructive" });
-      return;
-    }
 
     setIsLoading(true);
     setError(null);
 
     try {
       const trimmedFocusAreas = focusAreas.trim();
-      // Convert the text content to a data URI for the AI flow
       const contentDataUri = `data:text/plain;charset=utf-8;base64,${Buffer.from(jdContent).toString('base64')}`;
 
       const input: GenerateJDInterviewQuestionsInput = {
         jobDescriptionDataUri: contentDataUri,
-        roleTitle: roleTitle.trim(),
+        roleTitle: roleTitle.trim() || undefined,
         focusAreas: trimmedFocusAreas || undefined,
       };
       const aiOutput = await generateJDInterviewQuestions(input);
@@ -230,7 +225,7 @@ export default function InterviewQuestionGeneratorPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="roleTitle" className="font-medium text-foreground">Role Title</Label>
+                  <Label htmlFor="roleTitle" className="font-medium text-foreground">Role Title (Optional)</Label>
                   <Input 
                     id="roleTitle" 
                     value={roleTitle} 
@@ -238,7 +233,7 @@ export default function InterviewQuestionGeneratorPage() {
                     placeholder="e.g., Senior Software Engineer"
                     disabled={isProcessing}
                   />
-                  <p className="text-xs text-muted-foreground">Confirm or edit the job title.</p>
+                  <p className="text-xs text-muted-foreground">Confirm or edit the job title. Helps generate specific questions.</p>
                 </div>
 
                 <div className="space-y-2">
@@ -256,7 +251,7 @@ export default function InterviewQuestionGeneratorPage() {
               
               <Button 
                 onClick={handleGenerateQuestions} 
-                disabled={isProcessing || !jdContent.trim() || !roleTitle.trim()}
+                disabled={isProcessing || !jdContent.trim()}
                 size="lg"
                 className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground shadow-md hover:shadow-lg transition-all"
               >
@@ -294,7 +289,7 @@ export default function InterviewQuestionGeneratorPage() {
               <div className="space-y-6 mt-8">
                 <Separator />
                 <h2 className="text-xl font-semibold text-foreground font-headline text-center md:text-left">
-                  Interview Questions for <span className="text-primary">{generatedQuestions.roleTitle}</span>
+                  Interview Questions for {generatedQuestions.roleTitle ? <span className="text-primary">{generatedQuestions.roleTitle}</span> : 'the Provided Job Description'}
                 </h2>
                  <p className="text-sm text-muted-foreground text-center md:text-left">
                     {generatedQuestions.focusAreas && `Focusing on: ${generatedQuestions.focusAreas}.`}
