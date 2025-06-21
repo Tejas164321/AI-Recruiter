@@ -4,7 +4,7 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileUploadArea } from "@/components/file-upload-area";
+import { FileUploadArea } from "@/components/ui/file-upload-area";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -337,7 +337,7 @@ export default function InterviewQuestionGeneratorPage() {
                     Upload a JD file (PDF, DOCX, etc.) to automatically fill the fields on the left.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="flex-grow flex flex-col justify-center">
+                <CardContent className="flex-grow flex flex-col">
                   <FileUploadArea
                     onFilesUpload={handleJobDescriptionUpload}
                     acceptedFileTypes={{ 
@@ -348,6 +348,7 @@ export default function InterviewQuestionGeneratorPage() {
                     label="PDF, TXT, DOC, DOCX, MD (Max 5MB)"
                     id="job-description-upload"
                     maxSizeInBytes={MAX_FILE_SIZE_BYTES}
+                    className="h-full"
                   />
                 </CardContent>
               </Card>

@@ -1,13 +1,11 @@
 
 "use client";
 
-import { UploadCloud, FileText, XCircle } from "lucide-react";
-import React, { useCallback, useState } from "react";
+import { UploadCloud } from "lucide-react";
+import React, { useCallback } from "react";
 import { useDropzone, type Accept, type FileRejection } from "react-dropzone";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast"; // Import useToast
+import { useToast } from "@/hooks/use-toast";
 
 interface FileUploadAreaProps {
   onFilesUpload: (files: File[]) => void;
@@ -15,7 +13,8 @@ interface FileUploadAreaProps {
   multiple?: boolean;
   label: string;
   id: string;
-  maxSizeInBytes?: number; // New prop for max file size
+  maxSizeInBytes?: number;
+  className?: string; // Add className to props
 }
 
 export function FileUploadArea({
@@ -24,17 +23,14 @@ export function FileUploadArea({
   multiple = false,
   label,
   id,
-  maxSizeInBytes, // Destructure new prop
+  maxSizeInBytes,
+  className, // Destructure className
 }: FileUploadAreaProps) {
-  // We no longer need to manage a list of files visually inside this component
-  // because the parent component now controls the primary display (e.g., a textarea).
-  // This component becomes a "trigger" for the onFilesUpload callback.
-
-  const { toast } = useToast(); // Initialize useToast
+  const { toast } = useToast();
 
   const onDrop = useCallback(
     (acceptedFiles: File[], fileRejections: FileRejection[]) => {
-      // Handle rejected files (e.g., due to size)
+      // Handle rejected files
       fileRejections.forEach(({ file, errors }) => {
         errors.forEach((error) => {
           if (error.code === "file-too-large") {
@@ -65,7 +61,7 @@ export function FileUploadArea({
     onDrop,
     accept: acceptedFileTypes,
     multiple,
-    maxSize: maxSizeInBytes, // Pass maxSize to useDropzone
+    maxSize: maxSizeInBytes,
   });
 
   return (
@@ -74,7 +70,8 @@ export function FileUploadArea({
       className={cn(
         "flex flex-col items-center justify-center w-full p-6 border-2 border-dashed rounded-lg cursor-pointer hover:border-primary/70 transition-colors",
         isDragActive ? "border-primary bg-primary/10" : "border-border",
-        "bg-card"
+        "bg-card",
+        className // Use className here
       )}
       aria-labelledby={`${id}-label`}
     >
