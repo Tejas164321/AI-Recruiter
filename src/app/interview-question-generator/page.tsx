@@ -4,13 +4,14 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileUploadArea } from "@/components/file-upload-area";
+import { FileUploadArea } from "@/components/ui/file-upload-area";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea"; // Import Textarea
 import { useToast } from "@/hooks/use-toast";
-import { generateJDInterviewQuestions, type GenerateJDInterviewQuestionsInput, type GenerateJDInterviewQuestionsOutput } from "@/ai/flows/generate-jd-interview-questions";
+import { generateJDInterviewQuestions, type GenerateJDInterviewQuestionsInput } from "@/ai/flows/generate-jd-interview-questions";
 import { extractJobRoles as extractJobRolesAI, type ExtractJobRolesInput as ExtractJobRolesAIInput, type ExtractJobRolesOutput as ExtractJobRolesAIOutput } from "@/ai/flows/extract-job-roles";
-import type { JobDescriptionFile, InterviewQuestionsSet } from "@/lib/types";
+import type { InterviewQuestionsSet } from "@/lib/types";
 import { HelpCircle, Loader2, Lightbulb, FileText, ScrollText, Users, Brain, SearchCheck, ServerOff } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
@@ -18,7 +19,7 @@ import { motion } from "framer-motion";
 import { useLoading } from "@/contexts/loading-context";
 import { useAuth } from "@/contexts/auth-context";
 import { saveInterviewQuestionsSet, getInterviewQuestionsSetByTitle } from "@/services/firestoreService";
-import { db as firestoreDb } from "@/lib/firebase/config"; // Import db to check availability
+import { db as firestoreDb } from "@/lib/firebase/config";
 import type { Timestamp } from "firebase/firestore";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
@@ -28,17 +29,39 @@ const cardHoverVariants = {
   initial: { scale: 1, y: 0, boxShadow: "0px 6px 18px hsla(var(--primary), 0.1)" }
 };
 
+// Helper function to decode base64 URI (browser-safe)
+function decodeDataUri(dataUri: string): string {
+    try {
+        const base64 = dataUri.split(',')[1];
+        if (!base64) return "";
+        // Use atob for Base64 decoding, then handle multi-byte characters
+        const decoded = atob(base64);
+        const uriComponent = decoded.split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('');
+        return decodeURIComponent(uriComponent);
+    } catch (e) {
+        console.error("Failed to decode data URI:", e);
+        return "Error: Could not decode content.";
+    }
+}
+
+// Helper to encode to Base64 URI (browser-safe)
+function encodeDataUri(text: string): string {
+    const base64 = btoa(unescape(encodeURIComponent(text)));
+    return `data:text/plain;charset=utf-8;base64,${base64}`;
+}
+
+
 export default function InterviewQuestionGeneratorPage() {
   const { setIsPageLoading: setAppIsLoading } = useLoading();
   const { currentUser } = useAuth();
 
-  const [jobDescriptionFile, setJobDescriptionFile] = useState<JobDescriptionFile | null>(null);
+  const [jdContent, setJdContent] = useState<string>("");
   const [roleTitle, setRoleTitle] = useState<string>("");
   const [focusAreas, setFocusAreas] = useState<string>("");
   
   const [generatedQuestions, setGeneratedQuestions] = useState<InterviewQuestionsSet | null>(null);
+  const [isProcessingFile, setIsProcessingFile] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isExtractingTitle, setIsExtractingTitle] = useState<boolean>(false);
   const [isLoadingFromDB, setIsLoadingFromDB] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,7 +73,7 @@ export default function InterviewQuestionGeneratorPage() {
     setAppIsLoading(false);
     if (!currentUser || !isFirestoreAvailable) {
         setGeneratedQuestions(null);
-        setJobDescriptionFile(null);
+        setJdContent("");
         setRoleTitle("");
         setFocusAreas("");
     }
@@ -65,10 +88,9 @@ export default function InterviewQuestionGeneratorPage() {
     }
   }, [isLoading, isLoadingFromDB, generatedQuestions]);
   
-  // Debounced function to fetch saved questions
   const fetchSavedQuestions = useCallback(async (title: string) => {
     if (!title.trim() || !currentUser?.uid || !isFirestoreAvailable) {
-        setGeneratedQuestions(null); // Clear if title is empty
+        setGeneratedQuestions(null);
         return;
     }
     setIsLoadingFromDB(true);
@@ -77,60 +99,44 @@ export default function InterviewQuestionGeneratorPage() {
         const savedSet = await getInterviewQuestionsSetByTitle(title.trim());
         if (savedSet) {
             setGeneratedQuestions(savedSet);
-            if(jobDescriptionFile?.dataUri !== savedSet.jobDescriptionDataUri && savedSet.jobDescriptionDataUri){
-                 toast({ title: "Loaded Saved Questions", description: `Found questions for "${title}". JD content may differ.` });
-            } else {
-                 toast({ title: "Loaded Saved Questions", description: `Found questions for "${title}".` });
+            if (savedSet.jobDescriptionDataUri) {
+                const savedContent = decodeDataUri(savedSet.jobDescriptionDataUri);
+                setJdContent(savedContent);
             }
-           
+            setFocusAreas(savedSet.focusAreas || "");
+            toast({ title: "Loaded Saved Questions", description: `Found and loaded questions for "${title}".` });
         } else {
-            setGeneratedQuestions(null); // Clear if no questions found for this title yet
+            setGeneratedQuestions(null);
         }
     } catch (fetchError: any) {
         let description = `Error loading saved questions for "${title}".`;
         if (fetchError.code === 'failed-precondition') {
-            description = "Error loading questions. This may be a temporary problem. Please try again later.";
-            console.error(
-              "Firestore Error (getInterviewQuestionsSetByTitle): The query for interview questions requires an index. " +
-              "Please create the required composite index in your Firebase Firestore console. " +
-              "The original error message may contain a direct link to create it: ", fetchError.message
-            );
+            description = "Error: A database index is required. Check developer console for a link to create it.";
         } else {
-            console.error("Error fetching interview questions:", fetchError);
             description = String(fetchError.message || fetchError).substring(0,100);
         }
-        setError(description); // Set error state for potential display
+        setError(description);
         toast({ title: "Error Loading Questions", description, variant: "destructive" });
     } finally {
         setIsLoadingFromDB(false);
     }
-  }, [currentUser?.uid, toast, isFirestoreAvailable, jobDescriptionFile?.dataUri]);
+  }, [currentUser?.uid, toast, isFirestoreAvailable]);
 
-  // Effect to fetch questions when roleTitle changes (debounced)
   useEffect(() => {
-    if (roleTitle.trim()) {
-        const handler = setTimeout(() => {
-            fetchSavedQuestions(roleTitle);
-        }, 700); // Adjust delay as needed (e.g., 500-1000ms)
-        return () => clearTimeout(handler);
-    } else {
-        setGeneratedQuestions(null); // Clear if role title is cleared
-    }
+    const handler = setTimeout(() => {
+        fetchSavedQuestions(roleTitle);
+    }, 700);
+    return () => clearTimeout(handler);
   }, [roleTitle, fetchSavedQuestions]);
 
 
   const handleJobDescriptionUpload = useCallback(async (files: File[]) => {
      if (!currentUser?.uid) {
-      toast({ title: "Not Authenticated", description: "Please log in to upload job descriptions.", variant: "destructive" });
+      toast({ title: "Not Authenticated", description: "Please log in to upload files.", variant: "destructive" });
       return;
     }
-    if (files.length === 0) {
-      setJobDescriptionFile(null);
-      // Role title is not cleared here to allow manual entry even without a file
-      // setGeneratedQuestions(null); // Let roleTitle change effect handle this
-      setError(null);
-      return;
-    }
+    if (files.length === 0) return;
+
     const file = files[0];
     const dataUri = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
@@ -139,44 +145,47 @@ export default function InterviewQuestionGeneratorPage() {
       reader.readAsDataURL(file);
     });
     
-    const newJdFile = { id: crypto.randomUUID(), file, dataUri, name: file.name };
-    setJobDescriptionFile(newJdFile);
-    // setGeneratedQuestions(null); // Let roleTitle change effect handle this
+    setIsProcessingFile(true);
+    setGeneratedQuestions(null); // Clear old results
     setError(null);
-    
-    setIsExtractingTitle(true);
-    // Do not clear roleTitle here if user might have typed it
-    // setRoleTitle(""); 
+
     try {
       const extractionInput: ExtractJobRolesAIInput = {
-        jobDescriptionDocuments: [{ name: newJdFile.name, dataUri: newJdFile.dataUri }],
+        jobDescriptionDocuments: [{ name: file.name, dataUri }],
       };
       const extractionOutput: ExtractJobRolesAIOutput = await extractJobRolesAI(extractionInput);
-      if (extractionOutput.length > 0 && extractionOutput[0].name && 
-          extractionOutput[0].name !== "Untitled Job Role" && 
-          !extractionOutput[0].name.startsWith("Job Role")) {
-        const extractedTitle = extractionOutput[0].name;
-        setRoleTitle(extractedTitle); // This will trigger useEffect to fetch questions
-        toast({ title: "Role Title Suggested", description: `Extracted "${extractedTitle}" from the document. You can edit if needed.`});
+      
+      if (extractionOutput.length > 0 && extractionOutput[0].contentDataUri) {
+        const firstRole = extractionOutput[0];
+        const extractedContent = decodeDataUri(firstRole.contentDataUri);
+        setJdContent(extractedContent);
+        
+        if (firstRole.name && firstRole.name !== "Untitled Job Role" && !firstRole.name.startsWith("Job Role")) {
+          setRoleTitle(firstRole.name);
+          toast({ title: "Content & Title Extracted", description: `Extracted JD content and suggested role title: "${firstRole.name}".`});
+        } else {
+          setRoleTitle(""); // Clear title if not found, forcing user entry
+          toast({ title: "Content Extracted", description: "JD content has been extracted. Please provide a role title." });
+        }
       } else {
-         toast({ title: "Role Title Not Found", description: "Could not automatically extract a specific role title. Please enter manually.", variant: "default"});
+         toast({ title: "Extraction Failed", description: "Could not extract content from the document.", variant: "destructive"});
       }
     } catch (extractError) {
       const message = extractError instanceof Error ? extractError.message : String(extractError);
-      console.error("Failed to extract role title:", extractError);
-      toast({ title: "Title Extraction Failed", description: `Could not automatically extract role title. ${message.substring(0,100)}`, variant: "destructive" });
+      console.error("Failed to extract content:", extractError);
+      toast({ title: "File Processing Failed", description: message.substring(0,100), variant: "destructive" });
     } finally {
-      setIsExtractingTitle(false);
+      setIsProcessingFile(false);
     }
   }, [toast, currentUser?.uid]);
 
   const handleGenerateQuestions = useCallback(async () => {
     if (!currentUser?.uid || !isFirestoreAvailable) {
-      toast({ title: "Operation Unavailable", description: "Cannot generate questions. Please log in and ensure database is connected.", variant: "destructive" });
+      toast({ title: "Operation Unavailable", description: "Cannot generate questions.", variant: "destructive" });
       return;
     }
-    if (!jobDescriptionFile) {
-      toast({ title: "Missing Job Description", description: "Please upload a job description file.", variant: "destructive" });
+    if (!jdContent.trim()) {
+      toast({ title: "Missing Job Description", description: "Please provide the job description text.", variant: "destructive" });
       return;
     }
     if (!roleTitle.trim()) {
@@ -188,9 +197,10 @@ export default function InterviewQuestionGeneratorPage() {
     setError(null);
 
     try {
+      const contentDataUri = encodeDataUri(jdContent);
       const trimmedFocusAreas = focusAreas.trim();
       const input: GenerateJDInterviewQuestionsInput = {
-        jobDescriptionDataUri: jobDescriptionFile.dataUri,
+        jobDescriptionDataUri: contentDataUri,
         roleTitle: roleTitle.trim(),
         focusAreas: trimmedFocusAreas || undefined,
       };
@@ -198,15 +208,14 @@ export default function InterviewQuestionGeneratorPage() {
       
       const questionsSetToSave: Omit<InterviewQuestionsSet, 'id' | 'userId' | 'createdAt'> = {
         roleTitle: roleTitle.trim(),
-        jobDescriptionDataUri: jobDescriptionFile.dataUri,
+        jobDescriptionDataUri: contentDataUri,
         ...aiOutput,
-        // Conditionally add focusAreas to avoid sending `undefined` to Firestore
         ...(trimmedFocusAreas && { focusAreas: trimmedFocusAreas }),
       };
       
       const savedSet = await saveInterviewQuestionsSet(questionsSetToSave);
-      setGeneratedQuestions(savedSet); // Update state with the full object from DB
-      toast({ title: "Questions Generated & Saved", description: "Interview questions are ready and saved to your account." });
+      setGeneratedQuestions(savedSet);
+      toast({ title: "Questions Generated & Saved", description: "Interview questions are ready and saved." });
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
@@ -215,7 +224,7 @@ export default function InterviewQuestionGeneratorPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [jobDescriptionFile, roleTitle, focusAreas, toast, currentUser?.uid, isFirestoreAvailable]);
+  }, [jdContent, roleTitle, focusAreas, toast, currentUser?.uid, isFirestoreAvailable]);
 
   const questionCategories: Array<{key: keyof InterviewQuestionsSet, title: string, icon: React.ElementType}> = [
     { key: "technicalQuestions", title: "Technical Questions", icon: Brain },
@@ -224,7 +233,7 @@ export default function InterviewQuestionGeneratorPage() {
     { key: "roleSpecificQuestions", title: "Role-Specific Questions", icon: ScrollText },
   ];
   
-  const isProcessing = isLoading || isExtractingTitle || isLoadingFromDB;
+  const isProcessing = isLoading || isProcessingFile || isLoadingFromDB;
 
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-8">
@@ -234,7 +243,7 @@ export default function InterviewQuestionGeneratorPage() {
             <SearchCheck className="w-7 h-7 mr-3" /> AI Interview Question Generator
           </CardTitle>
           <CardDescription>
-            Upload a job description, confirm role title, and generate tailored interview questions. Your questions are saved to your account.
+            Type or paste a job description below, or upload a file to auto-fill the content. Then, provide a role title to generate questions.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -245,7 +254,7 @@ export default function InterviewQuestionGeneratorPage() {
             <CardTitle className="text-destructive flex items-center"><ServerOff className="w-5 h-5 mr-2" /> Database Not Connected</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-destructive-foreground">The application could not connect to the database. Data saving and loading features are disabled. Please ensure Firebase is configured correctly.</p>
+            <p className="text-destructive-foreground">Database features are disabled. Please ensure Firebase is configured correctly.</p>
           </CardContent>
         </Card>
       )}
@@ -253,7 +262,7 @@ export default function InterviewQuestionGeneratorPage() {
        {!currentUser && isFirestoreAvailable && (
         <Card className="shadow-lg">
             <CardContent className="pt-6 text-center">
-                <p className="text-lg text-muted-foreground">Please <a href="/login" className="text-primary underline">log in</a> to use the Interview Question Generator and save your questions.</p>
+                <p className="text-lg text-muted-foreground">Please <a href="/login" className="text-primary underline">log in</a> to use the generator and save your questions.</p>
             </CardContent>
         </Card>
       )}
@@ -266,11 +275,23 @@ export default function InterviewQuestionGeneratorPage() {
                 <FileText className="w-6 h-6 mr-2 text-primary" />
                 Job Description & Context
               </CardTitle>
-              <CardDescription>Provide job details. We'll try to auto-fill the title and load saved questions.</CardDescription>
+              <CardDescription>Provide job details. We'll load saved questions if you've used a role title before.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="job-description-upload" className="font-medium text-foreground">Upload Job Description</Label>
+                 <Label htmlFor="jdContent" className="font-medium text-foreground">Job Description</Label>
+                 <Textarea 
+                    id="jdContent"
+                    value={jdContent}
+                    onChange={(e) => setJdContent(e.target.value)}
+                    placeholder="Paste the full job description here..."
+                    className="min-h-[200px]"
+                    disabled={isProcessing}
+                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="job-description-upload" className="font-medium text-foreground">Or, Upload a File to Fill Above</Label>
                 <FileUploadArea
                   onFilesUpload={handleJobDescriptionUpload}
                   acceptedFileTypes={{ 
@@ -278,7 +299,7 @@ export default function InterviewQuestionGeneratorPage() {
                     "application/msword": [".doc"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"]
                   }}
                   multiple={false}
-                  label="Single PDF, TXT, DOC, DOCX, MD file up to 5MB"
+                  label="PDF, TXT, DOC, DOCX, MD (Max 5MB)"
                   id="job-description-upload"
                   maxSizeInBytes={MAX_FILE_SIZE_BYTES}
                 />
@@ -287,7 +308,7 @@ export default function InterviewQuestionGeneratorPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="roleTitle" className="font-medium text-foreground">Role Title</Label>
-                  {(isExtractingTitle || isLoadingFromDB) && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                  {(isProcessingFile || isLoadingFromDB) && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
                 </div>
                 <Input 
                   id="roleTitle" 
@@ -295,7 +316,7 @@ export default function InterviewQuestionGeneratorPage() {
                   onChange={(e) => setRoleTitle(e.target.value)} 
                   placeholder="e.g., Senior Software Engineer"
                   disabled={isProcessing}
-                  className={(isExtractingTitle || isLoadingFromDB) ? "bg-muted/50" : ""}
+                  className={(isProcessingFile || isLoadingFromDB) ? "bg-muted/50" : ""}
                 />
                 <p className="text-xs text-muted-foreground">Confirm or enter job title. We'll try to extract it & load saved questions.</p>
               </div>
@@ -314,7 +335,7 @@ export default function InterviewQuestionGeneratorPage() {
               
               <Button 
                 onClick={handleGenerateQuestions} 
-                disabled={isProcessing || !jobDescriptionFile || !roleTitle.trim()}
+                disabled={isProcessing || !jdContent.trim() || !roleTitle.trim()}
                 size="lg"
                 className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground shadow-md hover:shadow-lg transition-all"
               >
@@ -329,28 +350,28 @@ export default function InterviewQuestionGeneratorPage() {
           </Card>
 
           <div ref={resultsSectionRef}>
-            {isProcessing && !generatedQuestions && ( // Show main loading if no questions yet
+            {isProcessing && !generatedQuestions && (
               <Card className="shadow-lg bg-card">
                 <CardContent className="pt-6 flex flex-col items-center justify-center space-y-4 min-h-[200px]">
                   <Loader2 className="w-12 h-12 animate-spin text-primary" />
                   <p className="text-lg text-muted-foreground">
                     {isLoading && "AI is crafting insightful questions..."}
                     {isLoadingFromDB && "Loading saved questions..."}
-                    {isExtractingTitle && "Extracting title..."}
+                    {isProcessingFile && "Extracting content from file..."}
                   </p>
                   <p className="text-sm text-muted-foreground">This may take a moment.</p>
                 </CardContent>
               </Card>
             )}
 
-            {error && !isLoading && ( // Only show error if not in a loading state for questions
+            {error && !isLoading && (
               <Alert variant="destructive" className="shadow-md">
                 <AlertTitle className="font-semibold">Error</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
 
-            {generatedQuestions && !isLoading && ( // Show questions if available and not actively generating new ones
+            {generatedQuestions && !isLoading && (
               <div className="space-y-6 mt-8">
                 <Separator />
                 <h2 className="text-xl font-semibold text-foreground font-headline text-center md:text-left">
@@ -363,7 +384,7 @@ export default function InterviewQuestionGeneratorPage() {
                  </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {questionCategories.map(({key, title, icon: Icon}) => {
-                    const questions = generatedQuestions[key as keyof GenerateJDInterviewQuestionsOutput];
+                    const questions = generatedQuestions[key as keyof InterviewQuestionsSet];
                     if (questions && Array.isArray(questions) && questions.length > 0) {
                       return (
                         <motion.div
@@ -396,20 +417,11 @@ export default function InterviewQuestionGeneratorPage() {
                 </div>
               </div>
             )}
-            {!isProcessing && !generatedQuestions && roleTitle.trim() && jobDescriptionFile && !error && (
+             {!isProcessing && !generatedQuestions && !error && (
                  <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
                     <CardContent className="pt-6">
                         <p className="text-center text-muted-foreground py-8">
-                           Click "Generate & Save Questions" for "{roleTitle}".
-                        </p>
-                    </CardContent>
-                </Card>
-            )}
-             {!isProcessing && !generatedQuestions && !roleTitle.trim() && !error &&(
-                 <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
-                    <CardContent className="pt-6">
-                        <p className="text-center text-muted-foreground py-8">
-                           Upload a Job Description and provide a Role Title to generate questions.
+                           Provide a job description and role title to generate questions.
                         </p>
                     </CardContent>
                 </Card>
