@@ -130,10 +130,10 @@ export function FilterControls({
              )}
           </div>
            {selectedJobRoleId && (
-            <div className="mt-2 flex gap-2">
+            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="text-destructive hover:text-destructive hover:border-destructive/50 flex-1" disabled={isLoadingRoles}>
+                        <Button variant="outline" size="sm" className="text-destructive hover:text-destructive hover:border-destructive/50" disabled={isLoadingRoles}>
                             <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete Role
                         </Button>
                     </AlertDialogTrigger>
@@ -155,7 +155,7 @@ export function FilterControls({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="outline" size="sm" onClick={() => onRefreshScreeningForRole(selectedJobRoleId)} disabled={isLoadingRoles} className="flex-1">
+                      <Button variant="outline" size="sm" onClick={() => onRefreshScreeningForRole(selectedJobRoleId)} disabled={isLoadingRoles}>
                           <RotateCw className="w-3.5 h-3.5 mr-1.5" /> Re-screen Role
                       </Button>
                     </TooltipTrigger>
