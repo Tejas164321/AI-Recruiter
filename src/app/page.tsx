@@ -48,6 +48,32 @@ const cardHoverVariants = {
   }
 };
 
+const headingContainerVariants = {
+  initial: {},
+  hover: {
+    transition: {
+      staggerChildren: 0.04, // This creates the fluid ripple effect
+    }
+  }
+};
+
+const letterVariants = {
+  initial: {
+    y: 0,
+    scale: 1,
+    transition: { type: "spring", stiffness: 400, damping: 12 }
+  },
+  hover: {
+    y: -8,
+    scale: 1.1,
+    transition: {
+      type: "spring",
+      stiffness: 400,
+      damping: 12
+    }
+  }
+};
+
 
 export default function LandingPage() {
   const { currentUser } = useAuth();
@@ -103,9 +129,9 @@ export default function LandingPage() {
               >
                 <div className="space-y-4">
                   <motion.h1
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, delay: 0.2 }}
+                    initial="initial"
+                    whileHover="hover"
+                    variants={headingContainerVariants}
                     className="text-4xl font-bold tracking-tight sm:text-5xl xl:text-6xl/none font-headline"
                     aria-label={headingText + headingSpecialText}
                   >
@@ -113,7 +139,7 @@ export default function LandingPage() {
                       {headingText.split("").map((char, index) => (
                         <motion.span
                           key={`char-${index}`}
-                          whileHover={{ y: -8, scale: 1.1, transition: { type: "spring", stiffness: 350, damping: 10 } }}
+                          variants={letterVariants}
                           className="inline-block"
                           style={{ whiteSpace: "pre" }}
                         >
@@ -129,7 +155,7 @@ export default function LandingPage() {
                         {headingSpecialText.split("").map((char, index) => (
                           <motion.span
                             key={`char2-${index}`}
-                            whileHover={{ y: -8, scale: 1.1, transition: { type: "spring", stiffness: 350, damping: 10 } }}
+                            variants={letterVariants}
                             className="inline-block"
                             style={{ whiteSpace: "pre" }}
                           >
@@ -297,7 +323,7 @@ export default function LandingPage() {
         </section>
 
         {/* Call to Action Section */}
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-b from-transparent via-background/5 to-background/10 border-t border-white/10">
+        <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-t from-background/50 via-background/5 to-background/0 border-t border-white/10">
           <div className="container grid items-center justify-center gap-4 px-4 text-center md:px-6">
             <motion.div
               className="space-y-3"
