@@ -52,7 +52,7 @@ const cardHoverVariants = {
 
 // --- Proximity-based Text Animation Components ---
 
-const Letter = ({ children, mouse, letterRef }) => {
+const Letter = ({ children, mouse, letterRef }: { children: React.ReactNode, mouse: any, letterRef: React.RefObject<HTMLSpanElement> }) => {
     const [position, setPosition] = useState({ top: 0, left: 0, width: 0, height: 0 });
 
     useEffect(() => {
@@ -66,7 +66,7 @@ const Letter = ({ children, mouse, letterRef }) => {
         }
     }, [letterRef]);
 
-    const distance = useTransform(mouse, (mousePos) => {
+    const distance = useTransform(mouse, (mousePos: {x: number, y: number}) => {
         if (mousePos.x === Infinity || position.width === 0) {
             return Infinity;
         }
@@ -97,22 +97,24 @@ const Letter = ({ children, mouse, letterRef }) => {
     );
 };
 
-const AnimatedText = ({ text, mouse, isSpecial = false }) => {
+const AnimatedText = ({ text, mouse, isSpecial = false }: { text: string, mouse: any, isSpecial?: boolean }) => {
     const letters = text.split("");
     const letterRefs = useRef(letters.map(() => React.createRef<HTMLSpanElement>())).current;
 
     return (
-        <span className={isSpecial ? "text-primary relative inline-block" : "relative inline-block"} style={isSpecial ? { filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.8))" } : {}}>
+        <>
             {letters.map((char, index) => (
                 <Letter key={`${char}-${index}`} mouse={mouse} letterRef={letterRefs[index]}>
-                    <span style={{ whiteSpace: "pre" }}>{char}</span>
+                    <span style={{ whiteSpace: "pre" }} className={isSpecial ? "text-primary" : ""}>
+                        {char}
+                    </span>
                 </Letter>
             ))}
-        </span>
+        </>
     );
 };
 
-const HeroHeading = ({ text, specialText }) => {
+const HeroHeading = ({ text, specialText }: { text: string, specialText: string }) => {
     const ref = useRef<HTMLHeadingElement>(null);
     const mouse = useMotionValue({x: Infinity, y: Infinity});
 
@@ -132,7 +134,9 @@ const HeroHeading = ({ text, specialText }) => {
             aria-label={text + specialText}
         >
             <AnimatedText text={text} mouse={mouse} />
-            <AnimatedText text={specialText} mouse={mouse} isSpecial={true} />
+            <span style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.8))" }}>
+                <AnimatedText text={specialText} mouse={mouse} isSpecial={true} />
+            </span>
         </motion.h1>
     );
 }
@@ -351,7 +355,7 @@ export default function LandingPage() {
         </section>
 
         {/* Call to Action Section */}
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-t from-background/5 via-background/5 to-transparent border-t border-white/10">
+        <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-b from-background/5 via-background/5 to-transparent border-t border-white/10">
           <div className="container grid items-center justify-center gap-4 px-4 text-center md:px-6">
             <motion.div
               className="space-y-3"
