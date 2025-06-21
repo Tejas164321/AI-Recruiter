@@ -85,7 +85,7 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="flex flex-col min-h-screen overflow-x-hidden">
+    <div className="flex flex-col min-h-screen overflow-x-hidden landing-page-gradient">
       <main className="flex-1">
         {/* Hero Section */}
         <section className="relative w-full py-24 md:py-32 lg:py-40">
