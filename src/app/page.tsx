@@ -134,7 +134,7 @@ const HeroHeading = ({ text, specialText }: { text: string, specialText: string 
             aria-label={text + specialText}
         >
             <AnimatedText text={text} mouse={mouse} />
-            <span style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.8))" }}>
+            <span style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.8))", whiteSpace: 'nowrap' }}>
                 <AnimatedText text={specialText} mouse={mouse} isSpecial={true} />
             </span>
         </motion.h1>
