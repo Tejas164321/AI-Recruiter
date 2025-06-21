@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import Image from "next/image";
 import { ArrowRight, CheckCircle, BarChartBig, ScanSearch, MessageSquarePlus, ShieldCheckIcon } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, useMotionValue, useTransform } from "framer-motion";
 import { useAuth } from "@/contexts/auth-context";
+import React, { useRef, useEffect, useState } from 'react';
 
 const sectionVariants = {
   hidden: { opacity: 0, y: 50 },
@@ -48,32 +49,84 @@ const cardHoverVariants = {
   }
 };
 
-const headingContainerVariants = {
-  initial: {},
-  hover: {
-    transition: {
-      staggerChildren: 0.04, // This creates the fluid ripple effect
-    }
-  }
+
+// --- Proximity-based Text Animation Components ---
+
+const Letter = ({ children, mouseX, letterRef }) => {
+    const [position, setPosition] = useState({ left: 0, width: 0 });
+
+    useEffect(() => {
+        if (letterRef.current) {
+            setPosition({
+                left: letterRef.current.offsetLeft,
+                width: letterRef.current.offsetWidth,
+            });
+        }
+    }, [letterRef]);
+
+    const distance = useTransform(mouseX, (val) => {
+        if (val === Infinity || position.width === 0) {
+            return Infinity;
+        }
+        return Math.abs(val - (position.left + position.width / 2));
+    });
+
+    const scale = useTransform(distance, [0, 25, 60, 100], [1.5, 1.25, 1.1, 1]);
+    const y = useTransform(distance, [0, 25, 60, 100], [-12, -7, -3, 0]);
+
+    return (
+        <motion.span
+            ref={letterRef}
+            style={{ scale, y }}
+            className="inline-block"
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
+        >
+            {children}
+        </motion.span>
+    );
 };
 
-const letterVariants = {
-  initial: {
-    y: 0,
-    scale: 1,
-    transition: { type: "spring", stiffness: 400, damping: 12 }
-  },
-  hover: {
-    y: -8,
-    scale: 1.1,
-    transition: {
-      type: "spring",
-      stiffness: 400,
-      damping: 12
-    }
-  }
+const AnimatedText = ({ text, mouseX, isSpecial = false }) => {
+    const letters = text.split("");
+    const letterRefs = useRef(letters.map(() => React.createRef())).current;
+
+    return (
+        <span className={isSpecial ? "text-primary relative inline-block" : "relative inline-block"} style={isSpecial ? { filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.8))" } : {}}>
+            {letters.map((char, index) => (
+                <Letter key={`${char}-${index}`} mouseX={mouseX} letterRef={letterRefs[index]}>
+                    <span style={{ whiteSpace: "pre" }}>{char}</span>
+                </Letter>
+            ))}
+        </span>
+    );
 };
 
+const HeroHeading = ({ text, specialText }) => {
+    const ref = useRef<HTMLHeadingElement>(null);
+    const mouseX = useMotionValue(Infinity);
+
+    return (
+        <motion.h1
+            ref={ref}
+            onMouseMove={(e) => {
+                if (ref.current) {
+                    const rect = ref.current.getBoundingClientRect();
+                    mouseX.set(e.clientX - rect.left);
+                }
+            }}
+            onMouseLeave={() => {
+                mouseX.set(Infinity);
+            }}
+            className="text-4xl font-bold tracking-tight sm:text-5xl xl:text-6xl/none font-headline"
+            aria-label={text + specialText}
+        >
+            <AnimatedText text={text} mouseX={mouseX} />
+            <AnimatedText text={specialText} mouseX={mouseX} isSpecial={true} />
+        </motion.h1>
+    );
+}
+
+// --- End of Animation Components ---
 
 export default function LandingPage() {
   const { currentUser } = useAuth();
@@ -128,43 +181,7 @@ export default function LandingPage() {
                 custom={0}
               >
                 <div className="space-y-4">
-                  <motion.h1
-                    initial="initial"
-                    whileHover="hover"
-                    variants={headingContainerVariants}
-                    className="text-4xl font-bold tracking-tight sm:text-5xl xl:text-6xl/none font-headline"
-                    aria-label={headingText + headingSpecialText}
-                  >
-                    <span className="relative">
-                      {headingText.split("").map((char, index) => (
-                        <motion.span
-                          key={`char-${index}`}
-                          variants={letterVariants}
-                          className="inline-block"
-                          style={{ whiteSpace: "pre" }}
-                        >
-                          {char}
-                        </motion.span>
-                      ))}
-                      <span
-                        className="text-primary inline-block"
-                        style={{
-                          filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.8))",
-                        }}
-                      >
-                        {headingSpecialText.split("").map((char, index) => (
-                          <motion.span
-                            key={`char2-${index}`}
-                            variants={letterVariants}
-                            className="inline-block"
-                            style={{ whiteSpace: "pre" }}
-                          >
-                            {char}
-                          </motion.span>
-                        ))}
-                      </span>
-                    </span>
-                  </motion.h1>
+                  <HeroHeading text={headingText} specialText={headingSpecialText} />
                   <motion.p
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -323,7 +340,7 @@ export default function LandingPage() {
         </section>
 
         {/* Call to Action Section */}
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-t from-background/50 via-background/5 to-background/0 border-t border-white/10">
+        <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-t from-background/5 via-background/5 to-transparent border-t border-white/10">
           <div className="container grid items-center justify-center gap-4 px-4 text-center md:px-6">
             <motion.div
               className="space-y-3"
