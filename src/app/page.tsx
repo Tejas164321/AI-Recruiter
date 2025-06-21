@@ -157,7 +157,6 @@ export default function LandingPage() {
                 transition={{ type: 'spring', stiffness: 100, damping: 20, delay: 0.3 }}
                 className="relative"
               >
-                <div className="absolute -inset-2 bg-primary/20 rounded-2xl blur-xl opacity-50"></div>
                 <Image
                   src="/hero-hologram.png"
                   width="600"
