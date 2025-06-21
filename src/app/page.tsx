@@ -113,7 +113,7 @@ export default function LandingPage() {
                     transition={{ duration: 0.8, delay: 0.4 }}
                     className="max-w-[600px] text-muted-foreground md:text-xl"
                   >
-                    Streamline your recruitment process with AI-powered resume screening, candidate ranking, an ATS score checker, and tailored interview question generation. Make smarter hiring decisions, faster.
+                    Streamline your recruitment with an AI-powered suite for resume screening, candidate ranking, ATS compatibility checks, and tailored interview question generation. Make smarter hiring decisions, faster.
                   </motion.p>
                 </div>
                 <motion.div
@@ -155,8 +155,8 @@ export default function LandingPage() {
                   src="/hero-hologram.png"
                   width="600"
                   height="400"
-                  alt="AI brain analyzing resumes and interview questions"
-                  className="mx-auto overflow-hidden rounded-xl object-cover sm:w-full lg:order-last shadow-2xl shadow-primary/20"
+                  alt="A futuristic 3D isometric illustration of a business professional analyzing resumes on a holographic interface."
+                  className="mx-auto overflow-hidden object-cover sm:w-full lg:order-last shadow-2xl shadow-primary/20"
                   priority
                 />
               </motion.div>
@@ -264,7 +264,7 @@ export default function LandingPage() {
         </section>
 
         {/* Call to Action Section */}
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-primary/10">
+        <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-b from-primary/10 to-transparent border-t border-white/10">
           <div className="container grid items-center justify-center gap-4 px-4 text-center md:px-6">
             <motion.div
               className="space-y-3"
@@ -290,12 +290,13 @@ export default function LandingPage() {
               custom={0.4}
             >
               <motion.div whileHover={{ scale: 1.05, transition: {type: 'spring', stiffness: 300} }} whileTap={{ scale: 0.95 }}>
-                <Button asChild size="lg" className="w-full shadow-lg hover:shadow-primary/40 transition-all duration-300">
+                <Button asChild size="lg" className="w-full glowing-btn">
                     <Link
                     href={getStartedLink}
                     prefetch={false}
                     >
                     {currentUser ? "Go to Dashboard" : "Sign Up for Free"}
+                    <ArrowRight className="ml-2 h-5 w-5" />
                     </Link>
                 </Button>
               </motion.div>
