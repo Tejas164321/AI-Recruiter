@@ -188,19 +188,22 @@ export default function InterviewQuestionGeneratorPage() {
     setError(null);
 
     try {
+      const trimmedFocusAreas = focusAreas.trim();
       const input: GenerateJDInterviewQuestionsInput = {
         jobDescriptionDataUri: jobDescriptionFile.dataUri,
         roleTitle: roleTitle.trim(),
-        focusAreas: focusAreas.trim() || undefined,
+        focusAreas: trimmedFocusAreas || undefined,
       };
       const aiOutput = await generateJDInterviewQuestions(input);
       
       const questionsSetToSave: Omit<InterviewQuestionsSet, 'id' | 'userId' | 'createdAt'> = {
         roleTitle: roleTitle.trim(),
-        jobDescriptionDataUri: jobDescriptionFile.dataUri, // Save the specific JD used
-        focusAreas: focusAreas.trim() || undefined,
+        jobDescriptionDataUri: jobDescriptionFile.dataUri,
         ...aiOutput,
+        // Conditionally add focusAreas to avoid sending `undefined` to Firestore
+        ...(trimmedFocusAreas && { focusAreas: trimmedFocusAreas }),
       };
+      
       const savedSet = await saveInterviewQuestionsSet(questionsSetToSave);
       setGeneratedQuestions(savedSet); // Update state with the full object from DB
       toast({ title: "Questions Generated & Saved", description: "Interview questions are ready and saved to your account." });
