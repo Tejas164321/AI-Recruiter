@@ -37,7 +37,7 @@ interface SessionEntry {
 }
 
 export default function InterviewQuestionGeneratorPage() {
-  const { setAppIsLoading } = useLoading();
+  const { setIsPageLoading } = useLoading();
   const { currentUser } = useAuth();
   const { toast } = useToast();
   
@@ -51,13 +51,13 @@ export default function InterviewQuestionGeneratorPage() {
   
   // Initialize with a single blank entry on first load
   useEffect(() => {
-    setAppIsLoading(false);
+    setIsPageLoading(false);
     if (sessionEntries.length === 0) {
       const newId = crypto.randomUUID();
       setSessionEntries([{ id: newId, jdContent: '', roleTitle: '', focusAreas: '', questions: null }]);
       setSelectedEntryId(newId);
     }
-  }, [setAppIsLoading, sessionEntries.length]);
+  }, [setIsPageLoading, sessionEntries.length]);
 
   const currentEntry = useMemo(() => {
     return sessionEntries.find(e => e.id === selectedEntryId);
