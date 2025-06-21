@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowUpDown, Eye, ShieldCheck, FileText, User, Calendar } from "lucide-react";
 import type { AtsScoreResult } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
-import type { Timestamp } from "firebase/firestore";
+import { Timestamp } from "firebase/firestore";
 
 interface AtsScoreTableProps {
   results: AtsScoreResult[];
