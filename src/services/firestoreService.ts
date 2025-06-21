@@ -15,6 +15,7 @@ import {
   limit,
   getDoc,
   Timestamp,
+  writeBatch,
 } from 'firebase/firestore';
 
 import type { ExtractedJobRole, JobScreeningResult, AtsScoreResult, InterviewQuestionsSet, ResumeFile } from '@/lib/types';
@@ -81,13 +82,40 @@ export const deleteExtractedJobRole = async (roleId: string): Promise<void> => {
 export const saveJobScreeningResult = async (resultData: Omit<JobScreeningResult, 'id' | 'userId' | 'createdAt'>): Promise<JobScreeningResult> => {
   if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
   const userId = auth.currentUser.uid;
+  const HISTORY_LIMIT = 10;
+
+  // 1. Query for existing history for this specific job role, ordered oldest to newest.
+  const historyQuery = query(
+    collection(db, "jobScreeningResults"),
+    where("userId", "==", userId),
+    where("jobDescriptionId", "==", resultData.jobDescriptionId),
+    orderBy("createdAt", "asc")
+  );
+
+  const querySnapshot = await getDocs(historyQuery);
+
+  // 2. If the history limit is reached or exceeded, delete the oldest entries to make space.
+  if (querySnapshot.size >= HISTORY_LIMIT) {
+    const batch = writeBatch(db);
+    // Calculate how many documents to delete. +1 because we're about to add a new one.
+    const numToDelete = querySnapshot.size - HISTORY_LIMIT + 1;
+    const docsToDelete = querySnapshot.docs.slice(0, numToDelete);
+    
+    docsToDelete.forEach(docSnapshot => {
+      batch.delete(docSnapshot.ref);
+    });
+    
+    await batch.commit();
+  }
   
-  // Always add a new document for each screening, creating a historical record.
+  // 3. Add the new screening result document.
   const docRef = await addDoc(collection(db, "jobScreeningResults"), {
     ...resultData,
     userId,
     createdAt: serverTimestamp(),
   });
+
+  // 4. Return the new result object for immediate use in the UI.
   return { ...resultData, id: docRef.id, userId, createdAt: Timestamp.now() } as JobScreeningResult;
 };
 
