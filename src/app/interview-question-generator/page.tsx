@@ -95,7 +95,7 @@ export default function InterviewQuestionGeneratorPage() {
           toast({ title: "Content & Title Extracted", description: `Extracted JD content and suggested role title: "${firstRole.name}".`});
         } else {
           setRoleTitle("");
-          toast({ title: "Content Extracted", description: "JD content has been extracted. Please provide a role title." });
+          toast({ title: "Content Extracted", description: "JD content has been extracted. Please provide a role title if needed." });
         }
       } else {
          setJdContent("");
@@ -291,9 +291,11 @@ export default function InterviewQuestionGeneratorPage() {
                 <h2 className="text-xl font-semibold text-foreground font-headline text-center md:text-left">
                   Interview Questions for {generatedQuestions.roleTitle ? <span className="text-primary">{generatedQuestions.roleTitle}</span> : 'the Provided Job Description'}
                 </h2>
-                 <p className="text-sm text-muted-foreground text-center md:text-left">
-                    {generatedQuestions.focusAreas && `Focusing on: ${generatedQuestions.focusAreas}.`}
-                 </p>
+                 {generatedQuestions.focusAreas && (
+                  <p className="text-sm text-muted-foreground text-center md:text-left">
+                    Focusing on: {generatedQuestions.focusAreas}
+                  </p>
+                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {questionCategories.map(({key, title, icon: Icon}) => {
                     const questions = generatedQuestions[key as keyof typeof generatedQuestions];
@@ -344,3 +346,5 @@ export default function InterviewQuestionGeneratorPage() {
     </div>
   );
 }
+
+    
