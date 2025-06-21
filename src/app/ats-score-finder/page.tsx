@@ -10,11 +10,11 @@ import { calculateAtsScore, type CalculateAtsScoreInput, type CalculateAtsScoreO
 import type { ResumeFile, AtsScoreResult } from "@/lib/types";
 import { AtsScoreTable } from "@/components/ats-score-table";
 import { AtsFeedbackModal } from "@/components/ats-feedback-modal";
-import { BarChartBig, Loader2, ScanSearch, BrainCircuit, ServerOff, ListFilter, Trash2 } from "lucide-react";
+import { BarChartBig, Loader2, ScanSearch, BrainCircuit, ServerOff, ListFilter, Trash2, Trash } from "lucide-react";
 import { LoadingIndicator } from "@/components/loading-indicator";
 import { useLoading } from "@/contexts/loading-context";
 import { useAuth } from "@/contexts/auth-context";
-import { saveMultipleAtsScoreResults, getAtsScoreResults, deleteAtsScoreResult } from "@/services/firestoreService";
+import { saveMultipleAtsScoreResults, getAtsScoreResults, deleteAtsScoreResult, deleteAllAtsScoreResults } from "@/services/firestoreService";
 import { db as firestoreDb } from "@/lib/firebase/config"; // Import db to check availability
 import {
   DropdownMenu,
@@ -50,6 +50,7 @@ export default function AtsScoreFinderPage() {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [sortOption, setSortOption] = useState<SortOption>('score-desc');
   const [resultToDelete, setResultToDelete] = useState<AtsScoreResult | null>(null);
+  const [isDeleteAllDialogOpen, setIsDeleteAllDialogOpen] = useState<boolean>(false);
 
   const { toast } = useToast();
   const resultsSectionRef = useRef<HTMLDivElement | null>(null);
@@ -249,6 +250,31 @@ export default function AtsScoreFinderPage() {
     }
   };
 
+  const handleConfirmDeleteAll = async () => {
+    if (!currentUser?.uid || !isFirestoreAvailable) {
+      toast({ title: "Operation Unavailable", description: "Cannot delete results. Please log in and ensure database is connected.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      await deleteAllAtsScoreResults();
+      setAtsResults([]);
+      toast({
+        title: "All Results Deleted",
+        description: "All saved ATS score results have been permanently deleted.",
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      toast({
+        title: "Deletion Failed",
+        description: `Could not delete all results: ${message.substring(0, 100)}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleteAllDialogOpen(false);
+    }
+  };
+
   const isProcessing = isProcessingAts || isLoadingResultsFromDB;
 
   return (
@@ -346,25 +372,38 @@ export default function AtsScoreFinderPage() {
                         Previously analyzed and saved resumes.
                       </CardDescription>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="ml-4">
-                          <ListFilter className="w-4 h-4 mr-2" />
-                          Sort
+                    <div className="flex items-center space-x-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIsDeleteAllDialogOpen(true)}
+                            disabled={atsResults.length === 0 || isProcessing}
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/50"
+                            aria-label="Delete all results"
+                            >
+                            <Trash className="w-4 h-4 mr-2" />
+                            Delete All
                         </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setSortOption('score-desc')}>
-                          Highest Score
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setSortOption('score-asc')}>
-                          Lowest Score
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setSortOption('date-desc')}>
-                          Most Recent
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                        <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" disabled={isProcessing}>
+                            <ListFilter className="w-4 h-4 mr-2" />
+                            Sort
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setSortOption('score-desc')}>
+                            Highest Score
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setSortOption('score-asc')}>
+                            Lowest Score
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setSortOption('date-desc')}>
+                            Most Recent
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -405,6 +444,28 @@ export default function AtsScoreFinderPage() {
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
                   Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          <AlertDialog open={isDeleteAllDialogOpen} onOpenChange={setIsDeleteAllDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete all{" "}
+                  <span className="font-semibold">{atsResults.length}</span> saved ATS score results.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setIsDeleteAllDialogOpen(false)}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleConfirmDeleteAll}
+                  className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Yes, delete all
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

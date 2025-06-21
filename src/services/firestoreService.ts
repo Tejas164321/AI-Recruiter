@@ -118,6 +118,42 @@ export const deleteAtsScoreResult = async (resultId: string): Promise<void> => {
   await deleteDoc(docRef);
 };
 
+export const deleteAllAtsScoreResults = async (): Promise<void> => {
+  if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
+  const userId = auth.currentUser.uid;
+  const q = query(collection(db, "atsScoreResults"), where("userId", "==", userId));
+  const querySnapshot = await getDocs(q);
+
+  if (querySnapshot.empty) {
+    return; // Nothing to delete
+  }
+
+  // Firestore allows a maximum of 500 operations in a single batch.
+  // This implementation handles deletion in chunks of 500.
+  const batches = [];
+  let currentBatch = writeBatch(db);
+  let operationCount = 0;
+
+  for (const docSnapshot of querySnapshot.docs) {
+    currentBatch.delete(docSnapshot.ref);
+    operationCount++;
+
+    if (operationCount === 500) {
+      batches.push(currentBatch);
+      currentBatch = writeBatch(db);
+      operationCount = 0;
+    }
+  }
+
+  // Add the last batch if it has any operations
+  if (operationCount > 0) {
+    batches.push(currentBatch);
+  }
+
+  // Commit all batches
+  await Promise.all(batches.map(batch => batch.commit()));
+};
+
 
 // --- InterviewQuestionsSet Functions ---
 
