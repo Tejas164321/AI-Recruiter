@@ -163,7 +163,7 @@ export default function LandingPage() {
                   width="600"
                   height="400"
                   alt="A business professional analyzing resumes on a futuristic holographic interface"
-                  className="mx-auto aspect-video overflow-hidden rounded-xl object-cover sm:w-full lg:order-last border-2 border-primary/20 shadow-2xl shadow-primary/20"
+                  className="mx-auto overflow-hidden rounded-xl object-cover sm:w-full lg:order-last shadow-2xl shadow-primary/20"
                   priority
                 />
               </motion.div>
