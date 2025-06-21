@@ -133,7 +133,7 @@ export default function ResumeRankerPage() {
   }, [extractedJobRoles, uploadedResumeFiles, isLoadingJDExtraction, isLoadingScreening]);
 
   useEffect(() => {
-    const shouldScroll = isLoadingJDExtraction || isLoadingScreening || (!isLoadingScreening && !isLoadingJDExtraction && allScreeningResults.length > 0 && selectedJobRoleId);
+    const shouldScroll = isLoadingScreening || (!isLoadingScreening && !isLoadingJDExtraction && allScreeningResults.length > 0 && selectedJobRoleId);
     if (shouldScroll && resultsSectionRef.current) {
       const timer = setTimeout(() => {
         resultsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
