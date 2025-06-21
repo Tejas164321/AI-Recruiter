@@ -11,19 +11,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ArrowUpDown, Eye, ShieldCheck, FileText, User, Hash } from "lucide-react";
+import { ArrowUpDown, Eye, ShieldCheck, FileText, User, Calendar } from "lucide-react";
 import type { AtsScoreResult } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
+import type { Timestamp } from "firebase/firestore";
 
 interface AtsScoreTableProps {
   results: AtsScoreResult[];
   onViewInsights: (result: AtsScoreResult) => void;
 }
 
-type SortKey = "resumeName" | "atsScore" | "candidateName";
+type SortKey = "resumeName" | "atsScore" | "candidateName" | "createdAt";
 
 export function AtsScoreTable({ results, onViewInsights }: AtsScoreTableProps) {
-  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: "ascending" | "descending" } | null>({ key: "atsScore", direction: "descending" });
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: "ascending" | "descending" } | null>({ key: "createdAt", direction: "descending" });
 
   const sortedResults = useMemo(() => {
     let sortableItems = [...results];
@@ -32,22 +33,29 @@ export function AtsScoreTable({ results, onViewInsights }: AtsScoreTableProps) {
         let valA = a[sortConfig.key];
         let valB = b[sortConfig.key];
 
-        if (sortConfig.key === "candidateName") {
-          valA = valA || "";
-          valB = valB || "";
-        }
-        
-        if (valA === undefined || valB === undefined) return 0;
+        let compareResult = 0;
 
-        if (valA < valB) {
-          return sortConfig.direction === "ascending" ? -1 : 1;
+        if (sortConfig.key === 'createdAt') {
+          const timeA = (valA as Timestamp).toMillis();
+          const timeB = (valB as Timestamp).toMillis();
+          compareResult = timeA - timeB;
+        } else if (typeof valA === 'number' && typeof valB === 'number') {
+            compareResult = valA - valB;
+        } else {
+            const strA = String(valA || '').toLowerCase();
+            const strB = String(valB || '').toLowerCase();
+            compareResult = strA.localeCompare(strB);
         }
-        if (valA > valB) {
-          return sortConfig.direction === "ascending" ? 1 : -1;
+
+        if (compareResult !== 0) {
+            return sortConfig.direction === 'ascending' ? compareResult : -compareResult;
         }
-        if (sortConfig.key === "atsScore" || sortConfig.key === "candidateName") {
-            return a.resumeName.localeCompare(b.resumeName);
+
+        // Secondary sort by date descending if primary sort is equal
+        if (sortConfig.key !== 'createdAt') {
+            return (b.createdAt as Timestamp).toMillis() - (a.createdAt as Timestamp).toMillis();
         }
+
         return 0;
       });
     }
@@ -91,17 +99,13 @@ export function AtsScoreTable({ results, onViewInsights }: AtsScoreTableProps) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[5%] text-center">
-                 <div className="flex items-center justify-center">
-                    <Hash className="w-4 h-4 mr-1 text-muted-foreground" /> #
-                </div>
-            </TableHead>
-            <TableHead onClick={() => requestSort("resumeName")} className="cursor-pointer hover:bg-muted/50 w-[35%] transition-colors">
+            <TableHead className="w-[5%] text-center">#</TableHead>
+            <TableHead onClick={() => requestSort("resumeName")} className="cursor-pointer hover:bg-muted/50 w-[30%] transition-colors">
               <div className="flex items-center">
                 <FileText className="w-4 h-4 mr-1 text-muted-foreground" /> Resume File {getSortIndicator("resumeName")}
               </div>
             </TableHead>
-            <TableHead onClick={() => requestSort("candidateName")} className="cursor-pointer hover:bg-muted/50 w-[25%] transition-colors">
+            <TableHead onClick={() => requestSort("candidateName")} className="cursor-pointer hover:bg-muted/50 w-[20%] transition-colors">
               <div className="flex items-center">
                 <User className="w-4 h-4 mr-1 text-muted-foreground" /> Candidate Name {getSortIndicator("candidateName")}
               </div>
@@ -111,18 +115,25 @@ export function AtsScoreTable({ results, onViewInsights }: AtsScoreTableProps) {
                 <ShieldCheck className="w-4 h-4 mr-1 text-muted-foreground" /> ATS Score {getSortIndicator("atsScore")}
               </div>
             </TableHead>
-            <TableHead className="text-right w-[20%]">Actions</TableHead>
+            <TableHead onClick={() => requestSort("createdAt")} className="cursor-pointer hover:bg-muted/50 w-[15%] transition-colors">
+              <div className="flex items-center">
+                <Calendar className="w-4 h-4 mr-1 text-muted-foreground" /> Date Analyzed {getSortIndicator("createdAt")}
+              </div>
+            </TableHead>
+            <TableHead className="text-right w-[15%]">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {sortedResults.map((result, index) => (
-            // Use resumeId for key as AtsScoreResult might not have a top-level 'id' field after reversion
-            <TableRow key={result.resumeId || index} className="transition-colors hover:bg-muted/50">
+            <TableRow key={result.id || index} className="transition-colors hover:bg-muted/50">
               <TableCell className="font-medium text-center">{index + 1}</TableCell>
               <TableCell className="font-medium truncate" title={result.resumeName}>{result.resumeName}</TableCell>
               <TableCell>{result.candidateName || <span className="text-muted-foreground italic">Not extracted</span>}</TableCell>
               <TableCell>
                 {getAtsScoreBadge(result.atsScore)}
+              </TableCell>
+               <TableCell>
+                {result.createdAt instanceof Timestamp ? result.createdAt.toDate().toLocaleDateString() : 'N/A'}
               </TableCell>
               <TableCell className="text-right">
                 <Button

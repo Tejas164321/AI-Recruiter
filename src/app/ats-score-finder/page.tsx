@@ -42,7 +42,7 @@ export default function AtsScoreFinderPage() {
     if (currentUser && isFirestoreAvailable) {
       setIsLoadingResultsFromDB(true);
       getAtsScoreResults()
-        .then(results => setAtsResults(results.sort((a,b) => b.atsScore - a.atsScore)))
+        .then(results => setAtsResults(results)) // Results are pre-sorted by date from service
         .catch(err => {
           let description = "Could not load saved ATS results.";
           if (err.code === 'failed-precondition') {
@@ -162,7 +162,7 @@ export default function AtsScoreFinderPage() {
     if (aiResultsToSave.length > 0) {
         try {
             const savedDbResults = await saveMultipleAtsScoreResults(aiResultsToSave);
-            setAtsResults(prevResults => [...prevResults, ...savedDbResults].sort((a,b) => b.atsScore - a.atsScore));
+            setAtsResults(prevResults => [...savedDbResults, ...prevResults]);
             toast({
                 title: "ATS Analysis Complete & Saved",
                 description: `${savedDbResults.length} of ${uploadedResumeFiles.length} resumes processed and saved.`,
@@ -170,9 +170,6 @@ export default function AtsScoreFinderPage() {
         } catch (dbError) {
             const message = dbError instanceof Error ? dbError.message : String(dbError);
             toast({ title: "Failed to Save ATS Results", description: `AI analysis complete, but could not save to database: ${message.substring(0,100)}`, variant: "destructive"});
-            // Optionally, show results in memory if save fails
-            // const inMemoryResults = aiResultsToSave.map(r => ({...r, id: crypto.randomUUID(), userId: currentUser.uid, createdAt: new Date()}) as AtsScoreResult);
-            // setAtsResults(prev => [...prev, ...inMemoryResults].sort((a,b) => b.atsScore - a.atsScore));
         }
     } else if (uploadedResumeFiles.length > 0 && filesProcessedSuccessfully === 0) {
          toast({
@@ -263,7 +260,7 @@ export default function AtsScoreFinderPage() {
                 ) : (
                   <ScanSearch className="w-5 h-5 mr-2" />
                 )}
-                Analyze & Save ATS Scores
+                Find ATS Score
               </Button>
             </CardContent>
           </Card>
@@ -284,7 +281,7 @@ export default function AtsScoreFinderPage() {
                     <BrainCircuit className="w-6 h-6 mr-2" /> Saved ATS Score Results
                   </CardTitle>
                   <CardDescription>
-                    Previously analyzed and saved resumes, ranked by ATS score.
+                    Previously analyzed and saved resumes. Click headers to sort.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -296,7 +293,7 @@ export default function AtsScoreFinderPage() {
                 <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
                     <CardContent className="pt-6">
                         <p className="text-center text-muted-foreground py-8">
-                            {uploadedResumeFiles.length > 0 ? 'Click "Analyze & Save ATS Scores" to begin.' : 'Upload resumes to get started. Your saved results will appear here.'}
+                            {uploadedResumeFiles.length > 0 ? 'Click "Find ATS Score" to begin.' : 'Upload resumes to get started. Your saved results will appear here.'}
                         </p>
                     </CardContent>
                 </Card>
