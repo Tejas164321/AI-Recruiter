@@ -84,6 +84,30 @@ export default function LandingPage() {
     }
   ];
 
+  const headingText = "Unlock Your Hiring Potential with ";
+  const headingSpecialText = "ResumeRank AI";
+
+  const headingContainerVariants = {
+    hover: {
+      transition: {
+        staggerChildren: 0.025,
+      },
+    },
+  };
+
+  const headingLetterVariants = {
+    initial: {
+      y: 0,
+      scale: 1,
+    },
+    hover: {
+      y: -8,
+      scale: 1.1,
+      transition: { type: "spring", stiffness: 350, damping: 10 },
+    },
+  };
+
+
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden landing-page-gradient">
       <main className="flex-1">
@@ -105,7 +129,41 @@ export default function LandingPage() {
                     transition={{ duration: 0.8, delay: 0.2 }}
                     className="text-4xl font-bold tracking-tight sm:text-5xl xl:text-6xl/none font-headline"
                   >
-                    Unlock Your Hiring Potential with <span className="text-primary" style={{filter: 'drop-shadow(0 0 10px hsl(var(--primary)/0.8))'}}>ResumeRank AI</span>
+                    <motion.span
+                      variants={headingContainerVariants}
+                      whileHover="hover"
+                      initial="initial"
+                      aria-label={headingText + headingSpecialText}
+                      className="relative"
+                    >
+                      {headingText.split("").map((char, index) => (
+                        <motion.span
+                          key={`char-${index}`}
+                          variants={headingLetterVariants}
+                          className="inline-block"
+                          style={{ whiteSpace: "pre" }}
+                        >
+                          {char}
+                        </motion.span>
+                      ))}
+                      <span
+                        className="text-primary inline-block"
+                        style={{
+                          filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.8))",
+                        }}
+                      >
+                        {headingSpecialText.split("").map((char, index) => (
+                          <motion.span
+                            key={`char2-${index}`}
+                            variants={headingLetterVariants}
+                            className="inline-block"
+                            style={{ whiteSpace: "pre" }}
+                          >
+                            {char}
+                          </motion.span>
+                        ))}
+                      </span>
+                    </motion.span>
                   </motion.h1>
                   <motion.p
                     initial={{ opacity: 0, y: 20 }}
@@ -156,7 +214,8 @@ export default function LandingPage() {
                   width="600"
                   height="400"
                   alt="A futuristic 3D isometric illustration of a business professional analyzing resumes on a holographic interface."
-                  className="mx-auto overflow-hidden object-cover sm:w-full lg:order-last shadow-2xl shadow-primary/20"
+                  className="mx-auto overflow-hidden object-cover sm:w-full lg:order-last"
+                  style={{ filter: "drop-shadow(0 0 25px hsl(var(--primary)/0.3))" }}
                   priority
                 />
               </motion.div>
@@ -264,7 +323,7 @@ export default function LandingPage() {
         </section>
 
         {/* Call to Action Section */}
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-t from-primary/10 to-transparent border-t border-white/10">
+        <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-t from-background/10 via-background/5 to-transparent border-t border-white/10">
           <div className="container grid items-center justify-center gap-4 px-4 text-center md:px-6">
             <motion.div
               className="space-y-3"
