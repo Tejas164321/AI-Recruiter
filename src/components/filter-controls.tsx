@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
-import type { Filters, ExtractedJobRole } from "@/lib/types";
-import { SlidersHorizontal, Search, Briefcase, Loader2, RotateCw } from "lucide-react";
+import type { Filters, ExtractedJobRole, JobScreeningResult } from "@/lib/types";
+import { SlidersHorizontal, Search, Briefcase, RotateCw, Trash2, History } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -21,6 +21,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Separator } from "@/components/ui/separator";
 
 interface FilterControlsProps {
   filters: Filters;
@@ -29,7 +30,11 @@ interface FilterControlsProps {
   extractedJobRoles: ExtractedJobRole[];
   selectedJobRoleId: string | null;
   onJobRoleChange: (roleId: string | null) => void;
-  isLoadingRoles: boolean;
+  isLoading: boolean;
+  onDeleteRole: (roleId: string) => void;
+  screeningHistory: JobScreeningResult[];
+  selectedHistoryId: string | null;
+  onHistoryChange: (historyId: string | null) => void;
   onRefreshScreeningForRole: (roleId: string) => void;
 }
 
@@ -40,7 +45,11 @@ export function FilterControls({
   extractedJobRoles,
   selectedJobRoleId,
   onJobRoleChange,
-  isLoadingRoles,
+  isLoading,
+  onDeleteRole,
+  screeningHistory,
+  selectedHistoryId,
+  onHistoryChange,
   onRefreshScreeningForRole,
 }: FilterControlsProps) {
   const handleScoreChange = (value: number[]) => {
@@ -54,85 +63,86 @@ export function FilterControls({
   const handleJobRoleSelectChange = (roleId: string) => {
     onJobRoleChange(roleId === "none" ? null : roleId);
   };
+  
+  const handleHistorySelectChange = (historyId: string) => {
+    onHistoryChange(historyId === "none" ? null : historyId);
+  };
 
   return (
     <div className="p-6 rounded-lg border shadow-sm space-y-6 bg-card">
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         <h3 className="text-lg font-semibold text-foreground flex items-center">
           <SlidersHorizontal className="w-5 h-5 mr-2 text-primary" />
-          Filter & Select Role
+          Filter & Manage Roles
         </h3>
-        <Button variant="ghost" size="sm" onClick={onResetFilters} disabled={isLoadingRoles}>
+        <Button variant="ghost" size="sm" onClick={onResetFilters} disabled={isLoading}>
           Reset Filters
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-        {/* Column 1: Role Selection & Re-screen Button */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-x-8 gap-y-6">
+        
+        {/* Column 1: Selections */}
         <div className="space-y-4">
-          <div className="space-y-1">
+           <div className="space-y-2">
             <Label htmlFor="jobRoleSelect" className="text-sm font-medium">
-              Active Job Role
+              Saved Job Role
             </Label>
-            <div className="flex items-center gap-2">
-                {isLoadingRoles && !extractedJobRoles.length ? (
-                    <div className="flex items-center justify-center h-10 border rounded-md bg-muted w-full">
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin text-muted-foreground" />
-                        <span className="text-muted-foreground">Loading Roles...</span>
-                    </div>
-                ) : (
-                  <>
-                    <div className="relative flex-grow">
-                      <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
-                      <Select
-                          value={selectedJobRoleId || "none"}
-                          onValueChange={handleJobRoleSelectChange}
-                          disabled={extractedJobRoles.length === 0 || isLoadingRoles}
-                      >
-                          <SelectTrigger id="jobRoleSelect" className="pl-10">
-                          <SelectValue placeholder="Select a Job Role" />
-                          </SelectTrigger>
-                          <SelectContent>
-                          {extractedJobRoles.length === 0 && (
-                              <SelectItem value="none" disabled>
-                                  No roles uploaded.
-                              </SelectItem>
-                          )}
-                          {extractedJobRoles.map((role) => (
-                              <SelectItem key={role.id} value={role.id}>
-                              {role.name}
-                              </SelectItem>
-                          ))}
-                          </SelectContent>
-                      </Select>
-                    </div>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            onClick={() => onRefreshScreeningForRole(selectedJobRoleId!)} 
-                            disabled={isLoadingRoles || !selectedJobRoleId}
-                            aria-label="Re-screen selected role"
-                          >
-                              <RotateCw className="w-4 h-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Screen uploaded resumes against this role again.</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </>
-                )}
+            <div className="relative">
+              <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
+              <Select
+                  value={selectedJobRoleId || "none"}
+                  onValueChange={handleJobRoleSelectChange}
+                  disabled={isLoading || extractedJobRoles.length === 0}
+              >
+                  <SelectTrigger id="jobRoleSelect" className="pl-10">
+                  <SelectValue placeholder="Select a Job Role..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                  <SelectItem value="none" disabled={!selectedJobRoleId}>
+                      Select a Job Role...
+                  </SelectItem>
+                  {extractedJobRoles.map((role) => (
+                      <SelectItem key={role.id} value={role.id}>
+                      {role.name}
+                      </SelectItem>
+                  ))}
+                  </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-2">
+             <Label htmlFor="historySelect" className="text-sm font-medium">
+              Screening History
+            </Label>
+            <div className="relative">
+              <History className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
+              <Select
+                  value={selectedHistoryId || "none"}
+                  onValueChange={handleHistorySelectChange}
+                  disabled={isLoading || screeningHistory.length === 0}
+              >
+                  <SelectTrigger id="historySelect" className="pl-10">
+                  <SelectValue placeholder="Select a session..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                   <SelectItem value="none" disabled>
+                      Select a session...
+                    </SelectItem>
+                  {screeningHistory.map((hist) => (
+                      <SelectItem key={hist.id} value={hist.id}>
+                      {hist.createdAt.toDate().toLocaleString()}
+                      </SelectItem>
+                  ))}
+                  </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
 
         {/* Column 2: Filters */}
         <div className="space-y-4">
-          <div className="space-y-1">
+          <div className="space-y-2">
             <Label htmlFor="skillKeyword" className="text-sm font-medium">
               Search by Name/Skill/File
             </Label>
@@ -146,12 +156,12 @@ export function FilterControls({
                 onChange={handleKeywordChange}
                 className="pl-10"
                 aria-label="Skill, name, or filename keyword filter"
-                disabled={isLoadingRoles || !selectedJobRoleId}
+                disabled={isLoading || !selectedJobRoleId}
               />
             </div>
           </div>
           
-          <div className="space-y-1">
+          <div className="space-y-2">
             <Label htmlFor="scoreRange" className="text-sm font-medium">
               Match Score Range: {filters.scoreRange[0]} - {filters.scoreRange[1]}
             </Label>
@@ -164,11 +174,63 @@ export function FilterControls({
               onValueChange={handleScoreChange}
               className="pt-2"
               aria-label="Score range filter"
-              disabled={isLoadingRoles || !selectedJobRoleId}
+              disabled={isLoading || !selectedJobRoleId}
             />
           </div>
         </div>
       </div>
+      
+      {selectedJobRoleId && (
+          <>
+            <Separator />
+            <div className="space-y-2">
+                <Label className="text-sm font-medium">Role Actions</Label>
+                <p className="text-xs text-muted-foreground">Manage the selected job role or re-run screening with newly uploaded resumes.</p>
+                <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            className="w-full sm:w-auto"
+                            onClick={() => onRefreshScreeningForRole(selectedJobRoleId!)} 
+                            disabled={isLoading}
+                            aria-label="Re-screen selected role with new resumes"
+                          >
+                              <RotateCw className="w-4 h-4 mr-2" />
+                              Re-screen Role
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Screens newly uploaded resumes against this role.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button 
+                                    variant="destructive" 
+                                    className="w-full sm:w-auto"
+                                    onClick={() => onDeleteRole(selectedJobRoleId!)} 
+                                    disabled={isLoading}
+                                    aria-label="Delete selected role"
+                                >
+                                    <Trash2 className="w-4 h-4 mr-2"/>
+                                    Delete Role
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Deletes this role and all its history.</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                </div>
+            </div>
+          </>
+      )}
+
     </div>
   );
 }

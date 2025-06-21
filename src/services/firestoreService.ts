@@ -40,15 +40,19 @@ export const saveMultipleExtractedJobRoles = async (jobRolesData: Array<Omit<Ext
   if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
   const userId = auth.currentUser.uid;
   const savedRoles: ExtractedJobRole[] = [];
+  const now = Timestamp.now();
 
-  for (const roleData of jobRolesData) {
+  const promises = jobRolesData.map(async (roleData) => {
     const docRef = await addDoc(collection(db, "extractedJobRoles"), {
       ...roleData,
       userId,
       createdAt: serverTimestamp(),
     });
-    savedRoles.push({ ...roleData, id: docRef.id, userId, createdAt: Timestamp.now() } as ExtractedJobRole);
-  }
+    // Return a hydrated object immediately, assuming server timestamp will be close to `now`
+    savedRoles.push({ ...roleData, id: docRef.id, userId, createdAt: now } as ExtractedJobRole);
+  });
+
+  await Promise.all(promises);
   return savedRoles;
 };
 
@@ -192,3 +196,5 @@ export const getAllInterviewQuestionsSetsForUser = async (): Promise<InterviewQu
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InterviewQuestionsSet));
 };
+
+    
