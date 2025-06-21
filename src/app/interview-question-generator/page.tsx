@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { generateJDInterviewQuestions, type GenerateJDInterviewQuestionsInput } from "@/ai/flows/generate-jd-interview-questions";
-import { extractJobRoles as extractJobRolesAI, type ExtractJobRolesInput as ExtractJobRolesAIInput, type ExtractJobRolesOutput as ExtractJobRolesAIOutput } from "@/ai/flows/extract-job-roles";
+import { extractJobRoles as extractJobRolesAI, type ExtractJobRolesAIInput, type ExtractJobRolesAIOutput } from "@/ai/flows/extract-job-roles";
 import type { InterviewQuestionsSet } from "@/lib/types";
 import { HelpCircle, Loader2, Lightbulb, FileText, ScrollText, Users, Brain, SearchCheck } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -17,6 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { motion } from "framer-motion";
 import { useLoading } from "@/contexts/loading-context";
 import { useAuth } from "@/contexts/auth-context";
+import { Textarea } from "@/components/ui/textarea";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
@@ -29,7 +30,7 @@ export default function InterviewQuestionGeneratorPage() {
   const { setIsPageLoading: setAppIsLoading } = useLoading();
   const { currentUser } = useAuth();
 
-  const [jdContentDataUri, setJdContentDataUri] = useState<string>("");
+  const [jdContent, setJdContent] = useState<string>("");
   const [roleTitle, setRoleTitle] = useState<string>("");
   const [focusAreas, setFocusAreas] = useState<string>("");
   
@@ -70,7 +71,7 @@ export default function InterviewQuestionGeneratorPage() {
     });
     
     setIsLoading(true);
-    setGeneratedQuestions(null); // Clear old results
+    setGeneratedQuestions(null);
     setError(null);
 
     try {
@@ -81,23 +82,29 @@ export default function InterviewQuestionGeneratorPage() {
       
       if (extractionOutput.length > 0 && extractionOutput[0].contentDataUri) {
         const firstRole = extractionOutput[0];
-        setJdContentDataUri(firstRole.contentDataUri);
+        
+        const base64 = firstRole.contentDataUri.split(',')[1];
+        if (base64) {
+            // Using Buffer to handle potential UTF-8 characters, common in Node.js/Next.js envs
+            const decodedText = Buffer.from(base64, 'base64').toString('utf-8');
+            setJdContent(decodedText);
+        }
         
         if (firstRole.name && firstRole.name !== "Untitled Job Role" && !firstRole.name.startsWith("Job Role")) {
           setRoleTitle(firstRole.name);
           toast({ title: "Content & Title Extracted", description: `Extracted JD content and suggested role title: "${firstRole.name}".`});
         } else {
-          setRoleTitle(""); // Clear title if not found, forcing user entry
+          setRoleTitle("");
           toast({ title: "Content Extracted", description: "JD content has been extracted. Please provide a role title." });
         }
       } else {
-         setJdContentDataUri("");
+         setJdContent("");
          toast({ title: "Extraction Failed", description: "Could not extract content from the document.", variant: "destructive"});
       }
     } catch (extractError) {
       const message = extractError instanceof Error ? extractError.message : String(extractError);
       console.error("Failed to extract content:", extractError);
-      setJdContentDataUri("");
+      setJdContent("");
       toast({ title: "File Processing Failed", description: message.substring(0,100), variant: "destructive" });
     } finally {
       setIsLoading(false);
@@ -109,8 +116,8 @@ export default function InterviewQuestionGeneratorPage() {
       toast({ title: "Not Authenticated", description: "Please log in to generate questions.", variant: "destructive" });
       return;
     }
-    if (!jdContentDataUri.trim()) {
-      toast({ title: "Missing Job Description", description: "Please upload a job description file first.", variant: "destructive" });
+    if (!jdContent.trim()) {
+      toast({ title: "Missing Job Description", description: "Please enter or upload a job description.", variant: "destructive" });
       return;
     }
     if (!roleTitle.trim()) {
@@ -123,8 +130,11 @@ export default function InterviewQuestionGeneratorPage() {
 
     try {
       const trimmedFocusAreas = focusAreas.trim();
+      // Convert the text content to a data URI for the AI flow
+      const contentDataUri = `data:text/plain;charset=utf-8;base64,${Buffer.from(jdContent).toString('base64')}`;
+
       const input: GenerateJDInterviewQuestionsInput = {
-        jobDescriptionDataUri: jdContentDataUri,
+        jobDescriptionDataUri: contentDataUri,
         roleTitle: roleTitle.trim(),
         focusAreas: trimmedFocusAreas || undefined,
       };
@@ -132,7 +142,7 @@ export default function InterviewQuestionGeneratorPage() {
       
       const questionsSet = {
         roleTitle: roleTitle.trim(),
-        jobDescriptionDataUri: jdContentDataUri,
+        jobDescriptionDataUri: contentDataUri,
         ...aiOutput,
         ...(trimmedFocusAreas && { focusAreas: trimmedFocusAreas }),
       };
@@ -147,7 +157,7 @@ export default function InterviewQuestionGeneratorPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [jdContentDataUri, roleTitle, focusAreas, toast, currentUser?.uid]);
+  }, [jdContent, roleTitle, focusAreas, toast, currentUser?.uid]);
 
   const questionCategories: Array<{key: keyof Omit<InterviewQuestionsSet, 'id'|'userId'|'createdAt'|'roleTitle'>, title: string, icon: React.ElementType}> = [
     { key: "technicalQuestions", title: "Technical Questions", icon: Brain },
@@ -166,7 +176,7 @@ export default function InterviewQuestionGeneratorPage() {
             <SearchCheck className="w-7 h-7 mr-3" /> AI Interview Question Generator
           </CardTitle>
           <CardDescription>
-            Upload a job description file. The AI will extract the role title, and you can then add focus areas to generate tailored interview questions.
+            Type or paste a job description below, or upload a file to auto-populate the fields. Then, generate tailored interview questions.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -189,8 +199,20 @@ export default function InterviewQuestionGeneratorPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
+               <div className="space-y-2">
+                <Label htmlFor="job-description-content" className="font-medium text-foreground">Job Description Content</Label>
+                <Textarea
+                  id="job-description-content"
+                  value={jdContent}
+                  onChange={(e) => setJdContent(e.target.value)}
+                  placeholder="Paste the full job description here..."
+                  className="min-h-[200px]"
+                  disabled={isProcessing}
+                />
+              </div>
+
               <div className="space-y-2">
-                <Label htmlFor="job-description-upload" className="font-medium text-foreground">Upload Job Description File</Label>
+                 <Label htmlFor="job-description-upload" className="text-sm text-muted-foreground">Or upload a file to fill automatically</Label>
                 <FileUploadArea
                   onFilesUpload={handleJobDescriptionUpload}
                   acceptedFileTypes={{ 
@@ -203,34 +225,38 @@ export default function InterviewQuestionGeneratorPage() {
                   maxSizeInBytes={MAX_FILE_SIZE_BYTES}
                 />
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="roleTitle" className="font-medium text-foreground">Role Title (Auto-extracted from file)</Label>
-                <Input 
-                  id="roleTitle" 
-                  value={roleTitle} 
-                  onChange={(e) => setRoleTitle(e.target.value)} 
-                  placeholder="e.g., Senior Software Engineer"
-                  disabled={isProcessing}
-                />
-                <p className="text-xs text-muted-foreground">Confirm or edit the job title extracted from the uploaded file.</p>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="focusAreas" className="font-medium text-foreground">Key Focus Areas/Skills (Optional)</Label>
-                <Input 
-                  id="focusAreas" 
-                  value={focusAreas} 
-                  onChange={(e) => setFocusAreas(e.target.value)} 
-                  placeholder="e.g., JavaScript, Team Leadership"
-                  disabled={isProcessing}
-                />
-                <p className="text-xs text-muted-foreground">Comma-separated list of areas to emphasize.</p>
+              <Separator />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="roleTitle" className="font-medium text-foreground">Role Title</Label>
+                  <Input 
+                    id="roleTitle" 
+                    value={roleTitle} 
+                    onChange={(e) => setRoleTitle(e.target.value)} 
+                    placeholder="e.g., Senior Software Engineer"
+                    disabled={isProcessing}
+                  />
+                  <p className="text-xs text-muted-foreground">Confirm or edit the job title.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="focusAreas" className="font-medium text-foreground">Key Focus Areas/Skills (Optional)</Label>
+                  <Input 
+                    id="focusAreas" 
+                    value={focusAreas} 
+                    onChange={(e) => setFocusAreas(e.target.value)} 
+                    placeholder="e.g., JavaScript, Team Leadership"
+                    disabled={isProcessing}
+                  />
+                  <p className="text-xs text-muted-foreground">Comma-separated list of areas to emphasize.</p>
+                </div>
               </div>
               
               <Button 
                 onClick={handleGenerateQuestions} 
-                disabled={isProcessing || !jdContentDataUri.trim() || !roleTitle.trim()}
+                disabled={isProcessing || !jdContent.trim() || !roleTitle.trim()}
                 size="lg"
                 className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground shadow-md hover:shadow-lg transition-all"
               >
@@ -250,7 +276,7 @@ export default function InterviewQuestionGeneratorPage() {
                 <CardContent className="pt-6 flex flex-col items-center justify-center space-y-4 min-h-[200px]">
                   <Loader2 className="w-12 h-12 animate-spin text-primary" />
                   <p className="text-lg text-muted-foreground">
-                    AI is processing your file and crafting questions...
+                    AI is processing and crafting questions...
                   </p>
                   <p className="text-sm text-muted-foreground">This may take a moment.</p>
                 </CardContent>
@@ -312,7 +338,7 @@ export default function InterviewQuestionGeneratorPage() {
                  <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
                     <CardContent className="pt-6">
                         <p className="text-center text-muted-foreground py-8">
-                           Upload a job description file to get started.
+                           Enter a job description or upload a file to get started.
                         </p>
                     </CardContent>
                 </Card>
@@ -323,3 +349,5 @@ export default function InterviewQuestionGeneratorPage() {
     </div>
   );
 }
+
+    
