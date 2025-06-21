@@ -14,6 +14,7 @@ import {
   limit,
   Timestamp,
   writeBatch,
+  deleteDoc,
 } from 'firebase/firestore';
 
 import type { JobScreeningResult, AtsScoreResult, InterviewQuestionsSet } from '@/lib/types';
@@ -109,6 +110,14 @@ export const getAtsScoreResults = async (): Promise<AtsScoreResult[]> => {
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AtsScoreResult));
 };
+
+export const deleteAtsScoreResult = async (resultId: string): Promise<void> => {
+  if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
+  const docRef = doc(db, "atsScoreResults", resultId);
+  // Security is handled by Firestore rules, but you could add a check here to ensure the user owns this doc if needed.
+  await deleteDoc(docRef);
+};
+
 
 // --- InterviewQuestionsSet Functions ---
 

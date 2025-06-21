@@ -10,11 +10,11 @@ import { calculateAtsScore, type CalculateAtsScoreInput, type CalculateAtsScoreO
 import type { ResumeFile, AtsScoreResult } from "@/lib/types";
 import { AtsScoreTable } from "@/components/ats-score-table";
 import { AtsFeedbackModal } from "@/components/ats-feedback-modal";
-import { BarChartBig, Loader2, ScanSearch, BrainCircuit, ServerOff, ListFilter } from "lucide-react";
+import { BarChartBig, Loader2, ScanSearch, BrainCircuit, ServerOff, ListFilter, Trash2 } from "lucide-react";
 import { LoadingIndicator } from "@/components/loading-indicator";
 import { useLoading } from "@/contexts/loading-context";
 import { useAuth } from "@/contexts/auth-context";
-import { saveMultipleAtsScoreResults, getAtsScoreResults } from "@/services/firestoreService";
+import { saveMultipleAtsScoreResults, getAtsScoreResults, deleteAtsScoreResult } from "@/services/firestoreService";
 import { db as firestoreDb } from "@/lib/firebase/config"; // Import db to check availability
 import {
   DropdownMenu,
@@ -22,6 +22,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 const MAX_FILES_ATS = 10;
@@ -39,6 +49,7 @@ export default function AtsScoreFinderPage() {
   const [selectedResultForModal, setSelectedResultForModal] = useState<AtsScoreResult | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [sortOption, setSortOption] = useState<SortOption>('score-desc');
+  const [resultToDelete, setResultToDelete] = useState<AtsScoreResult | null>(null);
 
   const { toast } = useToast();
   const resultsSectionRef = useRef<HTMLDivElement | null>(null);
@@ -212,6 +223,32 @@ export default function AtsScoreFinderPage() {
     setIsModalOpen(true);
   };
   
+  const handleOpenDeleteDialog = (result: AtsScoreResult) => {
+    setResultToDelete(result);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!resultToDelete) return;
+
+    try {
+      await deleteAtsScoreResult(resultToDelete.id);
+      setAtsResults(prev => prev.filter(r => r.id !== resultToDelete.id));
+      toast({
+        title: "Result Deleted",
+        description: `The result for "${resultToDelete.resumeName}" has been deleted.`,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      toast({
+        title: "Deletion Failed",
+        description: message.substring(0, 100),
+        variant: "destructive",
+      });
+    } finally {
+      setResultToDelete(null);
+    }
+  };
+
   const isProcessing = isProcessingAts || isLoadingResultsFromDB;
 
   return (
@@ -331,7 +368,7 @@ export default function AtsScoreFinderPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <AtsScoreTable results={sortedAtsResults} onViewInsights={handleViewInsights} />
+                  <AtsScoreTable results={sortedAtsResults} onViewInsights={handleViewInsights} onDelete={handleOpenDeleteDialog} />
                 </CardContent>
               </Card>
             )}
@@ -351,6 +388,27 @@ export default function AtsScoreFinderPage() {
             onClose={() => setIsModalOpen(false)}
             result={selectedResultForModal}
           />
+
+          <AlertDialog open={!!resultToDelete} onOpenChange={(open) => !open && setResultToDelete(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete the ATS score result for <span className="font-semibold">{resultToDelete?.resumeName}</span>.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setResultToDelete(null)}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleConfirmDelete}
+                  className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </>
       )}
     </div>

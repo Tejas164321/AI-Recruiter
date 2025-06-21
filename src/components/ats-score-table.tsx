@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Eye, ShieldCheck, FileText, User, Calendar } from "lucide-react";
+import { Eye, ShieldCheck, FileText, User, Calendar, Trash2 } from "lucide-react";
 import type { AtsScoreResult } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Timestamp } from "firebase/firestore";
@@ -19,9 +19,10 @@ import { Timestamp } from "firebase/firestore";
 interface AtsScoreTableProps {
   results: AtsScoreResult[];
   onViewInsights: (result: AtsScoreResult) => void;
+  onDelete: (result: AtsScoreResult) => void;
 }
 
-export function AtsScoreTable({ results, onViewInsights }: AtsScoreTableProps) {
+export function AtsScoreTable({ results, onViewInsights, onDelete }: AtsScoreTableProps) {
   const getAtsScoreBadge = (score: number) => {
     if (score >= 80) {
       return <Badge className="bg-green-600 text-white hover:bg-green-600/90">{score}/100</Badge>;
@@ -81,16 +82,27 @@ export function AtsScoreTable({ results, onViewInsights }: AtsScoreTableProps) {
                 {result.createdAt instanceof Timestamp ? result.createdAt.toDate().toLocaleDateString() : 'N/A'}
               </TableCell>
               <TableCell className="text-right">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onViewInsights(result)}
-                  aria-label={`View insights for ${result.resumeName}`}
-                  className="hover:text-primary transition-colors"
-                >
-                  <Eye className="w-4 h-4 mr-2" />
-                  View Insights
-                </Button>
+                <div className="flex items-center justify-end space-x-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onViewInsights(result)}
+                    aria-label={`View insights for ${result.resumeName}`}
+                    className="hover:text-primary transition-colors"
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    Insights
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onDelete(result)}
+                    aria-label={`Delete result for ${result.resumeName}`}
+                    className="hover:text-destructive transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           ))}
