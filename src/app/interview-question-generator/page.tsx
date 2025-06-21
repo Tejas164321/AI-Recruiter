@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { generateJDInterviewQuestions, type GenerateJDInterviewQuestionsInput } from "@/ai/flows/generate-jd-interview-questions";
 import { extractJobRoles as extractJobRolesAI, type ExtractJobRolesInput as ExtractJobRolesAIInput, type ExtractJobRolesOutput as ExtractJobRolesAIOutput } from "@/ai/flows/extract-job-roles";
 import type { InterviewQuestionsSet } from "@/lib/types";
-import { HelpCircle, Loader2, Lightbulb, FileText, ScrollText, Users, Brain, SearchCheck, UploadCloud, PlusCircle, Trash2 } from "lucide-react";
+import { HelpCircle, Loader2, Lightbulb, FileText, ScrollText, Users, Brain, SearchCheck, UploadCloud, PlusCircle, Trash2, Download } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { motion } from "framer-motion";
@@ -19,6 +19,8 @@ import { useLoading } from "@/contexts/loading-context";
 import { useAuth } from "@/contexts/auth-context";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
@@ -45,9 +47,11 @@ export default function InterviewQuestionGeneratorPage() {
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
   
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isDownloading, setIsDownloading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   const resultsSectionRef = useRef<HTMLDivElement | null>(null);
+  const resultsPdfRef = useRef<HTMLDivElement | null>(null);
   
   // Initialize with a single blank entry on first load
   useEffect(() => {
@@ -197,6 +201,46 @@ export default function InterviewQuestionGeneratorPage() {
     }
   }, [currentEntry, toast, currentUser?.uid, selectedEntryId]);
 
+  const handleDownloadPdf = () => {
+    const input = resultsPdfRef.current;
+    if (!input || !currentEntry?.questions) return;
+    
+    setIsDownloading(true);
+
+    html2canvas(input, { scale: 2, useCORS: true })
+      .then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgProps = pdf.getImageProperties(imgData);
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+        
+        let heightLeft = pdfHeight;
+        let position = 0;
+        const pageMargin = 10;
+
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pdf.internal.pageSize.getHeight();
+
+        while (heightLeft > 0) {
+            position = heightLeft - pdfHeight + pageMargin;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+            heightLeft -= pdf.internal.pageSize.getHeight();
+        }
+        
+        const fileName = `Interview_Questions_${currentEntry.questions.roleTitle.replace(/\s+/g, '_') || 'General'}.pdf`;
+        pdf.save(fileName);
+      })
+      .catch(err => {
+        console.error("PDF Generation Error:", err);
+        toast({ title: "PDF Generation Failed", description: "An unexpected error occurred while creating the PDF.", variant: "destructive" });
+      })
+      .finally(() => {
+        setIsDownloading(false);
+      });
+  };
+
   const questionCategories: Array<{key: keyof Omit<InterviewQuestionsSet, 'id'|'userId'|'createdAt'|'roleTitle'>, title: string, icon: React.ElementType}> = [
     { key: "technicalQuestions", title: "Technical Questions", icon: Brain },
     { key: "behavioralQuestions", title: "Behavioral Questions", icon: Users },
@@ -283,7 +327,7 @@ export default function InterviewQuestionGeneratorPage() {
               </Card>
             </div>
             <div className="flex-1">
-              <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl h-full">
+              <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl h-full flex flex-col">
                 <CardHeader>
                   <CardTitle className="flex items-center text-xl font-headline">
                     <UploadCloud className="w-6 h-6 mr-2 text-primary" />
@@ -293,7 +337,7 @@ export default function InterviewQuestionGeneratorPage() {
                     Upload a JD file (PDF, DOCX, etc.) to automatically fill the fields on the left.
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex-grow flex flex-col justify-center">
                   <FileUploadArea
                     onFilesUpload={handleJobDescriptionUpload}
                     acceptedFileTypes={{ 
@@ -376,47 +420,59 @@ export default function InterviewQuestionGeneratorPage() {
 
             {currentEntry?.questions && !isLoading && (
               <div className="space-y-6 mt-8">
-                <Separator />
-                <h2 className="text-xl font-semibold text-foreground font-headline text-center md:text-left">
-                  Interview Questions for {currentEntry.questions.roleTitle ? <span className="text-primary">{currentEntry.questions.roleTitle}</span> : 'the Provided Job Description'}
-                </h2>
-                 {currentEntry.questions.focusAreas && (
-                  <p className="text-sm text-muted-foreground text-center md:text-left">
-                    Focusing on: {currentEntry.questions.focusAreas}
-                  </p>
-                 )}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {questionCategories.map(({key, title, icon: Icon}) => {
-                    const questions = currentEntry.questions?.[key as keyof typeof currentEntry.questions];
-                    if (questions && Array.isArray(questions) && questions.length > 0) {
-                      return (
-                        <motion.div
-                          key={key}
-                          initial="initial"
-                          whileHover="hover"
-                          variants={cardHoverVariants}
-                          className="h-full" 
-                        >
-                          <Card className="bg-card flex flex-col h-full">
-                            <CardHeader className="pb-3">
-                              <CardTitle className="flex items-center text-lg text-primary font-medium">
-                                <Icon className="w-5 h-5 mr-2.5 shrink-0" />
-                                {title}
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent className="flex-grow pt-0">
-                              <ul className="list-disc pl-5 space-y-2.5 text-sm text-foreground">
-                                {questions.map((q, index) => (
-                                  <li key={index} className="leading-relaxed">{q}</li>
-                                ))}
-                              </ul>
-                            </CardContent>
-                          </Card>
-                        </motion.div>
-                      );
-                    }
-                    return null; 
-                  })}
+                <div ref={resultsPdfRef} className="p-4 bg-background">
+                  <Separator />
+                  <div className="flex justify-between items-center py-4">
+                    <h2 className="text-xl font-semibold text-foreground font-headline text-center md:text-left">
+                      Interview Questions for {currentEntry.questions.roleTitle ? <span className="text-primary">{currentEntry.questions.roleTitle}</span> : 'the Provided Job Description'}
+                    </h2>
+                     <Button onClick={handleDownloadPdf} disabled={isDownloading} variant="outline" size="sm">
+                        {isDownloading ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Download className="w-4 h-4 mr-2" />
+                        )}
+                        Download PDF
+                      </Button>
+                  </div>
+                   {currentEntry.questions.focusAreas && (
+                    <p className="text-sm text-muted-foreground text-center md:text-left pb-4">
+                      Focusing on: {currentEntry.questions.focusAreas}
+                    </p>
+                   )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {questionCategories.map(({key, title, icon: Icon}) => {
+                      const questions = currentEntry.questions?.[key as keyof typeof currentEntry.questions];
+                      if (questions && Array.isArray(questions) && questions.length > 0) {
+                        return (
+                          <motion.div
+                            key={key}
+                            initial="initial"
+                            whileHover="hover"
+                            variants={cardHoverVariants}
+                            className="h-full" 
+                          >
+                            <Card className="bg-card flex flex-col h-full">
+                              <CardHeader className="pb-3">
+                                <CardTitle className="flex items-center text-lg text-primary font-medium">
+                                  <Icon className="w-5 h-5 mr-2.5 shrink-0" />
+                                  {title}
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent className="flex-grow pt-0">
+                                <ul className="list-disc pl-5 space-y-2.5 text-sm text-foreground">
+                                  {questions.map((q, index) => (
+                                    <li key={index} className="leading-relaxed">{q}</li>
+                                  ))}
+                                </ul>
+                              </CardContent>
+                            </Card>
+                          </motion.div>
+                        );
+                      }
+                      return null; 
+                    })}
+                  </div>
                 </div>
               </div>
             )}
