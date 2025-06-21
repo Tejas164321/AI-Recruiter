@@ -245,9 +245,8 @@ export default function LandingPage() {
                   src="/hero-hologram.png"
                   width="600"
                   height="400"
-                  alt="A futuristic 3D isometric illustration of a business professional analyzing resumes on a holographic interface."
+                  alt="A futuristic 3D isometric illustration of a business professional analyzing resumes on a holographic interface, with a glowing animated border."
                   className="mx-auto block rounded-[1.375rem] overflow-hidden object-cover sm:w-full lg:order-last"
-                  style={{ filter: "drop-shadow(0 0 25px hsl(var(--primary)/0.3))" }}
                   priority
                 />
               </motion.div>
