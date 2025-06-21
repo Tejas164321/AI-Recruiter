@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { generateJDInterviewQuestions, type GenerateJDInterviewQuestionsInput } from "@/ai/flows/generate-jd-interview-questions";
 import { extractJobRoles as extractJobRolesAI, type ExtractJobRolesInput as ExtractJobRolesAIInput, type ExtractJobRolesOutput as ExtractJobRolesAIOutput } from "@/ai/flows/extract-job-roles";
 import type { InterviewQuestionsSet } from "@/lib/types";
-import { HelpCircle, Loader2, Lightbulb, FileText, ScrollText, Users, Brain, SearchCheck } from "lucide-react";
+import { HelpCircle, Loader2, Lightbulb, FileText, ScrollText, Users, Brain, SearchCheck, UploadCloud } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { motion } from "framer-motion";
@@ -171,7 +171,7 @@ export default function InterviewQuestionGeneratorPage() {
             <SearchCheck className="w-7 h-7 mr-3" /> AI Interview Question Generator
           </CardTitle>
           <CardDescription>
-            Type or paste a job description below, or upload a file to auto-populate the fields. Then, generate tailored interview questions.
+            Provide the job description by typing/pasting or uploading a file. The AI will then generate tailored interview questions.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -186,84 +186,105 @@ export default function InterviewQuestionGeneratorPage() {
 
       {currentUser && (
         <>
-          <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
-            <CardHeader>
-              <CardTitle className="flex items-center text-xl font-headline">
-                <FileText className="w-6 h-6 mr-2 text-primary" />
-                Job Description & Context
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-               <div className="space-y-2">
-                <Label htmlFor="job-description-content" className="font-medium text-foreground">Job Description Content</Label>
-                <Textarea
-                  id="job-description-content"
-                  value={jdContent}
-                  onChange={(e) => setJdContent(e.target.value)}
-                  placeholder="Paste the full job description here..."
-                  className="min-h-[200px]"
-                  disabled={isProcessing}
-                />
-              </div>
+          <div className="flex flex-col md:flex-row gap-8">
+            {/* Left Card: Manual Input */}
+            <div className="flex-1">
+              <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl h-full">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-xl font-headline">
+                    <FileText className="w-6 h-6 mr-2 text-primary" />
+                    Job Description & Context
+                  </CardTitle>
+                  <CardDescription>
+                    Paste the job description below and optionally add a role title and key focus areas.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="job-description-content" className="font-medium text-foreground">Job Description Content</Label>
+                    <Textarea
+                      id="job-description-content"
+                      value={jdContent}
+                      onChange={(e) => setJdContent(e.target.value)}
+                      placeholder="Paste the full job description here..."
+                      className="min-h-[200px]"
+                      disabled={isProcessing}
+                    />
+                  </div>
+                  <Separator />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="roleTitle" className="font-medium text-foreground">Role Title (Optional)</Label>
+                      <Input 
+                        id="roleTitle" 
+                        value={roleTitle} 
+                        onChange={(e) => setRoleTitle(e.target.value)} 
+                        placeholder="e.g., Senior Software Engineer"
+                        disabled={isProcessing}
+                      />
+                      <p className="text-xs text-muted-foreground">Helps generate specific questions.</p>
+                    </div>
 
-              <div className="space-y-2">
-                 <Label htmlFor="job-description-upload" className="text-sm text-muted-foreground">Or upload a file to fill automatically</Label>
-                <FileUploadArea
-                  onFilesUpload={handleJobDescriptionUpload}
-                  acceptedFileTypes={{ 
-                    "application/pdf": [".pdf"], "text/plain": [".txt"], "text/markdown": [".md"],
-                    "application/msword": [".doc"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"]
-                  }}
-                  multiple={false}
-                  label="PDF, TXT, DOC, DOCX, MD (Max 5MB)"
-                  id="job-description-upload"
-                  maxSizeInBytes={MAX_FILE_SIZE_BYTES}
-                />
-              </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="focusAreas" className="font-medium text-foreground">Key Focus Areas/Skills (Optional)</Label>
+                      <Input 
+                        id="focusAreas" 
+                        value={focusAreas} 
+                        onChange={(e) => setFocusAreas(e.target.value)} 
+                        placeholder="e.g., JavaScript, Team Leadership"
+                        disabled={isProcessing}
+                      />
+                      <p className="text-xs text-muted-foreground">Comma-separated list of areas to emphasize.</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-              <Separator />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="roleTitle" className="font-medium text-foreground">Role Title (Optional)</Label>
-                  <Input 
-                    id="roleTitle" 
-                    value={roleTitle} 
-                    onChange={(e) => setRoleTitle(e.target.value)} 
-                    placeholder="e.g., Senior Software Engineer"
-                    disabled={isProcessing}
+            {/* Right Card: File Upload */}
+            <div className="flex-1">
+              <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl h-full">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-xl font-headline">
+                    <UploadCloud className="w-6 h-6 mr-2 text-primary" />
+                    Or Upload a File
+                  </CardTitle>
+                  <CardDescription>
+                    Upload a JD file (PDF, DOCX, etc.) to automatically fill the fields on the left.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <FileUploadArea
+                    onFilesUpload={handleJobDescriptionUpload}
+                    acceptedFileTypes={{ 
+                      "application/pdf": [".pdf"], "text/plain": [".txt"], "text/markdown": [".md"],
+                      "application/msword": [".doc"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"]
+                    }}
+                    multiple={false}
+                    label="PDF, TXT, DOC, DOCX, MD (Max 5MB)"
+                    id="job-description-upload"
+                    maxSizeInBytes={MAX_FILE_SIZE_BYTES}
                   />
-                  <p className="text-xs text-muted-foreground">Confirm or edit the job title. Helps generate specific questions.</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="focusAreas" className="font-medium text-foreground">Key Focus Areas/Skills (Optional)</Label>
-                  <Input 
-                    id="focusAreas" 
-                    value={focusAreas} 
-                    onChange={(e) => setFocusAreas(e.target.value)} 
-                    placeholder="e.g., JavaScript, Team Leadership"
-                    disabled={isProcessing}
-                  />
-                  <p className="text-xs text-muted-foreground">Comma-separated list of areas to emphasize.</p>
-                </div>
-              </div>
-              
-              <Button 
-                onClick={handleGenerateQuestions} 
-                disabled={isProcessing || !jdContent.trim()}
-                size="lg"
-                className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground shadow-md hover:shadow-lg transition-all"
-              >
-                {isLoading ? (
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                ) : (
-                  <Lightbulb className="w-5 h-5 mr-2" />
-                )}
-                Generate Questions
-              </Button>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+          
+          <div className="flex justify-center pt-4">
+            <Button 
+              onClick={handleGenerateQuestions} 
+              disabled={isProcessing || !jdContent.trim()}
+              size="lg"
+              className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground shadow-md hover:shadow-lg transition-all"
+            >
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              ) : (
+                <Lightbulb className="w-5 h-5 mr-2" />
+              )}
+              Generate Questions
+            </Button>
+          </div>
 
           <div ref={resultsSectionRef}>
             {isProcessing && !generatedQuestions && (
@@ -346,5 +367,7 @@ export default function InterviewQuestionGeneratorPage() {
     </div>
   );
 }
+
+    
 
     
