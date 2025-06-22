@@ -54,6 +54,9 @@ export function Header() {
         
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-2">
+           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+               <ThemeToggleButton />
+            </motion.div>
            {isLoadingAuth ? (
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             ) : currentUser ? (
@@ -85,29 +88,31 @@ export function Header() {
                 </motion.div>
                 </>
             )}
-            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
-                <ThemeToggleButton />
-            </motion.div>
         </nav>
 
         {/* Mobile Navigation */}
         <div className="md:hidden flex items-center gap-2">
-            {!isLoadingAuth && (
-                 currentUser ? (
-                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                        <Button variant="outline" size="sm" asChild>
-                        <Link href="/dashboard">Dashboard</Link>
-                        </Button>
-                    </motion.div>
-                 ) : (
-                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                        <Button size="sm" asChild>
-                        <Link href="/login">Sign In</Link>
-                        </Button>
-                    </motion.div>
-                 )
-            )}
-            <ThemeToggleButton />
+            {!isLoadingAuth &&
+            (currentUser ? (
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button variant="outline" size="sm" asChild>
+                    <Link href="/dashboard">Dashboard</Link>
+                </Button>
+                </motion.div>
+            ) : (
+                <>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button variant="ghost" size="sm" asChild>
+                    <Link href="/login">Sign In</Link>
+                    </Button>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button size="sm" asChild>
+                    <Link href="/signup">Sign Up</Link>
+                    </Button>
+                </motion.div>
+                </>
+            ))}
             <Sheet>
                 <SheetTrigger asChild>
                     <Button variant="outline" size="icon">
@@ -115,9 +120,8 @@ export function Header() {
                         <span className="sr-only">Open menu</span>
                     </Button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-[300px] p-4">
-                   <div className="flex flex-col h-full">
-                     <div className="mb-6">
+                <SheetContent side="right" className="w-[300px] p-4 flex flex-col">
+                   <div className="mb-6">
                         <SheetClose asChild>
                             <Link href="/" className="flex items-center gap-2 cursor-pointer" aria-label="Go to homepage">
                                 <BrainCircuit className="h-7 w-7 text-primary" />
@@ -126,7 +130,7 @@ export function Header() {
                         </SheetClose>
                     </div>
                     <Separator className="mb-4" />
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-3 flex-grow">
                       {isLoadingAuth ? (
                             <div className="flex justify-center items-center p-4">
                                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -163,7 +167,12 @@ export function Header() {
                             </>
                         )}
                     </div>
-                   </div>
+                     <div className="mt-auto pt-4 border-t border-border/50">
+                        <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Appearance</span>
+                        <ThemeToggleButton />
+                        </div>
+                    </div>
                 </SheetContent>
             </Sheet>
         </div>

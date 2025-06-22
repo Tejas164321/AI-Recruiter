@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import Image from "next/image";
-import { ArrowRight, CheckCircle, BarChartBig, ScanSearch, MessageSquarePlus, ShieldCheckIcon, Mail, Phone } from "lucide-react";
+import { ArrowRight, CheckCircle, BarChartBig, ScanSearch, MessageSquarePlus, ShieldCheckIcon, Mail, Phone, BrainCircuit } from "lucide-react";
 import { motion, useMotionValue, useTransform } from "framer-motion";
 import { useAuth } from "@/contexts/auth-context";
 import React, { useRef, useEffect, useState } from 'react';
@@ -295,7 +295,7 @@ export default function LandingPage() {
                   custom={feature.delay}
                   className="h-full"
                 >
-                  <Card className="shadow-lg h-full flex flex-col bg-card/50 backdrop-blur-sm border-border/20 transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-2xl dark:hover:shadow-[0_8px_30px_hsl(var(--primary)/0.25)] hover:shadow-black/20">
+                  <Card className="shadow-lg h-full flex flex-col bg-card/50 backdrop-blur-sm border-border/20 transition-all duration-300 ease-out hover:-translate-y-2 dark:hover:shadow-[0_8px_30px_hsl(var(--primary)/0.25)] light:hover:shadow-2xl light:hover:shadow-black/20">
                     <CardHeader className="pb-4">
                       <motion.div 
                         initial={{ opacity: 0, scale: 0.5 }}
@@ -380,24 +380,62 @@ export default function LandingPage() {
         </section>
       </main>
 
-      <footer className="flex flex-col gap-4 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t border-border bg-transparent">
-        <p className="text-xs text-muted-foreground text-center sm:text-left">&copy; {new Date().getFullYear()} ResumeRank AI. All rights reserved.</p>
-        <nav className="sm:ml-auto flex flex-col sm:flex-row items-center flex-wrap justify-center gap-x-6 gap-y-2">
-          <a href="mailto:tejas2382004@gmail.com" className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5">
-            <Mail className="h-4 w-4" />
-            tejas2382004@gmail.com
-          </a>
-          <a href="tel:+919960469732" className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5">
-            <Phone className="h-4 w-4" />
-            +91 9960469732
-          </a>
-          <Link href="/terms" className="text-xs text-muted-foreground hover:text-primary transition-colors" prefetch={false}>
-            Terms of Service
-          </Link>
-          <Link href="/privacy" className="text-xs text-muted-foreground hover:text-primary transition-colors" prefetch={false}>
-            Privacy Policy
-          </Link>
-        </nav>
+      <footer className="border-t border-border bg-background/50 text-foreground">
+        <div className="container mx-auto px-4 md:px-6 py-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Column 1: Brand and Copyright */}
+            <div className="space-y-4 text-center lg:text-left">
+                <Link href="/" className="flex items-center justify-center lg:justify-start gap-2">
+                <BrainCircuit className="h-7 w-7 text-primary" />
+                <span className="text-xl font-bold text-primary font-headline">ResumeRank AI</span>
+                </Link>
+                <p className="text-sm text-muted-foreground">
+                Streamlining recruitment with intelligent tools.
+                </p>
+                <p className="text-xs text-muted-foreground pt-2">
+                &copy; {new Date().getFullYear()} ResumeRank AI. All rights reserved.
+                </p>
+            </div>
+
+            {/* Column 2 & 3 wrapper for better mobile layout */}
+            <div className="col-span-1 lg:col-span-2 grid grid-cols-2 md:grid-cols-3 gap-8">
+                 {/* Legal Links */}
+                <div className="space-y-3 flex flex-col text-center sm:text-left">
+                    <h4 className="font-semibold uppercase tracking-wider text-sm">Legal</h4>
+                    <Link href="/terms" className="text-sm text-muted-foreground hover:text-primary transition-colors" prefetch={false}>
+                        Terms of Service
+                    </Link>
+                    <Link href="/privacy" className="text-sm text-muted-foreground hover:text-primary transition-colors" prefetch={false}>
+                        Privacy Policy
+                    </Link>
+                </div>
+
+                {/* Contact */}
+                <div className="space-y-3 flex flex-col text-center sm:text-left">
+                    <h4 className="font-semibold uppercase tracking-wider text-sm">Contact</h4>
+                    <a href="mailto:tejas2382004@gmail.com" className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center justify-center sm:justify-start gap-2">
+                        <Mail className="h-4 w-4" />
+                        Email Us
+                    </a>
+                    <a href="tel:+919960469732" className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center justify-center sm:justify-start gap-2">
+                        <Phone className="h-4 w-4" />
+                        Call Us
+                    </a>
+                </div>
+
+                {/* Navigation Links */}
+                <div className="space-y-3 flex flex-col text-center sm:text-left">
+                    <h4 className="font-semibold uppercase tracking-wider text-sm">Navigate</h4>
+                    <Link href="/#features" className="text-sm text-muted-foreground hover:text-primary transition-colors" prefetch={false}>
+                        Features
+                    </Link>
+                    <Link href={getStartedLink} className="text-sm text-muted-foreground hover:text-primary transition-colors" prefetch={false}>
+                        Get Started
+                    </Link>
+                </div>
+            </div>
+            </div>
+        </div>
       </footer>
     </div>
   );
