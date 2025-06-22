@@ -117,7 +117,7 @@ const HeroHeading = ({ text, specialText }: { text: string, specialText: string 
             onMouseLeave={() => {
                 mouse.set({x: Infinity, y: Infinity});
             }}
-            className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl font-headline"
+            className="text-3xl font-bold tracking-tight sm:text-4xl md:text-4xl lg:text-5xl font-headline"
             aria-label={text + specialText}
         >
             <AnimatedText text={text} mouse={mouse} />
@@ -381,9 +381,9 @@ export default function LandingPage() {
       </main>
 
       <footer className="border-t border-border bg-background/50 text-foreground">
-        <div className="container mx-auto flex flex-col items-center justify-between gap-4 px-4 py-6 md:flex-row md:px-6">
-          <div className="text-center md:text-left">
-            <Link href="/" className="flex items-center justify-center gap-2 md:justify-start">
+        <div className="container mx-auto flex flex-col items-center justify-between gap-4 px-4 py-6 sm:flex-row sm:px-6">
+          <div className="text-center sm:text-left">
+            <Link href="/" className="flex items-center justify-center gap-2 sm:justify-start">
               <BrainCircuit className="h-6 w-6 text-primary" />
               <span className="font-bold text-primary">ResumeRank AI</span>
             </Link>
@@ -391,24 +391,26 @@ export default function LandingPage() {
               &copy; {new Date().getFullYear()} ResumeRank AI. All rights reserved.
             </p>
           </div>
-          <nav className="flex flex-wrap items-center justify-center gap-4 text-sm font-medium md:gap-6">
-            <Link href="/terms" className="text-muted-foreground transition-colors hover:text-primary" prefetch={false}>
-              Terms
-            </Link>
-            <Link href="/privacy" className="text-muted-foreground transition-colors hover:text-primary" prefetch={false}>
-              Privacy
-            </Link>
-            <Link href="/#features" className="text-muted-foreground transition-colors hover:text-primary" prefetch={false}>
-              Features
-            </Link>
-          </nav>
-          <div className="flex items-center gap-4">
-            <a href="mailto:tejas2382004@gmail.com" aria-label="Email Us" className="text-muted-foreground hover:text-primary transition-colors">
-              <Mail className="h-5 w-5" />
-            </a>
-            <a href="tel:+919960469732" aria-label="Call Us" className="text-muted-foreground hover:text-primary transition-colors">
-              <Phone className="h-5 w-5" />
-            </a>
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:gap-6">
+              <nav className="flex flex-wrap items-center justify-center gap-4 text-sm font-medium sm:gap-6">
+                <Link href="/terms" className="text-muted-foreground transition-colors hover:text-primary" prefetch={false}>
+                Terms
+                </Link>
+                <Link href="/privacy" className="text-muted-foreground transition-colors hover:text-primary" prefetch={false}>
+                Privacy
+                </Link>
+                <Link href="/#features" className="text-muted-foreground transition-colors hover:text-primary" prefetch={false}>
+                Features
+                </Link>
+              </nav>
+              <div className="flex items-center gap-4">
+                <a href="mailto:tejas2382004@gmail.com" aria-label="Email Us" className="text-muted-foreground hover:text-primary transition-colors">
+                <Mail className="h-5 w-5" />
+                </a>
+                <a href="tel:+919960469732" aria-label="Call Us" className="text-muted-foreground hover:text-primary transition-colors">
+                <Phone className="h-5 w-5" />
+                </a>
+              </div>
           </div>
         </div>
       </footer>
