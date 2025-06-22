@@ -100,8 +100,8 @@ body {
 
 /* Special class for the landing page's unique background */
 .landing-page-gradient {
-  background-color: hsl(var(--background));
-  background-image: radial-gradient(ellipse 50% 70% at 25% 50%, hsla(var(--primary), 0.15), transparent);
+  background-color: #fbfdff; /* A very light, cool off-white for light mode */
+  background-image: radial-gradient(ellipse 50% 70% at 25% 50%, hsla(var(--primary), 0.20), transparent);
 }
 
 .dark .landing-page-gradient {
