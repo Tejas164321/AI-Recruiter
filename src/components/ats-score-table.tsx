@@ -68,7 +68,7 @@ export function AtsScoreTable({ results, onViewInsights, onDelete }: AtsScoreTab
                     <span>Analyzed on {result.createdAt instanceof Timestamp ? result.createdAt.toDate().toLocaleDateString() : 'N/A'}</span>
                 </div>
             </CardContent>
-            <CardFooter className="flex justify-between items-center gap-2">
+            <CardFooter className="flex justify-end items-center gap-2">
                  <Button
                     variant="outline"
                     size="sm"

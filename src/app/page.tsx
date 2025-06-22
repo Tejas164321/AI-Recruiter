@@ -117,7 +117,7 @@ const HeroHeading = ({ text, specialText }: { text: string, specialText: string 
             onMouseLeave={() => {
                 mouse.set({x: Infinity, y: Infinity});
             }}
-            className="text-4xl font-bold tracking-tight sm:text-5xl xl:text-6xl/none font-headline"
+            className="text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl xl:text-6xl/none font-headline"
             aria-label={text + specialText}
         >
             <AnimatedText text={text} mouse={mouse} />
@@ -295,7 +295,7 @@ export default function LandingPage() {
                   custom={feature.delay}
                   className="h-full"
                 >
-                  <Card className="shadow-lg h-full flex flex-col bg-card/50 backdrop-blur-sm border-border/20 transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-2xl hover:shadow-black/20 dark:hover:shadow-[0_8px_30px_hsl(var(--primary)/0.25)]">
+                  <Card className="shadow-lg h-full flex flex-col bg-card/50 backdrop-blur-sm border-border/20 transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-2xl dark:hover:shadow-[0_8px_30px_hsl(var(--primary)/0.25)] hover:shadow-black/20">
                     <CardHeader className="pb-4">
                       <motion.div 
                         initial={{ opacity: 0, scale: 0.5 }}
