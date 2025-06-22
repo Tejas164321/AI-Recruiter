@@ -1,5 +1,6 @@
 
 import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
 import './globals.css';
 // UI and Layout Components
 import { MainLayout } from '@/components/layout/main-layout';
@@ -8,6 +9,17 @@ import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 import { LoadingProvider } from "@/contexts/loading-context"; 
 import { AuthProvider } from "@/contexts/auth-context";
+import { cn } from '@/lib/utils';
+
+/**
+ * Initializes the Inter font with specified subsets and a CSS variable.
+ * This is the modern, optimized approach for handling fonts in Next.js.
+ */
+const inter = Inter({ 
+  subsets: ['latin'],
+  variable: '--font-inter', // Defines a CSS variable for the font
+});
+
 
 /**
  * Metadata for the application.
@@ -33,13 +45,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Preconnect to Google Fonts for performance */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* Import the Inter font */}
-        <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet" />
+        {/* Font link tags are no longer needed as we are using next/font */}
       </head>
-      <body className="font-body antialiased">
+      <body className={cn(inter.variable, "font-body antialiased")}>
         {/* ThemeProvider manages light/dark mode */}
         <ThemeProvider
           attribute="class"

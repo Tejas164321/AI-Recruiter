@@ -25,10 +25,11 @@ export default {
     },
     extend: {
       // Custom font families for consistent typography.
+      // The 'body' and 'headline' fonts use the CSS variable defined by next/font in layout.tsx.
       fontFamily: {
-        body: ['Inter', 'sans-serif'], // Main body font
-        headline: ['Inter', 'sans-serif'], // Font for headings
-        code: ['monospace', 'monospace'], // Fallback for code blocks
+        body: ['var(--font-inter)', 'sans-serif'],
+        headline: ['var(--font-inter)', 'sans-serif'],
+        code: ['monospace', 'monospace'],
       },
       // Custom color palette using CSS variables defined in globals.css.
       // This allows for easy theming (light/dark mode).
