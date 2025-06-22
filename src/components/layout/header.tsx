@@ -10,6 +10,7 @@ import { signOut } from "firebase/auth";
 import { auth as firebaseAuthModule } from "@/lib/firebase/config"; // Renamed import
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { motion } from "framer-motion";
 
 export function Header() {
   const { currentUser, isLoadingAuth } = useAuth();
@@ -48,26 +49,36 @@ export function Header() {
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           ) : currentUser ? (
             <>
-              <Button variant="outline" asChild>
-                <Link href="/dashboard">
-                  <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
-                </Link>
-              </Button>
-              <Button variant="ghost" onClick={handleSignOut} disabled={!firebaseAuthModule}>
-                <LogOut className="mr-2 h-4 w-4" /> Sign Out
-              </Button>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button variant="outline" asChild>
+                  <Link href="/dashboard">
+                    <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
+                  </Link>
+                </Button>
+              </motion.div>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button variant="ghost" onClick={handleSignOut} disabled={!firebaseAuthModule}>
+                  <LogOut className="mr-2 h-4 w-4" /> Sign Out
+                </Button>
+              </motion.div>
             </>
           ) : (
             <>
-              <Button variant="ghost" asChild disabled={!firebaseAuthModule}>
-                <Link href="/login">Sign In</Link>
-              </Button>
-              <Button asChild disabled={!firebaseAuthModule}>
-                <Link href="/signup">Sign Up</Link>
-              </Button>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button variant="ghost" asChild disabled={!firebaseAuthModule}>
+                  <Link href="/login">Sign In</Link>
+                </Button>
+              </motion.div>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button asChild disabled={!firebaseAuthModule}>
+                  <Link href="/signup">Sign Up</Link>
+                </Button>
+              </motion.div>
             </>
           )}
-          <ThemeToggleButton />
+          <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+            <ThemeToggleButton />
+          </motion.div>
         </nav>
       </div>
     </header>

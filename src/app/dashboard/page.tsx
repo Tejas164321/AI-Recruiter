@@ -68,6 +68,7 @@ export default function DashboardPage() {
         <motion.div
           initial="initial"
           whileHover="hover"
+          whileTap={{ scale: 0.98 }}
           variants={cardHoverVariants}
         >
           <Link href="/resume-ranker" onClick={handleLinkClick} className="block group">
@@ -92,6 +93,7 @@ export default function DashboardPage() {
           <motion.div
             initial="initial"
             whileHover="hover"
+            whileTap={{ scale: 0.98 }}
             variants={cardHoverVariants}
           >
             <Link href="/ats-score-finder" onClick={handleLinkClick} className="block group">
@@ -115,6 +117,7 @@ export default function DashboardPage() {
           <motion.div
             initial="initial"
             whileHover="hover"
+            whileTap={{ scale: 0.98 }}
             variants={cardHoverVariants}
           >
             <Link href="/interview-question-generator" onClick={handleLinkClick} passHref className="block group"> 
