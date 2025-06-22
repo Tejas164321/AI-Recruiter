@@ -245,7 +245,7 @@ export default function LandingPage() {
                   src="/hero-hologram.png"
                   width="600"
                   height="400"
-                  alt="A futuristic 3D isometric illustration of a business professional analyzing resumes on a holographic interface, with a glowing animated border."
+                  alt="A futuristic 3D isometric illustration of a business professional analyzing resumes on a holographic interface, with a soft, glowing animated border that radiates light as it moves."
                   className="mx-auto block rounded-[1.375rem] overflow-hidden object-cover sm:w-full lg:order-last"
                   priority
                 />
@@ -409,25 +409,6 @@ export default function LandingPage() {
           </Link>
         </nav>
       </footer>
-    </div>
-  );
-}
-
-// Placeholder pages for terms and privacy
-export function TermsPage() {
-  return (
-    <div className="container mx-auto p-8">
-      <h1 className="text-2xl font-bold">Terms of Service</h1>
-      <p className="mt-4">Placeholder for Terms of Service.</p>
-    </div>
-  );
-}
-
-export function PrivacyPage() {
-  return (
-    <div className="container mx-auto p-8">
-      <h1 className="text-2xl font-bold">Privacy Policy</h1>
-      <p className="mt-4">Placeholder for Privacy Policy.</p>
     </div>
   );
 }
