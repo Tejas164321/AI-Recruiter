@@ -17,7 +17,7 @@ import {
   deleteDoc,
 } from 'firebase/firestore';
 
-import type { JobScreeningResult, AtsScoreResult, InterviewQuestionsSet } from '@/lib/types';
+import type { JobScreeningResult, AtsScoreResult } from '@/lib/types';
 
 if (!db) {
   console.warn("Firestore service (db) is not available. Firestore operations will fail.");
@@ -159,65 +159,4 @@ export const deleteAllAtsScoreResults = async (): Promise<void> => {
 
   // Commit all batches
   await Promise.all(batches.map(batch => batch.commit()));
-};
-
-
-// --- InterviewQuestionsSet Functions ---
-
-export const saveInterviewQuestionsSet = async (setData: Omit<InterviewQuestionsSet, 'id' | 'userId' | 'createdAt'>): Promise<InterviewQuestionsSet> => {
-  if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
-  const userId = auth.currentUser.uid;
-
-  // Check if a question set for this roleTitle already exists for this user
-  const q = query(
-    collection(db, "interviewQuestionsSets"),
-    where("userId", "==", userId),
-    where("roleTitle", "==", setData.roleTitle),
-    limit(1)
-  );
-  const existingDocs = await getDocs(q);
-
-  if (!existingDocs.empty) {
-    const docToUpdate = existingDocs.docs[0];
-    await setDoc(doc(db, "interviewQuestionsSets", docToUpdate.id), {
-      ...setData,
-      userId,
-      createdAt: serverTimestamp(), // or update an 'updatedAt' field
-    }, { merge: true });
-    return { ...setData, id: docToUpdate.id, userId, createdAt: Timestamp.now() } as InterviewQuestionsSet;
-  } else {
-    const docRef = await addDoc(collection(db, "interviewQuestionsSets"), {
-      ...setData,
-      userId,
-      createdAt: serverTimestamp(),
-    });
-    return { ...setData, id: docRef.id, userId, createdAt: Timestamp.now() } as InterviewQuestionsSet;
-  }
-};
-
-export const getInterviewQuestionsSetByTitle = async (roleTitle: string): Promise<InterviewQuestionsSet | null> => {
-  if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
-  const userId = auth.currentUser.uid;
-  const q = query(
-    collection(db, "interviewQuestionsSets"), 
-    where("userId", "==", userId), 
-    where("roleTitle", "==", roleTitle),
-    orderBy("createdAt", "desc"), 
-    limit(1)
-  );
-  const querySnapshot = await getDocs(q);
-  if (querySnapshot.empty) {
-    return null;
-  }
-  const docData = querySnapshot.docs[0].data();
-  return { id: querySnapshot.docs[0].id, ...docData } as InterviewQuestionsSet;
-};
-
-// It might be useful to also have a function to get all sets for a user if you build a "history" view
-export const getAllInterviewQuestionsSetsForUser = async (): Promise<InterviewQuestionsSet[]> => {
-  if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
-  const userId = auth.currentUser.uid;
-  const q = query(collection(db, "interviewQuestionsSets"), where("userId", "==", userId), orderBy("createdAt", "desc"));
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InterviewQuestionsSet));
 };

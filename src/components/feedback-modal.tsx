@@ -22,16 +22,9 @@ interface FeedbackModalProps {
   isOpen: boolean;
   onClose: () => void;
   candidate: RankedCandidate | null;
-  jobDescriptionDataUri: string | null; 
 }
 
-export function FeedbackModal({ isOpen, onClose, candidate, jobDescriptionDataUri }: FeedbackModalProps) {
-  
-  React.useEffect(() => {
-    // No specific reset needed here now that question generation is removed
-  }, [isOpen, candidate?.id, jobDescriptionDataUri]);
-
-
+export function FeedbackModal({ isOpen, onClose, candidate }: FeedbackModalProps) {
   if (!candidate) return null;
 
   const getScoreBadge = (score: number, iconType: "match" | "ats" = "match") => {

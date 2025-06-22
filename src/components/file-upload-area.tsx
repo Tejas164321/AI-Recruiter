@@ -7,7 +7,7 @@ import { useDropzone, type Accept, type FileRejection } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast"; // Import useToast
+import { useToast } from "@/hooks/use-toast";
 
 interface FileUploadAreaProps {
   onFilesUpload: (files: File[]) => void;
@@ -15,7 +15,9 @@ interface FileUploadAreaProps {
   multiple?: boolean;
   label: string;
   id: string;
-  maxSizeInBytes?: number; // New prop for max file size
+  maxSizeInBytes?: number;
+  showFileList?: boolean; // New prop to control visibility of the file list
+  dropzoneClassName?: string; // New prop to style the dropzone area
 }
 
 export function FileUploadArea({
@@ -24,14 +26,16 @@ export function FileUploadArea({
   multiple = false,
   label,
   id,
-  maxSizeInBytes, // Destructure new prop
+  maxSizeInBytes,
+  showFileList = true, // Default to true for backward compatibility
+  dropzoneClassName,
 }: FileUploadAreaProps) {
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-  const { toast } = useToast(); // Initialize useToast
+  const { toast } = useToast();
 
   const onDrop = useCallback(
     (acceptedFiles: File[], fileRejections: FileRejection[]) => {
-      // Handle rejected files (e.g., due to size)
+      // Handle rejected files (e.g., due to size or type)
       fileRejections.forEach(({ file, errors }) => {
         errors.forEach((error) => {
           if (error.code === "file-too-large") {
@@ -53,26 +57,37 @@ export function FileUploadArea({
       // Process accepted files
       if (acceptedFiles.length > 0) {
         const newFiles = multiple ? [...uploadedFiles, ...acceptedFiles] : acceptedFiles;
+        // Ensure files are unique by name, just in case
         const uniqueNewFiles = newFiles.filter(
           (file, index, self) => index === self.findIndex((f) => f.name === file.name)
         );
-        setUploadedFiles(uniqueNewFiles);
+
+        // Always call the parent callback with the newly accepted/updated file list
         onFilesUpload(uniqueNewFiles);
+
+        // Only update the internal state for display if the file list is shown
+        if (showFileList) {
+          setUploadedFiles(uniqueNewFiles);
+        } else {
+            // If the list isn't shown, don't keep internal state
+            setUploadedFiles([]);
+        }
       }
     },
-    [onFilesUpload, multiple, uploadedFiles, toast, maxSizeInBytes]
+    [onFilesUpload, multiple, uploadedFiles, toast, maxSizeInBytes, showFileList]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: acceptedFileTypes,
     multiple,
-    maxSize: maxSizeInBytes, // Pass maxSize to useDropzone
+    maxSize: maxSizeInBytes,
   });
 
   const removeFile = (fileName: string) => {
     const newFiles = uploadedFiles.filter((file) => file.name !== fileName);
     setUploadedFiles(newFiles);
+    // Inform the parent component that the file list has changed
     onFilesUpload(newFiles);
   };
 
@@ -83,7 +98,8 @@ export function FileUploadArea({
         className={cn(
           "flex flex-col items-center justify-center w-full p-8 border-2 border-dashed rounded-lg cursor-pointer hover:border-primary/70 transition-colors",
           isDragActive ? "border-primary bg-primary/10" : "border-border",
-          "bg-card"
+          "bg-card",
+          dropzoneClassName // Apply custom class to the dropzone
         )}
         aria-labelledby={`${id}-label`}
       >
@@ -97,7 +113,7 @@ export function FileUploadArea({
           <p className="mt-2 text-sm text-primary">Drop the files here ...</p>
         )}
       </div>
-      {uploadedFiles.length > 0 && (
+      {showFileList && uploadedFiles.length > 0 && (
         <div className="space-y-2">
           <h4 className="text-sm font-medium text-foreground">Uploaded files:</h4>
           <ScrollArea className="max-h-28 w-full">
