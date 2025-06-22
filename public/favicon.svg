@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24">
+    <style>
+        path {
+            stroke: #257eff; /* Light mode: Saturated Sky Blue */
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+        }
+        @media (prefers-color-scheme: dark) {
+            path {
+                stroke: #4d94ff; /* Dark mode: Brighter Electric Blue */
+            }
+        }
+    </style>
+    <g>
+      <path d="M12 5a3 3 0 1 0-5.9-1.4"/>
+      <path d="M12 5a3 3 0 1 0 5.9-1.4"/>
+      <path d="M15 13a3 3 0 1 0-5.9-1.4"/>
+      <path d="M15 13a3 3 0 1 0 5.9-1.4"/>
+      <path d="M9 13a3 3 0 1 0-5.9-1.4"/>
+      <path d="M9 13a3 3 0 1 0 5.9-1.4"/>
+      <path d="M12 21a3 3 0 1 0-5.9-1.4"/>
+      <path d="M12 21a3 3 0 1 0 5.9-1.4"/>
+      <path d="M12 5v3.5"/>
+      <path d="M9 8h6"/>
+      <path d="M15 8v3.5"/>
+      <path d="M9 8v3.5"/>
+      <path d="M12 13v3.5"/>
+      <path d="M15 20v-3.5"/>
+      <path d="M9 20v-3.5"/>
+    </g>
+</svg>

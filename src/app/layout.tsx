@@ -28,6 +28,14 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'ResumeRank AI',
   description: 'AI-Powered Resume Screening and Ranking',
+  icons: {
+    // Defines the icon for the browser tab (favicon).
+    // Using an SVG allows for a scalable and theme-aware icon.
+    icon: {
+      url: "/favicon.svg",
+      type: "image/svg+xml",
+    },
+  },
 };
 
 /**
