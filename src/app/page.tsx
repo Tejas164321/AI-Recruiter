@@ -40,12 +40,12 @@ const itemVariants = {
 const cardHoverVariants = {
   hover: {
     y: -8,
-    boxShadow: "0px 20px 40px -10px hsl(var(--primary)/0.3)", 
+    boxShadow: "0px 20px 45px rgba(0, 0, 0, 0.3)",
     transition: { type: "spring", stiffness: 300, damping: 15 }
   },
   initial: {
     y: 0,
-    boxShadow: "0px 5px 15px hsl(var(--primary)/0.0)"
+    boxShadow: "0px 5px 15px rgba(0, 0, 0, 0.0)"
   }
 };
 
