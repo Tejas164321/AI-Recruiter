@@ -2,7 +2,7 @@
 
 An AI-powered suite designed to streamline and revolutionize your recruitment workflow.
 
-![ResumeRank AI Hero](https://placehold.co/1200x630.png)
+![ResumeRank AI Hero](./public/hero-hologram.png)
 
 ## 📝 Overview
 
