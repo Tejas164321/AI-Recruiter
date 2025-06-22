@@ -295,7 +295,7 @@ export default function LandingPage() {
                   custom={feature.delay}
                   className="h-full"
                 >
-                  <Card className="shadow-lg h-full flex flex-col bg-card/50 backdrop-blur-sm border-border/20 transition-all duration-300 ease-out hover:-translate-y-2 dark:hover:shadow-[0_8px_30px_hsl(var(--primary)/0.25)] light:hover:shadow-2xl light:hover:shadow-black/20">
+                  <Card className="shadow-lg h-full flex flex-col bg-card/50 backdrop-blur-sm border-border/20 transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-[0_8px_30px_hsl(var(--primary)/0.25)] dark:hover:shadow-[0_8px_30px_hsl(var(--primary)/0.25)] light:hover:shadow-2xl light:hover:shadow-black/20">
                     <CardHeader className="pb-4">
                       <motion.div 
                         initial={{ opacity: 0, scale: 0.5 }}
@@ -381,60 +381,35 @@ export default function LandingPage() {
       </main>
 
       <footer className="border-t border-border bg-background/50 text-foreground">
-        <div className="container mx-auto px-4 md:px-6 py-8">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Column 1: Brand and Copyright */}
-            <div className="space-y-4 text-center lg:text-left">
-                <Link href="/" className="flex items-center justify-center lg:justify-start gap-2">
-                <BrainCircuit className="h-7 w-7 text-primary" />
-                <span className="text-xl font-bold text-primary font-headline">ResumeRank AI</span>
-                </Link>
-                <p className="text-sm text-muted-foreground">
-                Streamlining recruitment with intelligent tools.
-                </p>
-                <p className="text-xs text-muted-foreground pt-2">
-                &copy; {new Date().getFullYear()} ResumeRank AI. All rights reserved.
-                </p>
-            </div>
-
-            {/* Column 2 & 3 wrapper for better mobile layout */}
-            <div className="col-span-1 lg:col-span-2 grid grid-cols-2 md:grid-cols-3 gap-8">
-                 {/* Legal Links */}
-                <div className="space-y-3 flex flex-col text-center sm:text-left">
-                    <h4 className="font-semibold uppercase tracking-wider text-sm">Legal</h4>
-                    <Link href="/terms" className="text-sm text-muted-foreground hover:text-primary transition-colors" prefetch={false}>
-                        Terms of Service
-                    </Link>
-                    <Link href="/privacy" className="text-sm text-muted-foreground hover:text-primary transition-colors" prefetch={false}>
-                        Privacy Policy
-                    </Link>
-                </div>
-
-                {/* Contact */}
-                <div className="space-y-3 flex flex-col text-center sm:text-left">
-                    <h4 className="font-semibold uppercase tracking-wider text-sm">Contact</h4>
-                    <a href="mailto:tejas2382004@gmail.com" className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center justify-center sm:justify-start gap-2">
-                        <Mail className="h-4 w-4" />
-                        Email Us
-                    </a>
-                    <a href="tel:+919960469732" className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center justify-center sm:justify-start gap-2">
-                        <Phone className="h-4 w-4" />
-                        Call Us
-                    </a>
-                </div>
-
-                {/* Navigation Links */}
-                <div className="space-y-3 flex flex-col text-center sm:text-left">
-                    <h4 className="font-semibold uppercase tracking-wider text-sm">Navigate</h4>
-                    <Link href="/#features" className="text-sm text-muted-foreground hover:text-primary transition-colors" prefetch={false}>
-                        Features
-                    </Link>
-                    <Link href={getStartedLink} className="text-sm text-muted-foreground hover:text-primary transition-colors" prefetch={false}>
-                        Get Started
-                    </Link>
-                </div>
-            </div>
-            </div>
+        <div className="container mx-auto flex flex-col items-center justify-between gap-4 px-4 py-6 md:flex-row md:px-6">
+          <div className="text-center md:text-left">
+            <Link href="/" className="flex items-center justify-center gap-2 md:justify-start">
+              <BrainCircuit className="h-6 w-6 text-primary" />
+              <span className="font-bold text-primary">ResumeRank AI</span>
+            </Link>
+            <p className="mt-2 text-xs text-muted-foreground">
+              &copy; {new Date().getFullYear()} ResumeRank AI. All rights reserved.
+            </p>
+          </div>
+          <nav className="flex flex-wrap items-center justify-center gap-4 text-sm font-medium md:gap-6">
+            <Link href="/terms" className="text-muted-foreground transition-colors hover:text-primary" prefetch={false}>
+              Terms
+            </Link>
+            <Link href="/privacy" className="text-muted-foreground transition-colors hover:text-primary" prefetch={false}>
+              Privacy
+            </Link>
+            <Link href="/#features" className="text-muted-foreground transition-colors hover:text-primary" prefetch={false}>
+              Features
+            </Link>
+          </nav>
+          <div className="flex items-center gap-4">
+            <a href="mailto:tejas2382004@gmail.com" aria-label="Email Us" className="text-muted-foreground hover:text-primary transition-colors">
+              <Mail className="h-5 w-5" />
+            </a>
+            <a href="tel:+919960469732" aria-label="Call Us" className="text-muted-foreground hover:text-primary transition-colors">
+              <Phone className="h-5 w-5" />
+            </a>
+          </div>
         </div>
       </footer>
     </div>
