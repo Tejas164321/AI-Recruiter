@@ -239,16 +239,18 @@ export default function LandingPage() {
                 initial={{ opacity: 0, scale: 0.8, y: 50 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 transition={{ type: 'spring', stiffness: 100, damping: 20, delay: 0.3 }}
-                className="relative sparkle-border-container"
+                className="relative glowing-btn rounded-3xl"
               >
-                <Image
-                  src="/hero-hologram.png"
-                  width="600"
-                  height="400"
-                  alt="A futuristic 3D isometric illustration of a business professional analyzing resumes on a holographic interface, with a soft, glowing animated border that radiates light as it moves."
-                  className="mx-auto block rounded-[1.375rem] overflow-hidden object-cover sm:w-full lg:order-last"
-                  priority
-                />
+                <div className="sparkle-border-container">
+                  <Image
+                    src="/hero-hologram.png"
+                    width="600"
+                    height="400"
+                    alt="A futuristic 3D isometric illustration of a business professional analyzing resumes on a holographic interface, with a soft, glowing animated border that radiates light as it moves."
+                    className="mx-auto block rounded-[1.375rem] overflow-hidden object-cover sm:w-full lg:order-last"
+                    priority
+                  />
+                </div>
               </motion.div>
             </div>
           </div>

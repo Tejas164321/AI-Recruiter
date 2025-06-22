@@ -8,72 +8,53 @@ body {
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11.2%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11.2%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11.2%;
-
-    --primary: 217 91% 60%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222 47% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215 20% 65.1%;
-
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
     --accent: 163 70% 45%;
     --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 217 91% 60%;
-
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 217.2 91.2% 59.8%;
+    --radius: 0.5rem;
     --chart-1: 220 70% 55%;
     --chart-2: 160 60% 50%;
     --chart-3: 30 80% 60%;
     --chart-4: 280 65% 65%;
     --chart-5: 340 75% 60%;
-    --radius: 0.5rem;
   }
-
-  .dark {
-    --background: 240 10% 3.9%; /* AMOLED Black */
-    --foreground: 210 40% 98%; /* Soft White */
-
-    --card: 240 10% 3.9%; /* Match background for seamless look */
-    --card-foreground: 210 40% 98%;
-
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 217 91% 60%; /* Electric Blue */
-    --primary-foreground: 222 47% 11.2%; /* Dark Blue */
-
-    --secondary: 240 3.7% 15.9%; /* Darker secondary */
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 215 20% 65.1%;
-
+  .light {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
     --accent: 163 70% 45%;
-    --accent-foreground: 160 100% 10%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 217.2 91.2% 59.8%;
     --radius: 0.5rem;
-
     --chart-1: 220 70% 55%;
     --chart-2: 160 60% 50%;
     --chart-3: 30 80% 60%;
@@ -93,15 +74,14 @@ body {
 
 .glowing-btn {
   @apply relative;
-  -webkit-box-shadow: 0 0 40px theme('colors.primary.DEFAULT');
-  -moz-box-shadow: 0 0 40px theme('colors.primary.DEFAULT');
-  box-shadow: 0 0 40px theme('colors.primary.DEFAULT');
+  /* A multi-layered shadow for a long, smooth, faded glow effect */
+  box-shadow: 0px 4px 20px 0px hsl(var(--primary) / 0.15), 0px 10px 60px 0px hsl(var(--primary) / 0.2);
 }
 
 /* Special class for the landing page's unique background */
 .landing-page-gradient {
   background-color: #fbfdff; /* A very light, cool off-white for light mode */
-  background-image: radial-gradient(ellipse 50% 70% at 25% 50%, hsla(var(--primary), 0.20), transparent);
+  background-image: radial-gradient(ellipse 50% 70% at 25% 50%, hsl(var(--primary), 0.20), transparent);
 }
 
 .dark .landing-page-gradient {
