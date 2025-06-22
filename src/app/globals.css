@@ -10,24 +10,23 @@ body {
   :root {
     --background: 0 0% 0%; /* Pure Black for AMOLED */
     --foreground: 210 40% 98%;
-    --card: 0 0% 5%; /* Very dark gray, almost black */
+    --card: 0 0% 3%; /* Darker gray for cards */
     --card-foreground: 210 40% 98%;
-    --popover: 0 0% 5%; /* Consistent with cards */
+    --popover: 0 0% 3%; /* Darker gray for popovers */
     --popover-foreground: 210 40% 98%;
     --primary: 215 100% 60%; /* Saturated Sky Blue (Electric Blue) */
     --primary-foreground: 210 40% 98%;
-    --secondary: 0 0% 12%; /* Dark gray for secondary elements */
+    --secondary: 0 0% 8%; /* Darker gray for secondary elements */
     --secondary-foreground: 210 40% 98%;
-    --muted: 0 0% 12%; /* Dark gray for muted elements */
+    --muted: 0 0% 8%; /* Darker gray for muted elements */
     --muted-foreground: 215 20.2% 65.1%;
     --accent: 163 70% 45%; /* Teal-green */
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 0 0% 15%; /* Lighter gray for borders */
-    --input: 0 0% 15%; /* Consistent with borders */
+    --border: 0 0% 10%; /* Darker gray for borders */
+    --input: 0 0% 10%; /* Darker gray for inputs */
     --ring: 215 100% 60%;
-    --radius: 0.5rem;
     --chart-1: 220 70% 55%;
     --chart-2: 160 60% 50%;
     --chart-3: 30 80% 60%;
@@ -75,7 +74,7 @@ body {
 .glowing-btn {
   @apply relative;
   /* A multi-layered shadow for a long, smooth, faded black shadow effect */
-  box-shadow: 0 25px 50px rgba(0,0,0,0.35), 0 45px 80px rgba(0,0,0,0.25);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 /* Special class for the landing page's unique background */
