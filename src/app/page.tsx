@@ -224,7 +224,7 @@ export default function LandingPage() {
                     </Button>
                   </motion.div>
                    <motion.div whileHover={{ scale: 1.05, y: -2, transition: {type: 'spring', stiffness: 300} }} whileTap={{ scale: 0.95 }}>
-                     <Button variant="secondary" size="lg" asChild className="w-full min-[400px]:w-auto">
+                     <Button variant="outline" size="lg" asChild className="w-full min-[400px]:w-auto">
                         <Link
                           href="/#features"
                           prefetch={false}
@@ -273,7 +273,7 @@ export default function LandingPage() {
                   whileInView={{ opacity:1, scale:1 }}
                   viewport={{ once: true, amount: 0.3 }}
                   transition={{ duration:0.5, delay:0.3 }}
-                  className="inline-block rounded-lg bg-muted px-3 py-1 text-sm"
+                  className="inline-block rounded-lg bg-primary/10 text-primary px-3 py-1 text-sm font-medium"
                 >
                   Key Features
                 </motion.div>
@@ -422,5 +422,7 @@ export default function LandingPage() {
     </div>
   );
 }
+
+    
 
     
