@@ -363,7 +363,7 @@ export default function AtsScoreFinderPage() {
             {!isProcessing && atsResults.length > 0 && (
               <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
                 <CardHeader>
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center">
                      <div className="flex-1">
                       <CardTitle className="text-xl font-headline text-primary flex items-center">
                         <BrainCircuit className="w-6 h-6 mr-2" /> Saved ATS Score Results

@@ -38,13 +38,13 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center">
-        <Link href="/" className="mr-auto flex items-center cursor-pointer" aria-label="Go to homepage">
+      <div className="container flex h-auto min-h-16 items-center justify-between flex-wrap gap-y-2 py-2">
+        <Link href="/" className="flex items-center cursor-pointer mr-4" aria-label="Go to homepage">
           <BrainCircuit className="h-8 w-8 mr-2 text-primary" />
           <span className="text-2xl font-bold text-primary font-headline">ResumeRank AI</span>
         </Link>
         
-        <nav className="flex items-center space-x-2 md:space-x-4">
+        <nav className="flex items-center flex-wrap justify-end gap-2 md:gap-4">
           {isLoadingAuth ? (
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           ) : currentUser ? (

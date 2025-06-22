@@ -284,7 +284,7 @@ export default function LandingPage() {
                 </motion.p>
               </div>
             </motion.div>
-            <div className="mx-auto grid max-w-5xl items-stretch gap-8 sm:grid-cols-2 md:gap-12 lg:grid-cols-2 xl:grid-cols-4 lg:max-w-none mt-12">
+            <div className="mx-auto grid max-w-5xl items-stretch gap-8 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 lg:max-w-none mt-12">
               {features.map((feature, index) => (
                 <motion.div
                   key={index}
@@ -295,7 +295,7 @@ export default function LandingPage() {
                   custom={feature.delay}
                   className="h-full"
                 >
-                  <Card className="shadow-lg h-full flex flex-col bg-card/50 backdrop-blur-sm border-border/20 transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-2xl dark:hover:shadow-[0_8px_30px_hsl(var(--primary)/0.25)]">
+                  <Card className="shadow-lg h-full flex flex-col bg-card/50 backdrop-blur-sm border-border/20 transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-2xl hover:shadow-black/20 dark:hover:shadow-[0_8px_30px_hsl(var(--primary)/0.25)]">
                     <CardHeader className="pb-4">
                       <motion.div 
                         initial={{ opacity: 0, scale: 0.5 }}
@@ -380,9 +380,9 @@ export default function LandingPage() {
         </section>
       </main>
 
-      <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t border-border bg-transparent">
-        <p className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} ResumeRank AI. All rights reserved.</p>
-        <nav className="sm:ml-auto flex items-center flex-wrap justify-center gap-4 sm:gap-6">
+      <footer className="flex flex-col gap-4 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t border-border bg-transparent">
+        <p className="text-xs text-muted-foreground text-center sm:text-left">&copy; {new Date().getFullYear()} ResumeRank AI. All rights reserved.</p>
+        <nav className="sm:ml-auto flex flex-col sm:flex-row items-center flex-wrap justify-center gap-x-6 gap-y-2">
           <a href="mailto:tejas2382004@gmail.com" className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5">
             <Mail className="h-4 w-4" />
             tejas2382004@gmail.com
@@ -402,5 +402,3 @@ export default function LandingPage() {
     </div>
   );
 }
-
-    

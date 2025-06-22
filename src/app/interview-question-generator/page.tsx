@@ -405,8 +405,8 @@ export default function InterviewQuestionGeneratorPage() {
 
           <Card className="p-6 shadow-lg">
             <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="session-select" className="text-sm font-medium whitespace-nowrap">Current JD Session:</Label>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <Label htmlFor="session-select" className="text-sm font-medium whitespace-nowrap self-center">Current JD Session:</Label>
                 <Select value={selectedEntryId || ''} onValueChange={setSelectedEntryId} disabled={isProcessing}>
                   <SelectTrigger id="session-select" className="flex-grow">
                     <SelectValue placeholder="Select a job description..." />
@@ -419,12 +419,14 @@ export default function InterviewQuestionGeneratorPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Button variant="outline" size="icon" onClick={handleAddNewEntry} disabled={isProcessing} aria-label="Add new job description session">
-                  <PlusCircle className="w-5 h-5"/>
-                </Button>
-                <Button variant="outline" size="icon" onClick={handleDeleteEntry} disabled={isProcessing || sessionEntries.length <= 1} aria-label="Delete current job description session">
-                  <Trash2 className="w-5 h-5"/>
-                </Button>
+                <div className="flex gap-2">
+                    <Button variant="outline" size="icon" onClick={handleAddNewEntry} disabled={isProcessing} aria-label="Add new job description session" className="flex-grow sm:flex-grow-0">
+                    <PlusCircle className="w-5 h-5"/>
+                    </Button>
+                    <Button variant="outline" size="icon" onClick={handleDeleteEntry} disabled={isProcessing || sessionEntries.length <= 1} aria-label="Delete current job description session" className="flex-grow sm:flex-grow-0">
+                    <Trash2 className="w-5 h-5"/>
+                    </Button>
+                </div>
               </div>
 
               <Separator />
@@ -471,7 +473,7 @@ export default function InterviewQuestionGeneratorPage() {
               <div className="space-y-6 mt-8">
                 <div className="p-4 bg-background">
                   <Separator />
-                  <div className="flex justify-between items-center py-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-center py-4 gap-4">
                     <h2 className="text-xl font-semibold text-foreground font-headline text-center md:text-left">
                       Interview Questions for {currentEntry.questions.roleTitle ? <span className="text-primary">{currentEntry.questions.roleTitle}</span> : 'the Provided Job Description'}
                     </h2>
