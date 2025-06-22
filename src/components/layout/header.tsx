@@ -54,9 +54,6 @@ export function Header() {
         
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-2">
-           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-               <ThemeToggleButton />
-            </motion.div>
            {isLoadingAuth ? (
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             ) : currentUser ? (
@@ -88,31 +85,36 @@ export function Header() {
                 </motion.div>
                 </>
             )}
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+               <ThemeToggleButton />
+            </motion.div>
         </nav>
 
         {/* Mobile Navigation */}
         <div className="md:hidden flex items-center gap-2">
-            {!isLoadingAuth &&
-            (currentUser ? (
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button variant="outline" size="sm" asChild>
-                    <Link href="/dashboard">Dashboard</Link>
-                </Button>
-                </motion.div>
-            ) : (
-                <>
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                    <Button variant="ghost" size="sm" asChild>
-                    <Link href="/login">Sign In</Link>
+            <div className="flex items-center gap-2">
+                 {!isLoadingAuth &&
+                (currentUser ? (
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button variant="outline" size="sm" asChild>
+                        <Link href="/dashboard">Dashboard</Link>
                     </Button>
-                </motion.div>
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                    <Button size="sm" asChild>
-                    <Link href="/signup">Sign Up</Link>
-                    </Button>
-                </motion.div>
-                </>
-            ))}
+                    </motion.div>
+                ) : (
+                    <>
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <Button variant="ghost" size="sm" asChild>
+                        <Link href="/login">Sign In</Link>
+                        </Button>
+                    </motion.div>
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <Button size="sm" asChild>
+                        <Link href="/signup">Sign Up</Link>
+                        </Button>
+                    </motion.div>
+                    </>
+                ))}
+            </div>
             <Sheet>
                 <SheetTrigger asChild>
                     <Button variant="outline" size="icon">
