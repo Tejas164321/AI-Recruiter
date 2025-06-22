@@ -230,7 +230,16 @@ export default function ResumeRankerPage() {
 
     setIsLoadingScreening(true);
     try {
-      const input: PerformBulkScreeningInput = { jobRolesToScreen: [roleToScreen], resumesToRank: uploadedResumeFiles };
+      // Manually create a "plain" object to send to the server action.
+      // This strips out complex objects like the Firebase Timestamp.
+      const plainRoleToScreen = {
+        id: roleToScreen.id,
+        name: roleToScreen.name,
+        contentDataUri: roleToScreen.contentDataUri,
+        originalDocumentName: roleToScreen.originalDocumentName,
+      };
+
+      const input: PerformBulkScreeningInput = { jobRolesToScreen: [plainRoleToScreen], resumesToRank: uploadedResumeFiles };
       const outputFromAI: PerformBulkScreeningOutput = await performBulkScreening(input);
       
       // Save the result to Firestore and update the local state.
