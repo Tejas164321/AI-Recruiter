@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import Image from "next/image";
-import { ArrowRight, CheckCircle, BarChartBig, ScanSearch, MessageSquarePlus, ShieldCheckIcon } from "lucide-react";
+import { ArrowRight, CheckCircle, BarChartBig, ScanSearch, MessageSquarePlus, ShieldCheckIcon, Mail, Phone } from "lucide-react";
 import { motion, useMotionValue, useTransform } from "framer-motion";
 import { useAuth } from "@/contexts/auth-context";
 import React, { useRef, useEffect, useState } from 'react';
@@ -40,7 +40,7 @@ const itemVariants = {
 const cardHoverVariants = {
   hover: {
     y: -8,
-    boxShadow: "0px 20px 45px rgba(0, 0, 0, 0.3)",
+    boxShadow: "0 25px 50px rgba(0,0,0,0.35), 0 45px 80px rgba(0,0,0,0.25)",
     transition: { type: "spring", stiffness: 300, damping: 15 }
   },
   initial: {
@@ -402,7 +402,15 @@ export default function LandingPage() {
 
       <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t border-border bg-transparent">
         <p className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} ResumeRank AI. All rights reserved.</p>
-        <nav className="sm:ml-auto flex gap-4 sm:gap-6">
+        <nav className="sm:ml-auto flex items-center flex-wrap justify-center gap-4 sm:gap-6">
+          <a href="mailto:tejas2382004@gmail.com" className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5">
+            <Mail className="h-4 w-4" />
+            tejas2382004@gmail.com
+          </a>
+          <a href="tel:+919960469732" className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5">
+            <Phone className="h-4 w-4" />
+            +91 9960469732
+          </a>
           <Link href="/terms" className="text-xs text-muted-foreground hover:text-primary transition-colors" prefetch={false}>
             Terms of Service
           </Link>
@@ -414,3 +422,5 @@ export default function LandingPage() {
     </div>
   );
 }
+
+    
