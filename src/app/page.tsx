@@ -117,7 +117,7 @@ const HeroHeading = ({ text, specialText }: { text: string, specialText: string 
             onMouseLeave={() => {
                 mouse.set({x: Infinity, y: Infinity});
             }}
-            className="text-3xl font-bold tracking-tight sm:text-4xl md:text-4xl lg:text-5xl font-headline"
+            className="text-3xl font-bold tracking-tight sm:text-4xl lg:text-4xl xl:text-5xl font-headline"
             aria-label={text + specialText}
         >
             <AnimatedText text={text} mouse={mouse} />
