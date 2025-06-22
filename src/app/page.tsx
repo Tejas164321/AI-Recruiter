@@ -37,19 +37,6 @@ const itemVariants = {
   }),
 };
 
-const cardHoverVariants = {
-  hover: {
-    y: -8,
-    boxShadow: "0 25px 50px rgba(0,0,0,0.35), 0 45px 80px rgba(0,0,0,0.25)",
-    transition: { type: "spring", stiffness: 300, damping: 15 }
-  },
-  initial: {
-    y: 0,
-    boxShadow: "0px 5px 15px rgba(0, 0, 0, 0.0)"
-  }
-};
-
-
 // --- Proximity-based Text Animation Components ---
 
 const Letter = ({ children, mouse, letterRef }: { children: React.ReactNode, mouse: any, letterRef: React.RefObject<HTMLSpanElement> }) => {
@@ -308,47 +295,40 @@ export default function LandingPage() {
                   custom={feature.delay}
                   className="h-full"
                 >
-                  <motion.div
-                     initial="initial"
-                     whileHover="hover"
-                     variants={cardHoverVariants}
-                     className="h-full"
-                  >
-                    <Card className="shadow-lg h-full flex flex-col bg-card/50 backdrop-blur-sm border-white/10 transition-colors duration-300">
-                      <CardHeader className="pb-4">
-                        <motion.div 
-                          initial={{ opacity: 0, scale: 0.5 }}
-                          whileInView={{ opacity: 1, scale: 1 }}
-                          viewport={{ once: true }}
-                          transition={{ duration: 0.4, delay: feature.delay + 0.1}}
-                          className="flex items-center justify-center bg-primary/10 rounded-full w-12 h-12 mb-4 border-2 border-primary/20"
-                        >
-                          <feature.icon className="h-6 w-6 text-primary" />
-                        </motion.div>
-                        <CardTitle className="font-headline">{feature.title}</CardTitle>
-                      </CardHeader>
-                      <CardContent className="flex flex-col flex-grow">
-                        <CardDescription className="text-muted-foreground">
-                          {feature.description}
-                        </CardDescription>
-                        <motion.ul className="mt-4 space-y-2 text-sm flex-grow">
-                          {feature.items.map((item, itemIndex) => (
-                            <motion.li
-                              key={itemIndex}
-                              custom={feature.delay + 0.2 + itemIndex * 0.1}
-                              initial="hidden"
-                              whileInView="visible"
-                              viewport={{ once: true }}
-                              variants={itemVariants}
-                              className="flex items-center"
-                            >
-                              <CheckCircle className="mr-2 h-4 w-4 text-accent" />{item}
-                            </motion.li>
-                          ))}
-                        </motion.ul>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
+                  <Card className="shadow-lg h-full flex flex-col bg-card/50 backdrop-blur-sm border-white/10 transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-2xl hover:shadow-black/30 dark:hover:shadow-none dark:hover:drop-shadow-[0_8px_16px_hsl(var(--primary)/0.3)]">
+                    <CardHeader className="pb-4">
+                      <motion.div 
+                        initial={{ opacity: 0, scale: 0.5 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.4, delay: feature.delay + 0.1}}
+                        className="flex items-center justify-center bg-primary/10 rounded-full w-12 h-12 mb-4 border-2 border-primary/20"
+                      >
+                        <feature.icon className="h-6 w-6 text-primary" />
+                      </motion.div>
+                      <CardTitle className="font-headline">{feature.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex flex-col flex-grow">
+                      <CardDescription className="text-muted-foreground">
+                        {feature.description}
+                      </CardDescription>
+                      <motion.ul className="mt-4 space-y-2 text-sm flex-grow">
+                        {feature.items.map((item, itemIndex) => (
+                          <motion.li
+                            key={itemIndex}
+                            custom={feature.delay + 0.2 + itemIndex * 0.1}
+                            initial="hidden"
+                            whileInView="visible"
+                            viewport={{ once: true }}
+                            variants={itemVariants}
+                            className="flex items-center"
+                          >
+                            <CheckCircle className="mr-2 h-4 w-4 text-accent" />{item}
+                          </motion.li>
+                        ))}
+                      </motion.ul>
+                    </CardContent>
+                  </Card>
                 </motion.div>
               ))}
             </div>
@@ -422,7 +402,3 @@ export default function LandingPage() {
     </div>
   );
 }
-
-    
-
-    
