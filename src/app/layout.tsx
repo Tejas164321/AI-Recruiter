@@ -1,17 +1,30 @@
 
 import type { Metadata } from 'next';
 import './globals.css';
+// UI and Layout Components
 import { MainLayout } from '@/components/layout/main-layout';
 import { Toaster } from "@/components/ui/toaster";
+// Providers for theming, loading state, and authentication
 import { ThemeProvider } from "@/components/theme-provider";
 import { LoadingProvider } from "@/contexts/loading-context"; 
-import { AuthProvider } from "@/contexts/auth-context"; // Import AuthProvider
+import { AuthProvider } from "@/contexts/auth-context";
 
+/**
+ * Metadata for the application.
+ * This information is used for SEO and browser tab information.
+ */
 export const metadata: Metadata = {
   title: 'ResumeRank AI',
   description: 'AI-Powered Resume Screening and Ranking',
 };
 
+/**
+ * The root layout for the entire application.
+ * This component wraps all pages and provides shared UI and context.
+ * @param {object} props - The props object.
+ * @param {React.ReactNode} props.children - The child components to be rendered within the layout.
+ * @returns {JSX.Element} The root layout structure.
+ */
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -20,20 +33,27 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Preconnect to Google Fonts for performance */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Import the Inter font */}
         <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
+        {/* ThemeProvider manages light/dark mode */}
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
+          {/* LoadingProvider manages global page loading indicators */}
           <LoadingProvider>
-            <AuthProvider> {/* Wrap with AuthProvider */}
+            {/* AuthProvider manages user authentication state */}
+            <AuthProvider>
+              {/* MainLayout provides the consistent header and page structure */}
               <MainLayout>{children}</MainLayout>
+              {/* Toaster component handles all pop-up notifications */}
               <Toaster />
             </AuthProvider>
           </LoadingProvider>

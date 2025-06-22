@@ -2,14 +2,22 @@
 "use client";
 
 import Link from "next/link";
+// UI Components
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+// Icons
 import { ArrowRight, BrainCircuit, BarChartBig, MessageSquarePlus, Loader2 } from "lucide-react";
+// Animation library
 import { motion } from "framer-motion";
+// Hooks and Contexts
 import { useLoading } from "@/contexts/loading-context";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from 'next/navigation';
 import { useEffect } from "react";
 
+/**
+ * Defines animation variants for the feature cards on the dashboard.
+ * This creates a subtle lift and shadow effect on hover.
+ */
 const cardHoverVariants = {
   hover: {
     scale: 1.02, 
@@ -24,25 +32,33 @@ const cardHoverVariants = {
   }
 };
 
+/**
+ * Dashboard Page Component.
+ * This is the main landing page for authenticated users, providing links to the application's features.
+ */
 export default function DashboardPage() {
+  // App-wide loading state context
   const { setIsPageLoading } = useLoading();
+  // Authentication context to get user status
   const { currentUser, isLoadingAuth } = useAuth();
+  // Next.js router for navigation
   const router = useRouter();
 
+  // Effect to handle authentication state changes
   useEffect(() => {
-    // This effect runs after the AuthProvider has determined the auth state
+    // If authentication check is complete and no user is found, redirect to login page.
     if (!isLoadingAuth && !currentUser) {
       router.push('/login');
-    } else if (!isLoadingAuth && currentUser) {
-      // User is authenticated, safe to turn off general page loader
+    } 
+    // If authentication is complete and user is found, turn off the page loader.
+    else if (!isLoadingAuth && currentUser) {
       setIsPageLoading(false);
     }
   }, [currentUser, isLoadingAuth, router, setIsPageLoading]);
 
-  // Display loading state or redirect if not authenticated
+  // While checking auth state, show a loading spinner.
+  // This prevents a flash of the dashboard content before redirection.
   if (isLoadingAuth || !currentUser) {
-    // AuthProvider already shows a full-page loader during initial auth check.
-    // This is a fallback or for subsequent checks if needed.
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="w-16 h-16 animate-spin text-primary" />
@@ -50,21 +66,28 @@ export default function DashboardPage() {
     );
   }
   
-  // User is authenticated, render the dashboard
+  // Get user's name for a personalized greeting. Fallback to email or a generic greeting.
   const userName = currentUser.displayName || currentUser.email || "Valued User";
 
+  /**
+   * Handler to activate the page loader when navigating to a new feature page.
+   * This provides visual feedback to the user that the next page is loading.
+   */
   const handleLinkClick = () => {
     setIsPageLoading(true);
   };
 
   return (
     <div className="container mx-auto p-4 md:p-8">
+      {/* Page Header */}
       <header className="mb-8">
         <h1 className="text-3xl font-bold font-headline text-foreground">Welcome to Your Dashboard, {userName}!</h1>
         <p className="text-muted-foreground">Select a tool below to get started.</p>
       </header>
 
+      {/* Main content grid with feature cards */}
       <div className="flex flex-col gap-8"> 
+        {/* AI Resume Ranker Card */}
         <motion.div
           initial="initial"
           whileHover="hover"
@@ -89,7 +112,9 @@ export default function DashboardPage() {
           </Link>
         </motion.div>
 
+        {/* Grid for smaller feature cards */}
         <div className="grid gap-6 md:grid-cols-2">
+          {/* ATS Score Finder Card */}
           <motion.div
             initial="initial"
             whileHover="hover"
@@ -114,6 +139,7 @@ export default function DashboardPage() {
             </Link>
           </motion.div>
 
+          {/* Interview Question Generator Card */}
           <motion.div
             initial="initial"
             whileHover="hover"

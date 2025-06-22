@@ -1,7 +1,10 @@
+
 'use server';
 
 /**
  * @fileOverview Performs bulk screening: ranks all candidate resumes against all provided job roles.
+ * This file orchestrates the process of taking a list of jobs and a list of resumes,
+ * and having an AI rank each resume against each job.
  *
  * - performBulkScreening - The main function to handle the bulk screening process.
  * - PerformBulkScreeningInput - Input type: list of job roles and list of resumes.
@@ -10,21 +13,23 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+// Import custom types from the application's type definitions.
 import type { ExtractedJobRole, ResumeFile, RankedCandidate, JobScreeningResult, PerformBulkScreeningInput, PerformBulkScreeningOutput } from '@/lib/types'; 
 
-// Schema for a single resume file input (used internally if not directly from PerformBulkScreeningInput)
+// Internal Zod schema for a resume file. This ensures type safety within the flow.
 const ResumeInputSchema = z.object({
-  id: z.string(), // Added ID to match ResumeFile type
+  id: z.string(), // Matches the ID from the ResumeFile type.
   name: z.string().describe("The file name or identifier of the resume."),
   dataUri: z
     .string()
     .describe(
       "A candidate resume as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
-  file: z.any().optional().describe("The File object, not used by the AI flow directly but part of the input structure."), // Match ResumeFile
+  // The 'file' object is part of the input from the frontend but not used by the AI flow itself.
+  file: z.any().optional().describe("The File object, not used by the AI flow directly but part of the input structure."),
 });
 
-// Schema for ExtractedJobRole (used internally if not directly from PerformBulkScreeningInput)
+// Internal Zod schema for an extracted job role.
 const ExtractedJobRoleSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -33,14 +38,14 @@ const ExtractedJobRoleSchema = z.object({
 });
 
 
-// Input schema for the bulk screening flow
+// Zod schema for the entire bulk screening input.
 const PerformBulkScreeningInputSchema = z.object({
   jobRolesToScreen: z.array(ExtractedJobRoleSchema),
   resumesToRank: z.array(ResumeInputSchema),
 });
 
 
-// Schema for the AI's direct output when ranking a single resume against a single JD
+// Zod schema for the AI's direct output when ranking one resume against one JD.
 const AICandidateOutputSchema = z.object({
   name: z.string().describe('The name of the candidate, extracted from the resume.'),
   score: z.number().describe('The match score (0-100) of the resume to the job description.'),
@@ -49,14 +54,14 @@ const AICandidateOutputSchema = z.object({
   feedback: z.string().describe('AI-driven feedback for the candidate, including strengths, weaknesses, improvement suggestions, and notes on ATS score if relevant.'),
 });
 
-// Schema for the full candidate data structure, including fields added after AI processing (id, uris)
+// Zod schema for the full candidate data structure, including fields added *after* AI processing.
 const FullRankedCandidateSchema = AICandidateOutputSchema.extend({
   id: z.string().describe('Unique identifier for the candidate entry.'),
   originalResumeName: z.string().describe('The original file name of the uploaded resume.'),
   resumeDataUri: z.string().describe('The data URI of the resume content.'),
 });
 
-// Schema for JobScreeningResult (output for a single job role)
+// Zod schema for the result of screening all resumes against a *single* job role.
 const JobScreeningResultSchema = z.object({
     jobDescriptionId: z.string().describe("The ID of the job description against which candidates were ranked."),
     jobDescriptionName: z.string().describe("The name/title of the job description against which candidates were ranked."),
@@ -64,10 +69,14 @@ const JobScreeningResultSchema = z.object({
     candidates: z.array(FullRankedCandidateSchema),
   });
 
-// The overall output schema for the performBulkScreeningFlow
+// The overall output schema for the entire flow, which is an array of JobScreeningResult.
 const PerformBulkScreeningOutputSchema = z.array(JobScreeningResultSchema);
 
-
+/**
+ * Public-facing server action to perform bulk screening.
+ * @param {PerformBulkScreeningInput} input - The job roles and resumes to be processed.
+ * @returns {Promise<PerformBulkScreeningOutput>} A promise resolving to the ranked results.
+ */
 export async function performBulkScreening(input: PerformBulkScreeningInput): Promise<PerformBulkScreeningOutput> {
   try {
     return await performBulkScreeningFlow(input);
@@ -75,11 +84,12 @@ export async function performBulkScreening(input: PerformBulkScreeningInput): Pr
     const message = flowError instanceof Error ? flowError.message : String(flowError);
     const stack = flowError instanceof Error ? flowError.stack : undefined;
     console.error('Error in performBulkScreening function (server action entry):', message, stack);
-    // Ensure a simple error object is thrown so Next.js can serialize it
+    // Throw a simple error object that Next.js can safely serialize back to the client.
     throw new Error(`Bulk screening process failed: ${message}`);
   }
 }
 
+// Defines the Genkit prompt for ranking a single resume against a single job description.
 const rankCandidatePrompt = ai.definePrompt({
   name: 'rankSingleCandidateAgainstSingleJDPrompt',
   input: {
@@ -110,10 +120,11 @@ Your scoring should be consistent and deterministic given the same inputs.
 
   Ensure the output is structured as a JSON object. Crucially, provide a consistent score given the same inputs.`,
   config: {
-    temperature: 0, // Low temperature for consistent ranking
+    temperature: 0, // Set to 0 for maximum consistency in ranking.
   },
 });
 
+// Defines the main Genkit flow for bulk screening.
 const performBulkScreeningFlow = ai.defineFlow(
   {
     name: 'performBulkScreeningFlow',
@@ -125,6 +136,7 @@ const performBulkScreeningFlow = ai.defineFlow(
       const { jobRolesToScreen, resumesToRank } = input;
       const allScreeningResults: PerformBulkScreeningOutput = [];
 
+      // Early exit if no job roles or resumes are provided.
       if (jobRolesToScreen.length === 0) {
         console.warn('[performBulkScreeningFlow] No job roles provided for screening.');
         return [];
@@ -139,9 +151,11 @@ const performBulkScreeningFlow = ai.defineFlow(
         }));
       }
 
+      // Iterate over each job role.
       for (const jobRole of jobRolesToScreen) {
         let candidatesForThisJobRole: RankedCandidate[] = [];
         try {
+          // For each job role, rank all resumes against it concurrently.
           const resumeRankingPromises = resumesToRank.map(async (resume) => {
             let aiCandidateOutput: z.infer<typeof AICandidateOutputSchema> | null = null;
             try {
@@ -150,28 +164,30 @@ const performBulkScreeningFlow = ai.defineFlow(
                 resumeDataUri: resume.dataUri,
                 originalResumeName: resume.name,
               };
+              // Call the AI prompt for ranking.
               const { output } = await rankCandidatePrompt(promptInput);
               aiCandidateOutput = output;
 
               if (aiCandidateOutput) {
+                // If successful, combine AI output with original resume data.
                 return {
                   ...aiCandidateOutput,
                   id: crypto.randomUUID(),
-                  name: aiCandidateOutput.name || resume.name.replace(/\.[^/.]+$/, "") || "Unnamed Candidate", // Use extracted name or fallback
+                  name: aiCandidateOutput.name || resume.name.replace(/\.[^/.]+$/, "") || "Unnamed Candidate", // Use extracted name or fallback to filename.
                   resumeDataUri: resume.dataUri,
                   originalResumeName: resume.name,
                 } satisfies RankedCandidate;
               } else {
                 console.warn(`[performBulkScreeningFlow] AI returned no output for resume ${resume.name} against JD ${jobRole.name}.`);
-                // Fall through to create a default entry
+                // Fall through to create a default error entry.
               }
             } catch (error) {
               const errorMessage = error instanceof Error ? error.message : String(error);
               console.error(`[performBulkScreeningFlow] Error ranking resume ${resume.name} for JD ${jobRole.name}: ${errorMessage}`, error instanceof Error ? error.stack : undefined);
-              // Fall through to create a default entry
+              // Fall through to create a default error entry.
             }
             
-            // If aiCandidateOutput is still null (due to error or no output), create a default entry
+            // If the AI call failed, create a default entry with error information.
             return {
               id: crypto.randomUUID(),
               name: resume.name.replace(/\.[^/.]+$/, "") || "Candidate (Processing Error)",
@@ -184,9 +200,12 @@ const performBulkScreeningFlow = ai.defineFlow(
             } satisfies RankedCandidate;
           });
 
+          // Wait for all resume rankings for the current job role to complete.
           candidatesForThisJobRole = await Promise.all(resumeRankingPromises);
+          // Sort candidates by score in descending order.
           candidatesForThisJobRole.sort((a, b) => b.score - a.score);
 
+          // Add the complete result for this job role to the list.
           allScreeningResults.push({
             jobDescriptionId: jobRole.id,
             jobDescriptionName: jobRole.name,
@@ -195,10 +214,11 @@ const performBulkScreeningFlow = ai.defineFlow(
           });
 
         } catch (jobRoleProcessingError) {
+          // Handle critical errors during the processing of a single job role.
           const errorMessage = jobRoleProcessingError instanceof Error ? jobRoleProcessingError.message : String(jobRoleProcessingError);
           console.error(`[performBulkScreeningFlow] CRITICAL ERROR processing job role ${jobRole.name} (ID: ${jobRole.id}). Skipping this role. Error: ${errorMessage}`, jobRoleProcessingError instanceof Error ? jobRoleProcessingError.stack : undefined);
           
-          // Create error entries for all resumes for this failed job role
+          // Create error entries for all resumes for this failed job role to inform the user.
           const errorCandidatesForThisJobRole: RankedCandidate[] = resumesToRank.map(resume => ({
             id: crypto.randomUUID(),
             name: resume.name.replace(/\.[^/.]+$/, "") || "Candidate (Processing Error)",
@@ -221,6 +241,7 @@ const performBulkScreeningFlow = ai.defineFlow(
       return allScreeningResults;
 
     } catch (error) {
+      // Catch any other unexpected errors within the flow.
       const message = error instanceof Error ? error.message : String(error);
       const stack = error instanceof Error ? error.stack : undefined;
       console.error('[performBulkScreeningFlow] Internal error caught within the flow itself:', message, stack);

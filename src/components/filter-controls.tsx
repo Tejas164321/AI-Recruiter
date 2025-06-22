@@ -2,26 +2,21 @@
 "use client";
 
 import React from "react";
+// UI Components
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
-import type { Filters, ExtractedJobRole, JobScreeningResult } from "@/lib/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+// Icons
 import { SlidersHorizontal, Search, Briefcase, RotateCw, History, Trash2 } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+// Types
+import type { Filters, ExtractedJobRole, JobScreeningResult } from "@/lib/types";
 
+/**
+ * Props for the FilterControls component.
+ */
 interface FilterControlsProps {
   filters: Filters;
   onFilterChange: (newFilters: Partial<Filters>) => void;
@@ -36,6 +31,10 @@ interface FilterControlsProps {
   onDeleteHistory: (historyId: string) => void;
 }
 
+/**
+ * A component that provides UI controls for filtering and selecting job roles and screening history.
+ * @param {FilterControlsProps} props - The component props.
+ */
 export function FilterControls({
   filters,
   onFilterChange,
@@ -49,21 +48,12 @@ export function FilterControls({
   onHistoryChange,
   onDeleteHistory,
 }: FilterControlsProps) {
-  const handleScoreChange = (value: number[]) => {
-    onFilterChange({ scoreRange: [value[0], value[1]] });
-  };
 
-  const handleKeywordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    onFilterChange({ skillKeyword: event.target.value });
-  };
-
-  const handleJobRoleSelectChange = (roleId: string) => {
-    onJobRoleChange(roleId === "none" ? null : roleId);
-  };
-  
-  const handleHistorySelectChange = (historyId: string) => {
-    onHistoryChange(historyId === "none" ? null : historyId);
-  };
+  // Handlers to update parent state when filter values change.
+  const handleScoreChange = (value: number[]) => onFilterChange({ scoreRange: [value[0], value[1]] });
+  const handleKeywordChange = (event: React.ChangeEvent<HTMLInputElement>) => onFilterChange({ skillKeyword: event.target.value });
+  const handleJobRoleSelectChange = (roleId: string) => onJobRoleChange(roleId === "none" ? null : roleId);
+  const handleHistorySelectChange = (historyId: string) => onHistoryChange(historyId === "none" ? null : historyId);
 
   return (
     <div className="p-6 rounded-lg border shadow-sm space-y-6 bg-card">
@@ -80,125 +70,55 @@ export function FilterControls({
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-x-8 gap-y-6">
         
-        {/* Column 1: Selections */}
+        {/* Column 1: Selections (Job Role and History) */}
         <div className="space-y-4">
            <div className="space-y-2">
-            <Label htmlFor="jobRoleSelect" className="text-sm font-medium">
-              Job Role
-            </Label>
+            <Label htmlFor="jobRoleSelect">Job Role</Label>
             <div className="relative">
               <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
-              <Select
-                  value={selectedJobRoleId || "none"}
-                  onValueChange={handleJobRoleSelectChange}
-                  disabled={isLoading || extractedJobRoles.length === 0}
-              >
-                  <SelectTrigger id="jobRoleSelect" className="pl-10">
-                  <SelectValue placeholder="Select a Job Role..." />
-                  </SelectTrigger>
+              <Select value={selectedJobRoleId || "none"} onValueChange={handleJobRoleSelectChange} disabled={isLoading || extractedJobRoles.length === 0}>
+                  <SelectTrigger id="jobRoleSelect" className="pl-10"><SelectValue placeholder="Select a Job Role..." /></SelectTrigger>
                   <SelectContent>
-                  <SelectItem value="none" disabled={!selectedJobRoleId}>
-                      Select a Job Role...
-                  </SelectItem>
-                  {extractedJobRoles.map((role) => (
-                      <SelectItem key={role.id} value={role.id}>
-                      {role.name}
-                      </SelectItem>
-                  ))}
+                  <SelectItem value="none" disabled={!selectedJobRoleId}>Select a Job Role...</SelectItem>
+                  {extractedJobRoles.map((role) => (<SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>))}
                   </SelectContent>
               </Select>
             </div>
           </div>
           <div className="space-y-2">
-             <Label htmlFor="historySelect" className="text-sm font-medium">
-              Screening History
-            </Label>
+             <Label htmlFor="historySelect">Screening History</Label>
             <div className="flex items-center gap-2">
               <div className="relative flex-grow">
                 <History className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
-                <Select
-                    value={selectedHistoryId || "none"}
-                    onValueChange={handleHistorySelectChange}
-                    disabled={isLoading || screeningHistory.length === 0}
-                >
-                    <SelectTrigger id="historySelect" className="pl-10">
-                    <SelectValue placeholder="Select a session..." />
-                    </SelectTrigger>
+                <Select value={selectedHistoryId || "none"} onValueChange={handleHistorySelectChange} disabled={isLoading || screeningHistory.length === 0}>
+                    <SelectTrigger id="historySelect" className="pl-10"><SelectValue placeholder="Select a session..." /></SelectTrigger>
                     <SelectContent>
-                    <SelectItem value="none" disabled>
-                        Select a session...
-                      </SelectItem>
-                    {screeningHistory.map((hist) => (
-                        <SelectItem key={hist.id} value={hist.id}>
-                        {hist.createdAt.toDate().toLocaleString()}
-                        </SelectItem>
-                    ))}
+                    <SelectItem value="none" disabled>Select a session...</SelectItem>
+                    {screeningHistory.map((hist) => (<SelectItem key={hist.id} value={hist.id}>{hist.createdAt.toDate().toLocaleString()}</SelectItem>))}
                     </SelectContent>
                 </Select>
               </div>
-               <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => {
-                            if (selectedHistoryId) {
-                                onDeleteHistory(selectedHistoryId)
-                            }
-                        }}
-                        disabled={!selectedHistoryId || isLoading}
-                        className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/50"
-                        aria-label="Delete selected history session"
-                    >
+               <TooltipProvider><Tooltip><TooltipTrigger asChild>
+                    <Button variant="outline" size="icon" onClick={() => { if (selectedHistoryId) onDeleteHistory(selectedHistoryId) }} disabled={!selectedHistoryId || isLoading} className="shrink-0 text-destructive hover:bg-destructive/10" aria-label="Delete selected history">
                         <Trash2 className="w-4 h-4" />
                     </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                      <p>Delete selected session</p>
-                  </TooltipContent>
-                </Tooltip>
-            </TooltipProvider>
+                  </TooltipTrigger><TooltipContent><p>Delete selected session</p></TooltipContent></Tooltip></TooltipProvider>
             </div>
           </div>
         </div>
 
-        {/* Column 2: Filters */}
+        {/* Column 2: Filters (Keyword and Score) */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="skillKeyword" className="text-sm font-medium">
-              Search by Name/Skill/File
-            </Label>
+            <Label htmlFor="skillKeyword">Search by Name/Skill/File</Label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                id="skillKeyword"
-                type="text"
-                placeholder="e.g., React, John Doe"
-                value={filters.skillKeyword}
-                onChange={handleKeywordChange}
-                className="pl-10"
-                aria-label="Skill, name, or filename keyword filter"
-                disabled={isLoading || !selectedHistoryId}
-              />
+              <Input id="skillKeyword" type="text" placeholder="e.g., React, John Doe" value={filters.skillKeyword} onChange={handleKeywordChange} className="pl-10" disabled={isLoading || !selectedHistoryId}/>
             </div>
           </div>
-          
           <div className="space-y-2">
-            <Label htmlFor="scoreRange" className="text-sm font-medium">
-              Match Score Range: {filters.scoreRange[0]} - {filters.scoreRange[1]}
-            </Label>
-            <Slider
-              id="scoreRange"
-              min={0}
-              max={100}
-              step={1}
-              value={[filters.scoreRange[0], filters.scoreRange[1]]}
-              onValueChange={handleScoreChange}
-              className="pt-2"
-              aria-label="Score range filter"
-              disabled={isLoading || !selectedHistoryId}
-            />
+            <Label htmlFor="scoreRange">Match Score Range: {filters.scoreRange[0]} - {filters.scoreRange[1]}</Label>
+            <Slider id="scoreRange" min={0} max={100} step={1} value={[filters.scoreRange[0], filters.scoreRange[1]]} onValueChange={handleScoreChange} className="pt-2" disabled={isLoading || !selectedHistoryId}/>
           </div>
         </div>
       </div>

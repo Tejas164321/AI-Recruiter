@@ -1,14 +1,22 @@
+
 import type {Config} from 'tailwindcss';
 
+/**
+ * Tailwind CSS configuration file.
+ * Here, we define the application's design system, including colors, fonts,
+ * and other utility classes. It's extended with plugins like 'tailwindcss-animate'.
+ */
 export default {
-  darkMode: ['class'],
+  darkMode: ['class'], // Enable dark mode using a class (e.g., <html class="dark">)
   content: [
+    // Files to scan for Tailwind class names.
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
-    container: { // Added container class defaults
+    // Defines default styles for the .container class.
+    container: { 
       center: true,
       padding: "2rem",
       screens: {
@@ -16,11 +24,14 @@ export default {
       },
     },
     extend: {
+      // Custom font families for consistent typography.
       fontFamily: {
-        body: ['Inter', 'sans-serif'],
-        headline: ['Inter', 'sans-serif'],
-        code: ['monospace', 'monospace'], // Added fallback for code
+        body: ['Inter', 'sans-serif'], // Main body font
+        headline: ['Inter', 'sans-serif'], // Font for headings
+        code: ['monospace', 'monospace'], // Fallback for code blocks
       },
+      // Custom color palette using CSS variables defined in globals.css.
+      // This allows for easy theming (light/dark mode).
       colors: {
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
@@ -55,6 +66,7 @@ export default {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
+        // Custom chart colors for data visualizations.
         chart: {
           '1': 'hsl(var(--chart-1))',
           '2': 'hsl(var(--chart-2))',
@@ -62,45 +74,31 @@ export default {
           '4': 'hsl(var(--chart-4))',
           '5': 'hsl(var(--chart-5))',
         },
-        sidebar: {
-          DEFAULT: 'hsl(var(--sidebar-background))',
-          foreground: 'hsl(var(--sidebar-foreground))',
-          primary: 'hsl(var(--sidebar-primary))',
-          'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
-          accent: 'hsl(var(--sidebar-accent))',
-          'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
-          border: 'hsl(var(--sidebar-border))',
-          ring: 'hsl(var(--sidebar-ring))',
-        },
       },
+      // Custom border radius values based on a CSS variable.
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
       },
+      // Custom keyframe animations for components like accordions.
       keyframes: {
         'accordion-down': {
-          from: {
-            height: '0',
-          },
-          to: {
-            height: 'var(--radix-accordion-content-height)',
-          },
+          from: { height: '0' },
+          to: { height: 'var(--radix-accordion-content-height)' },
         },
         'accordion-up': {
-          from: {
-            height: 'var(--radix-accordion-content-height)',
-          },
-          to: {
-            height: '0',
-          },
+          from: { height: 'var(--radix-accordion-content-height)' },
+          to: { height: '0' },
         },
       },
+      // Binds the keyframes to animation utility classes.
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
       },
     },
   },
-  plugins: [require('tailwindcss-animate')],
+  // Plugins to extend Tailwind's functionality.
+  plugins: [require('tailwindcss-animate')], // Adds animation utilities.
 } satisfies Config;

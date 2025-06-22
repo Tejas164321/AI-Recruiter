@@ -16,15 +16,21 @@ import {
   writeBatch,
   deleteDoc,
 } from 'firebase/firestore';
-
 import type { JobScreeningResult, AtsScoreResult } from '@/lib/types';
 
+// A warning is logged if Firestore was not initialized correctly.
 if (!db) {
   console.warn("Firestore service (db) is not available. Firestore operations will fail.");
 }
 
 // --- JobScreeningResult Functions ---
 
+/**
+ * Saves a new job screening result to Firestore and manages history limits.
+ * It ensures that only the most recent 10 screening sessions per job role are kept.
+ * @param {Omit<JobScreeningResult, 'id' | 'userId' | 'createdAt'>} resultData - The data for the new screening result.
+ * @returns {Promise<JobScreeningResult>} A promise that resolves with the newly created and saved result object.
+ */
 export const saveJobScreeningResult = async (resultData: Omit<JobScreeningResult, 'id' | 'userId' | 'createdAt'>): Promise<JobScreeningResult> => {
   if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
   const userId = auth.currentUser.uid;
@@ -37,20 +43,14 @@ export const saveJobScreeningResult = async (resultData: Omit<JobScreeningResult
     where("jobDescriptionId", "==", resultData.jobDescriptionId),
     orderBy("createdAt", "asc")
   );
-
   const querySnapshot = await getDocs(historyQuery);
 
-  // 2. If the history limit is reached or exceeded, delete the oldest entries to make space.
+  // 2. If the history limit is reached, delete the oldest entries to make space for the new one.
   if (querySnapshot.size >= HISTORY_LIMIT) {
     const batch = writeBatch(db);
-    // Calculate how many documents to delete. +1 because we're about to add a new one.
     const numToDelete = querySnapshot.size - HISTORY_LIMIT + 1;
     const docsToDelete = querySnapshot.docs.slice(0, numToDelete);
-    
-    docsToDelete.forEach(docSnapshot => {
-      batch.delete(docSnapshot.ref);
-    });
-    
+    docsToDelete.forEach(docSnapshot => batch.delete(docSnapshot.ref));
     await batch.commit();
   }
   
@@ -58,13 +58,17 @@ export const saveJobScreeningResult = async (resultData: Omit<JobScreeningResult
   const docRef = await addDoc(collection(db, "jobScreeningResults"), {
     ...resultData,
     userId,
-    createdAt: serverTimestamp(),
+    createdAt: serverTimestamp(), // Use server timestamp for consistency.
   });
 
   // 4. Return the new result object for immediate use in the UI.
   return { ...resultData, id: docRef.id, userId, createdAt: Timestamp.now() } as JobScreeningResult;
 };
 
+/**
+ * Fetches all job screening results for the currently logged-in user.
+ * @returns {Promise<JobScreeningResult[]>} A promise that resolves with an array of screening results.
+ */
 export const getAllJobScreeningResultsForUser = async (): Promise<JobScreeningResult[]> => {
   if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
   const userId = auth.currentUser.uid;
@@ -73,16 +77,25 @@ export const getAllJobScreeningResultsForUser = async (): Promise<JobScreeningRe
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as JobScreeningResult));
 };
 
+/**
+ * Deletes a specific job screening result from Firestore.
+ * @param {string} resultId - The ID of the document to delete.
+ */
 export const deleteJobScreeningResult = async (resultId: string): Promise<void> => {
   if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
   const docRef = doc(db, "jobScreeningResults", resultId);
-  // Firestore rules should enforce that the user owns this document.
+  // Firestore security rules should enforce that only the owner can delete this document.
   await deleteDoc(docRef);
 };
 
 
 // --- AtsScoreResult Functions ---
 
+/**
+ * Saves a single ATS score result to Firestore.
+ * @param {Omit<AtsScoreResult, 'id' | 'userId' | 'createdAt'>} resultData - The data for the new ATS score result.
+ * @returns {Promise<AtsScoreResult>} The newly created and saved ATS result object.
+ */
 export const saveAtsScoreResult = async (resultData: Omit<AtsScoreResult, 'id' | 'userId' | 'createdAt'>): Promise<AtsScoreResult> => {
   if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
   const userId = auth.currentUser.uid;
@@ -94,22 +107,26 @@ export const saveAtsScoreResult = async (resultData: Omit<AtsScoreResult, 'id' |
   return { ...resultData, id: docRef.id, userId, createdAt: Timestamp.now() } as AtsScoreResult;
 };
 
+/**
+ * Saves multiple ATS score results to Firestore in a loop.
+ * @param {Array<Omit<AtsScoreResult, 'id' | 'userId' | 'createdAt'>>} resultsData - An array of ATS results to save.
+ * @returns {Promise<AtsScoreResult[]>} A promise that resolves with an array of the newly saved result objects.
+ */
 export const saveMultipleAtsScoreResults = async (resultsData: Array<Omit<AtsScoreResult, 'id' | 'userId' | 'createdAt'>>): Promise<AtsScoreResult[]> => {
     if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
     const userId = auth.currentUser.uid;
     const savedResults: AtsScoreResult[] = [];
-
     for (const result of resultsData) {
-        const docRef = await addDoc(collection(db, "atsScoreResults"), {
-            ...result,
-            userId,
-            createdAt: serverTimestamp(),
-        });
+        const docRef = await addDoc(collection(db, "atsScoreResults"), { ...result, userId, createdAt: serverTimestamp() });
         savedResults.push({ ...result, id: docRef.id, userId, createdAt: Timestamp.now() } as AtsScoreResult);
     }
     return savedResults;
 };
 
+/**
+ * Fetches all ATS score results for the currently logged-in user.
+ * @returns {Promise<AtsScoreResult[]>} An array of saved ATS score results.
+ */
 export const getAtsScoreResults = async (): Promise<AtsScoreResult[]> => {
   if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
   const userId = auth.currentUser.uid;
@@ -118,25 +135,29 @@ export const getAtsScoreResults = async (): Promise<AtsScoreResult[]> => {
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AtsScoreResult));
 };
 
+/**
+ * Deletes a specific ATS score result from Firestore.
+ * @param {string} resultId - The ID of the document to delete.
+ */
 export const deleteAtsScoreResult = async (resultId: string): Promise<void> => {
   if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
   const docRef = doc(db, "atsScoreResults", resultId);
-  // Security is handled by Firestore rules, but you could add a check here to ensure the user owns this doc if needed.
   await deleteDoc(docRef);
 };
 
+/**
+ * Deletes all ATS score results for the currently logged-in user.
+ * This operation is performed in batches to handle large numbers of documents safely.
+ */
 export const deleteAllAtsScoreResults = async (): Promise<void> => {
   if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
   const userId = auth.currentUser.uid;
   const q = query(collection(db, "atsScoreResults"), where("userId", "==", userId));
   const querySnapshot = await getDocs(q);
 
-  if (querySnapshot.empty) {
-    return; // Nothing to delete
-  }
+  if (querySnapshot.empty) return; // Nothing to delete.
 
-  // Firestore allows a maximum of 500 operations in a single batch.
-  // This implementation handles deletion in chunks of 500.
+  // Firestore allows a maximum of 500 operations per batch.
   const batches = [];
   let currentBatch = writeBatch(db);
   let operationCount = 0;
@@ -144,7 +165,6 @@ export const deleteAllAtsScoreResults = async (): Promise<void> => {
   for (const docSnapshot of querySnapshot.docs) {
     currentBatch.delete(docSnapshot.ref);
     operationCount++;
-
     if (operationCount === 500) {
       batches.push(currentBatch);
       currentBatch = writeBatch(db);
@@ -152,11 +172,11 @@ export const deleteAllAtsScoreResults = async (): Promise<void> => {
     }
   }
 
-  // Add the last batch if it has any operations
+  // Add the last batch if it has any operations.
   if (operationCount > 0) {
     batches.push(currentBatch);
   }
 
-  // Commit all batches
+  // Commit all batches concurrently.
   await Promise.all(batches.map(batch => batch.commit()));
 };
