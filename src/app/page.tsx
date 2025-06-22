@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -101,7 +100,7 @@ const AnimatedText = ({ text, mouse, isSpecial = false }: { text: string, mouse:
     );
 };
 
-const HeroHeading = ({ text, specialText }: { text: string, specialText: string }) => {
+const HeroHeading = () => {
     const ref = useRef<HTMLHeadingElement>(null);
     const mouse = useMotionValue({x: Infinity, y: Infinity});
 
@@ -118,11 +117,23 @@ const HeroHeading = ({ text, specialText }: { text: string, specialText: string 
                 mouse.set({x: Infinity, y: Infinity});
             }}
             className="text-3xl font-bold tracking-tight sm:text-4xl lg:text-4xl xl:text-5xl font-headline"
-            aria-label={text + specialText}
+            aria-label="Unlock Your Hiring Potential with ResumeRank AI"
         >
-            <AnimatedText text={text} mouse={mouse} />
-            <span style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.8))", whiteSpace: 'nowrap' }}>
-                <AnimatedText text={specialText} mouse={mouse} isSpecial={true} />
+            {/* Mobile & Tablet view (flowing text) */}
+            <span className="lg:hidden">
+                <AnimatedText text="Unlock Your Hiring Potential with " mouse={mouse} />
+                <span style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.8))", whiteSpace: 'nowrap' }}>
+                    <AnimatedText text="ResumeRank AI" mouse={mouse} isSpecial={true} />
+                </span>
+            </span>
+
+            {/* Desktop view (three lines) */}
+            <span className="hidden lg:inline">
+                <span className="block"><AnimatedText text="Unlock Your Hiring" mouse={mouse} /></span>
+                <span className="block"><AnimatedText text="Potential with" mouse={mouse} /></span>
+                <span className="block" style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.8))", whiteSpace: 'nowrap' }}>
+                    <AnimatedText text="ResumeRank AI" mouse={mouse} isSpecial={true} />
+                </span>
             </span>
         </motion.h1>
     );
@@ -165,9 +176,6 @@ export default function LandingPage() {
     }
   ];
 
-  const headingText = "Unlock Your Hiring Potential with ";
-  const headingSpecialText = "ResumeRank AI";
-
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden landing-page-gradient">
       <main className="flex-1">
@@ -183,7 +191,7 @@ export default function LandingPage() {
                 custom={0}
               >
                 <div className="space-y-4">
-                  <HeroHeading text={headingText} specialText={headingSpecialText} />
+                  <HeroHeading />
                   <motion.p
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
