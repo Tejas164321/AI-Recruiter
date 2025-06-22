@@ -12,8 +12,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 // Icons
-import { HelpCircle, Loader2, Lightbulb, FileText, ScrollText, Users, Brain, SearchCheck, UploadCloud, PlusCircle, Trash2, Download } from "lucide-react";
+import { HelpCircle, Loader2, Lightbulb, FileText, ScrollText, Users, Brain, SearchCheck, UploadCloud, PlusCircle, Trash2, Download, ServerOff } from "lucide-react";
 // Hooks and Contexts
 import { useToast } from "@/hooks/use-toast";
 import { useLoading } from "@/contexts/loading-context";
@@ -22,6 +24,9 @@ import { useAuth } from "@/contexts/auth-context";
 import { generateJDInterviewQuestions, type GenerateJDInterviewQuestionsInput } from "@/ai/flows/generate-jd-interview-questions";
 import { extractJobRoles as extractJobRolesAI, type ExtractJobRolesInput as ExtractJobRolesAIInput, type ExtractJobRolesOutput as ExtractJobRolesAIOutput } from "@/ai/flows/extract-job-roles";
 import type { InterviewQuestionsSet } from "@/lib/types";
+// Firebase Services
+import { saveInterviewQuestionSet, getInterviewQuestionSets, deleteInterviewQuestionSet } from "@/services/firestoreService";
+import { db as firestoreDb } from "@/lib/firebase/config";
 // Animation and PDF library
 import { motion } from "framer-motion";
 import jsPDF from 'jspdf';
@@ -35,9 +40,11 @@ const cardHoverVariants = {
   initial: { scale: 1, y: 0, boxShadow: "0px 6px 18px hsla(var(--primary), 0.1)" }
 };
 
-// Interface for managing a single session entry (one job description and its generated questions)
-interface SessionEntry {
-  id: string; // client-side UUID
+/**
+ * Interface for the local state of the form, representing either a saved set or a new draft.
+ */
+interface FormState {
+  id: string | null; // null for a new draft, otherwise the ID of the saved set
   jdContent: string;
   roleTitle: string;
   focusAreas: string;
@@ -45,43 +52,67 @@ interface SessionEntry {
 }
 
 /**
+ * The initial state for a new, blank form.
+ */
+const getInitialFormState = (): FormState => ({
+  id: null,
+  jdContent: '',
+  roleTitle: '',
+  focusAreas: '',
+  questions: null,
+});
+
+/**
  * Interview Question Generator Page Component.
  * This page allows users to upload or paste job descriptions to generate tailored interview questions.
- * It supports managing multiple JDs within a single browser session.
+ * It now saves generated question sets to Firestore for persistence.
  */
 export default function InterviewQuestionGeneratorPage() {
   const { setIsPageLoading } = useLoading();
   const { currentUser } = useAuth();
   const { toast } = useToast();
   
-  // State to manage multiple JD sessions. Data is lost on page refresh.
-  const [sessionEntries, setSessionEntries] = useState<SessionEntry[]>([]);
-  // State to track which session is currently active.
-  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
+  // State for saved question sets fetched from Firestore
+  const [savedSets, setSavedSets] = useState<InterviewQuestionsSet[]>([]);
+  // State for the currently active form (either a draft or a selected saved set)
+  const [activeForm, setActiveForm] = useState<FormState>(getInitialFormState());
   
   // State for loading indicators
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoadingFromDB, setIsLoadingFromDB] = useState<boolean>(true);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
-  // State for displaying errors
+  
+  // State for modals and errors
   const [error, setError] = useState<string | null>(null);
+  const [setToDelete, setSetToDelete] = useState<InterviewQuestionsSet | null>(null);
 
   // Ref for scrolling to the results section
   const resultsSectionRef = useRef<HTMLDivElement | null>(null);
-  
-  // Effect to initialize the page with a single blank session entry on first load
+  const isFirestoreAvailable = !!firestoreDb;
+
+  // Effect to fetch saved question sets from Firestore on component mount or user change
   useEffect(() => {
     setIsPageLoading(false);
-    if (sessionEntries.length === 0) {
-      const newId = crypto.randomUUID();
-      setSessionEntries([{ id: newId, jdContent: '', roleTitle: '', focusAreas: '', questions: null }]);
-      setSelectedEntryId(newId);
+    if (currentUser && isFirestoreAvailable) {
+      setIsLoadingFromDB(true);
+      getInterviewQuestionSets()
+        .then(sets => {
+          setSavedSets(sets);
+          // If there are saved sets, select the most recent one. Otherwise, start with a new draft.
+          if (sets.length > 0) handleSelectSet(sets[0].id); else handleAddNewEntry();
+        })
+        .catch(err => {
+          console.error("Error fetching question sets:", err);
+          toast({ title: "Error Loading Data", description: "Could not load saved question sets.", variant: "destructive" });
+        })
+        .finally(() => setIsLoadingFromDB(false));
+    } else {
+        setIsLoadingFromDB(false);
+        setSavedSets([]);
+        handleAddNewEntry();
     }
-  }, [setIsPageLoading, sessionEntries.length]);
+  }, [currentUser, isFirestoreAvailable, setIsPageLoading, toast]);
 
-  // Memoized value to get the currently selected session entry object
-  const currentEntry = useMemo(() => {
-    return sessionEntries.find(e => e.id === selectedEntryId);
-  }, [sessionEntries, selectedEntryId]);
 
   // Effect to scroll to the results section when AI processing starts
   useEffect(() => {
@@ -93,39 +124,107 @@ export default function InterviewQuestionGeneratorPage() {
     }
   }, [isLoading]);
   
-  // Handler for updating input fields of the current session entry
-  const handleInputChange = (field: keyof Omit<SessionEntry, 'id' | 'questions'>, value: string) => {
-    setSessionEntries(prev => prev.map(entry => 
-      entry.id === selectedEntryId ? { ...entry, [field]: value } : entry
-    ));
+  /**
+   * Handler for updating input fields of the active form.
+   * @param {keyof Omit<FormState, 'id' | 'questions'>} field - The field to update.
+   * @param {string} value - The new value for the field.
+   */
+  const handleInputChange = (field: keyof Omit<FormState, 'id' | 'questions'>, value: string) => {
+    setActiveForm(prev => ({ ...prev, [field]: value }));
   };
   
-  // Handler to add a new, blank session entry
+  /**
+   * Handler to start a new, blank draft.
+   */
   const handleAddNewEntry = () => {
-    const newId = crypto.randomUUID();
-    const newEntry: SessionEntry = { id: newId, jdContent: '', roleTitle: '', focusAreas: '', questions: null };
-    setSessionEntries(prev => [...prev, newEntry]);
-    setSelectedEntryId(newId);
-  };
-  
-  // Handler to delete the currently selected session entry
-  const handleDeleteEntry = () => {
-    if (sessionEntries.length <= 1 || !selectedEntryId) return; // Prevent deleting the last entry
-    const newEntries = sessionEntries.filter(e => e.id !== selectedEntryId);
-    setSessionEntries(newEntries);
-    setSelectedEntryId(newEntries[0]?.id || null); // Select the first remaining entry
+    setActiveForm(getInitialFormState());
   };
 
-  // Callback to handle file upload and extract job description content and title
+  /**
+   * Handler to select a saved question set from the dropdown, populating the form.
+   * @param {string | null} setId - The ID of the set to select, or null to start a new entry.
+   */
+  const handleSelectSet = async (setId: string | null) => {
+    if (!setId) {
+      handleAddNewEntry();
+      return;
+    }
+    const selected = savedSets.find(s => s.id === setId);
+    if (selected) {
+      let jdContent = "";
+      if (selected.jobDescriptionDataUri) {
+        try {
+          const base64 = selected.jobDescriptionDataUri.split(',')[1];
+          jdContent = Buffer.from(base64, 'base64').toString('utf-8');
+        } catch (e) {
+            console.error("Failed to decode JD content from data URI:", e);
+            jdContent = "Could not load job description content.";
+        }
+      }
+      setActiveForm({
+        id: selected.id,
+        jdContent: jdContent,
+        roleTitle: selected.roleTitle,
+        focusAreas: selected.focusAreas || '',
+        questions: {
+            technicalQuestions: selected.technicalQuestions,
+            behavioralQuestions: selected.behavioralQuestions,
+            situationalQuestions: selected.situationalQuestions,
+            roleSpecificQuestions: selected.roleSpecificQuestions,
+        },
+      });
+    }
+  };
+  
+  /**
+   * Handler to open the delete confirmation dialog.
+   */
+  const handleOpenDeleteDialog = () => {
+    if (!activeForm.id) return;
+    const setToDelete = savedSets.find(s => s.id === activeForm.id);
+    if (setToDelete) setSetToDelete(setToDelete);
+  };
+
+  /**
+   * Handler to confirm and execute the deletion of a saved question set.
+   */
+  const handleConfirmDelete = async () => {
+    if (!setToDelete) return;
+    try {
+      await deleteInterviewQuestionSet(setToDelete.id);
+      toast({ title: "Set Deleted", description: `The question set for "${setToDelete.roleTitle}" has been deleted.` });
+      const newSets = savedSets.filter(s => s.id !== setToDelete.id);
+      setSavedSets(newSets);
+      // Select the newest remaining set or start a new draft.
+      if (newSets.length > 0) {
+        handleSelectSet(newSets[0].id);
+      } else {
+        handleAddNewEntry();
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      toast({ title: "Deletion Failed", description: message.substring(0, 100), variant: "destructive" });
+    } finally {
+      setSetToDelete(null);
+    }
+  };
+
+
+  /**
+   * Callback to handle file upload and extract job description content and title.
+   * This populates the fields for a *new draft*.
+   */
   const handleJobDescriptionUpload = useCallback(async (files: File[]) => {
      if (!currentUser?.uid) {
       toast({ title: "Not Authenticated", description: "Please log in to upload files.", variant: "destructive" });
       return;
     }
-    if (files.length === 0 || !selectedEntryId) return;
-
+    if (files.length === 0) return;
+    
+    // Start a new draft for the uploaded file
+    handleAddNewEntry();
+    
     const file = files[0];
-    // Convert file to data URI for the AI flow
     const dataUri = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
@@ -135,9 +234,7 @@ export default function InterviewQuestionGeneratorPage() {
     
     setIsLoading(true);
     setError(null);
-    // Clear previous questions for the current entry
-    setSessionEntries(prev => prev.map(e => e.id === selectedEntryId ? {...e, questions: null} : e));
-
+    
     try {
       const extractionInput: ExtractJobRolesAIInput = { jobDescriptionDocuments: [{ name: file.name, dataUri }] };
       const extractionOutput: ExtractJobRolesAIOutput = await extractJobRolesAI(extractionInput);
@@ -147,29 +244,15 @@ export default function InterviewQuestionGeneratorPage() {
 
       if (extractionOutput.length > 0 && extractionOutput[0].contentDataUri) {
         const firstRole = extractionOutput[0];
-        
-        // Decode the content from the data URI returned by the AI
         const base64 = firstRole.contentDataUri.split(',')[1];
-        if (base64) {
-            const decodedText = Buffer.from(base64, 'base64').toString('utf-8');
-            newJdContent = decodedText;
-        }
-        
-        // Use the extracted title if it's meaningful
-        if (firstRole.name && firstRole.name !== "Untitled Job Role" && !firstRole.name.startsWith("Job Role")) {
-          newRoleTitle = firstRole.name;
-          toast({ title: "Content & Title Extracted", description: `Extracted JD and title: "${firstRole.name}".`});
-        } else {
-          toast({ title: "Content Extracted", description: "JD content has been extracted." });
-        }
+        if (base64) newJdContent = Buffer.from(base64, 'base64').toString('utf-8');
+        if (firstRole.name && firstRole.name !== "Untitled Job Role" && !firstRole.name.startsWith("Job Role")) newRoleTitle = firstRole.name;
+        toast({ title: "Content Extracted", description: `Extracted content for "${newRoleTitle || 'new role'}"`});
       } else {
-         toast({ title: "Extraction Failed", description: "Could not extract content from the document.", variant: "destructive"});
+         toast({ title: "Extraction Failed", description: "Could not extract content.", variant: "destructive"});
       }
       
-      // Update the current session entry with the extracted data
-      setSessionEntries(prev => prev.map(entry =>
-        entry.id === selectedEntryId ? { ...entry, jdContent: newJdContent, roleTitle: newRoleTitle } : entry
-      ));
+      setActiveForm({ ...getInitialFormState(), jdContent: newJdContent, roleTitle: newRoleTitle });
 
     } catch (extractError) {
       const message = extractError instanceof Error ? extractError.message : String(extractError);
@@ -178,15 +261,17 @@ export default function InterviewQuestionGeneratorPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast, currentUser?.uid, selectedEntryId]);
+  }, [toast, currentUser?.uid]);
 
-  // Callback to generate interview questions using the AI flow
+  /**
+   * Callback to generate interview questions using the AI flow and save the result.
+   */
   const handleGenerateQuestions = useCallback(async () => {
-    if (!currentUser?.uid) {
+    if (!currentUser?.uid || !isFirestoreAvailable) {
       toast({ title: "Not Authenticated", description: "Please log in.", variant: "destructive" });
       return;
     }
-    if (!currentEntry || !currentEntry.jdContent.trim()) {
+    if (!activeForm.jdContent.trim()) {
       toast({ title: "Missing Job Description", description: "Please enter or upload a job description.", variant: "destructive" });
       return;
     }
@@ -195,8 +280,7 @@ export default function InterviewQuestionGeneratorPage() {
     setError(null);
 
     try {
-      const { jdContent, roleTitle, focusAreas } = currentEntry;
-      // Convert the text content to a data URI for the AI flow
+      const { jdContent, roleTitle, focusAreas } = activeForm;
       const contentDataUri = `data:text/plain;charset=utf-8;base64,${Buffer.from(jdContent).toString('base64')}`;
 
       const input: GenerateJDInterviewQuestionsInput = {
@@ -206,17 +290,19 @@ export default function InterviewQuestionGeneratorPage() {
       };
       const aiOutput = await generateJDInterviewQuestions(input);
       
-      // Structure the output to be stored in the session state
-      const questionsSet = {
-        roleTitle: roleTitle.trim(),
+      const questionSetToSave: Omit<InterviewQuestionsSet, 'id' | 'userId' | 'createdAt'> = {
+        roleTitle: roleTitle.trim() || "Untitled Role",
         jobDescriptionDataUri: contentDataUri,
         ...aiOutput,
         ...(focusAreas.trim() && { focusAreas: focusAreas.trim() }),
       };
       
-      // Update the current session entry with the generated questions
-      setSessionEntries(prev => prev.map(e => e.id === selectedEntryId ? {...e, questions: questionsSet} : e));
-      toast({ title: "Questions Generated", description: "Your interview questions are ready." });
+      const savedSet = await saveInterviewQuestionSet(questionSetToSave);
+      
+      setSavedSets(prev => [savedSet, ...prev]);
+      handleSelectSet(savedSet.id); // Select the newly created set
+      
+      toast({ title: "Questions Generated & Saved", description: "Your new interview question set is ready and saved." });
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
@@ -225,46 +311,40 @@ export default function InterviewQuestionGeneratorPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentEntry, toast, currentUser?.uid, selectedEntryId]);
+  }, [activeForm, toast, currentUser?.uid, isFirestoreAvailable]);
 
-  // Handler to generate and download a PDF of the questions
+  /**
+   * Handler to generate and download a PDF of the currently active questions.
+   */
   const handleDownloadPdf = () => {
-    if (!currentEntry?.questions) return;
+    if (!activeForm.questions) return;
     setIsDownloading(true);
 
     try {
         const pdf = new jsPDF('p', 'pt', 'a4');
-        const { questions } = currentEntry;
+        const { questions, roleTitle, focusAreas } = activeForm;
         const pageMargin = 40;
         const pageWidth = pdf.internal.pageSize.getWidth();
         const pageHeight = pdf.internal.pageSize.getHeight();
         const contentWidth = pageWidth - (pageMargin * 2);
         let yPos = pageMargin;
 
-        // Function to check if a page break is needed and add one if so
-        const checkPageBreak = (neededHeight: number) => {
-            if (yPos + neededHeight > pageHeight - pageMargin) {
-                pdf.addPage();
-                yPos = pageMargin;
-            }
-        };
+        const checkPageBreak = (neededHeight: number) => { if (yPos + neededHeight > pageHeight - pageMargin) { pdf.addPage(); yPos = pageMargin; } };
 
-        // PDF Title and Subtitle
         pdf.setFontSize(22);
         pdf.setFont('helvetica', 'bold');
-        pdf.setTextColor(getComputedStyle(document.documentElement).getPropertyValue('--primary')); // Use theme color
         pdf.text(`Interview Questions`, pageWidth / 2, yPos, { align: 'center' });
         yPos += 30;
 
         pdf.setFontSize(16);
-        pdf.setTextColor('#000000');
-        pdf.text(`Role: ${questions.roleTitle || 'General'}`, pageWidth / 2, yPos, { align: 'center' });
+        pdf.setTextColor('#333333');
+        pdf.text(`Role: ${roleTitle || 'General'}`, pageWidth / 2, yPos, { align: 'center' });
         yPos += 20;
 
-        if (questions.focusAreas) {
+        if (focusAreas) {
             pdf.setFontSize(12);
             pdf.setFont('helvetica', 'italic');
-            pdf.text(`Focus Areas: ${questions.focusAreas}`, pageWidth / 2, yPos, { align: 'center' });
+            pdf.text(`Focus Areas: ${focusAreas}`, pageWidth / 2, yPos, { align: 'center' });
             yPos += 25;
         }
 
@@ -272,7 +352,6 @@ export default function InterviewQuestionGeneratorPage() {
         pdf.line(pageMargin, yPos, pageWidth - pageMargin, yPos);
         yPos += 20;
 
-        // Question Categories
         const questionCategoriesToRender: Array<{key: keyof typeof questions, title: string}> = [
             { key: "technicalQuestions", title: "Technical Questions" },
             { key: "behavioralQuestions", title: "Behavioral Questions" },
@@ -280,14 +359,12 @@ export default function InterviewQuestionGeneratorPage() {
             { key: "roleSpecificQuestions", title: "Role-Specific Questions" },
         ];
         
-        // Loop through categories and render questions
         questionCategoriesToRender.forEach(({ key, title }) => {
             const questionList = questions[key];
             if (questionList && Array.isArray(questionList) && questionList.length > 0) {
                 checkPageBreak(30); 
                 pdf.setFontSize(14);
                 pdf.setFont('helvetica', 'bold');
-                pdf.setTextColor(getComputedStyle(document.documentElement).getPropertyValue('--accent'));
                 pdf.text(title, pageMargin, yPos);
                 yPos += 20;
                 
@@ -304,8 +381,8 @@ export default function InterviewQuestionGeneratorPage() {
                 yPos += 15;
             }
         });
-
-        const fileName = `Interview_Questions_${(questions.roleTitle || 'General').replace(/\s+/g, '_')}.pdf`;
+        
+        const fileName = `Interview_Questions_${(roleTitle || 'General').replace(/\s+/g, '_')}.pdf`;
         pdf.save(fileName);
 
     } catch (err) {
@@ -316,15 +393,17 @@ export default function InterviewQuestionGeneratorPage() {
     }
   };
 
-  // Data structure for rendering question categories
-  const questionCategories: Array<{key: keyof Omit<InterviewQuestionsSet, 'id'|'userId'|'createdAt'|'roleTitle'>, title: string, icon: React.ElementType}> = [
+  /**
+   * Data structure for rendering question categories.
+   */
+  const questionCategories: Array<{key: keyof Omit<InterviewQuestionsSet, 'id'|'userId'|'createdAt'|'roleTitle'|'jobDescriptionDataUri'|'focusAreas'>, title: string, icon: React.ElementType}> = [
     { key: "technicalQuestions", title: "Technical Questions", icon: Brain },
     { key: "behavioralQuestions", title: "Behavioral Questions", icon: Users },
     { key: "situationalQuestions", title: "Situational Questions", icon: HelpCircle },
     { key: "roleSpecificQuestions", title: "Role-Specific Questions", icon: ScrollText },
   ];
   
-  const isProcessing = isLoading;
+  const isProcessing = isLoading || isLoadingFromDB;
 
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-8">
@@ -332,44 +411,37 @@ export default function InterviewQuestionGeneratorPage() {
       <Card className="mb-8 shadow-md">
         <CardHeader>
           <CardTitle className="text-2xl font-headline text-primary flex items-center"><SearchCheck className="w-7 h-7 mr-3" /> AI Interview Question Generator</CardTitle>
-          <CardDescription>Manage multiple job descriptions in a single session. Upload or paste a JD, generate questions, and switch between them. Data is cleared on page refresh.</CardDescription>
+          <CardDescription>Generate and save interview question sets for different roles. Your saved sets are automatically loaded.</CardDescription>
         </CardHeader>
       </Card>
-      
-       {/* Authentication Gate */}
-       {!currentUser && (
-        <Card className="shadow-lg"><CardContent className="pt-6 text-center"><p className="text-lg text-muted-foreground">Please <a href="/login" className="text-primary underline">log in</a> to use the generator.</p></CardContent></Card>
-      )}
 
-      {/* Main Content */}
-      {currentUser && (
+      {!isFirestoreAvailable && (<Card className="shadow-lg border-destructive"><CardHeader><CardTitle className="text-destructive flex items-center"><ServerOff className="w-5 h-5 mr-2" /> Database Not Connected</CardTitle></CardHeader><CardContent><p>Database features are disabled.</p></CardContent></Card>)}
+      {!currentUser && isFirestoreAvailable && (<Card className="shadow-lg"><CardContent className="pt-6 text-center"><p className="text-lg text-muted-foreground">Please <a href="/login" className="text-primary underline">log in</a> to use the generator.</p></CardContent></Card>)}
+
+      {currentUser && isFirestoreAvailable && (
         <>
-          {/* Input Section (JD Paste and Upload) */}
+          {/* Input Section */}
           <div className="flex flex-col md:flex-row gap-8">
             <div className="flex-1">
               <Card className="shadow-lg h-full">
                 <CardHeader>
                   <CardTitle className="flex items-center text-xl font-headline"><FileText className="w-6 h-6 mr-2 text-primary" />Job Description & Context</CardTitle>
-                  <CardDescription>Paste the job description below or upload a file.</CardDescription>
+                  <CardDescription>Paste the job description below or upload a file for a new entry.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* JD Content Textarea */}
                   <div className="space-y-2">
                     <Label htmlFor="job-description-content">Job Description Content</Label>
-                    <Textarea id="job-description-content" value={currentEntry?.jdContent || ''} onChange={(e) => handleInputChange('jdContent', e.target.value)} placeholder="Paste the full job description here..." className="min-h-[200px]" disabled={isProcessing}/>
+                    <Textarea id="job-description-content" value={activeForm.jdContent} onChange={(e) => handleInputChange('jdContent', e.target.value)} placeholder="Paste the full job description here..." className="min-h-[200px]" disabled={isProcessing}/>
                   </div>
                   <Separator />
-                  {/* Optional Context Inputs */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="roleTitle">Role Title (Optional)</Label>
-                      <Input id="roleTitle" value={currentEntry?.roleTitle || ''} onChange={(e) => handleInputChange('roleTitle', e.target.value)} placeholder="e.g., Senior Software Engineer" disabled={isProcessing}/>
-                      <p className="text-xs text-muted-foreground">Helps generate more specific questions.</p>
+                      <Input id="roleTitle" value={activeForm.roleTitle} onChange={(e) => handleInputChange('roleTitle', e.target.value)} placeholder="e.g., Senior Software Engineer" disabled={isProcessing}/>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="focusAreas">Key Focus Areas (Optional)</Label>
-                      <Input id="focusAreas" value={currentEntry?.focusAreas || ''} onChange={(e) => handleInputChange('focusAreas', e.target.value)} placeholder="e.g., JavaScript, Team Leadership" disabled={isProcessing}/>
-                      <p className="text-xs text-muted-foreground">Comma-separated skills to emphasize.</p>
+                      <Input id="focusAreas" value={activeForm.focusAreas} onChange={(e) => handleInputChange('focusAreas', e.target.value)} placeholder="e.g., JavaScript, Team Leadership" disabled={isProcessing}/>
                     </div>
                   </div>
                 </CardContent>
@@ -378,8 +450,8 @@ export default function InterviewQuestionGeneratorPage() {
             <div className="flex-1">
               <Card className="shadow-lg h-full flex flex-col">
                 <CardHeader>
-                  <CardTitle className="flex items-center text-xl font-headline"><UploadCloud className="w-6 h-6 mr-2 text-primary" />Or Upload a File</CardTitle>
-                  <CardDescription>The AI will extract the content and title for you.</CardDescription>
+                  <CardTitle className="flex items-center text-xl font-headline"><UploadCloud className="w-6 h-6 mr-2 text-primary" />Or Upload for New Entry</CardTitle>
+                  <CardDescription>The AI will extract content and create a new draft.</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow flex flex-col">
                   <FileUploadArea onFilesUpload={handleJobDescriptionUpload} acceptedFileTypes={{ "application/pdf": [".pdf"], "text/plain": [".txt"],"application/msword": [".doc"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"]}} multiple={false} label="PDF, TXT, DOC, DOCX (Max 5MB)" id="job-description-upload" maxSizeInBytes={MAX_FILE_SIZE_BYTES} dropzoneClassName="h-full" showFileList={false}/>
@@ -392,23 +464,29 @@ export default function InterviewQuestionGeneratorPage() {
           <Card className="p-6 shadow-lg">
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                <Label htmlFor="session-select" className="text-sm whitespace-nowrap self-center">Current JD Session:</Label>
-                <Select value={selectedEntryId || ''} onValueChange={setSelectedEntryId} disabled={isProcessing}>
-                  <SelectTrigger id="session-select" className="flex-grow"><SelectValue placeholder="Select a job description..." /></SelectTrigger>
+                <Label htmlFor="session-select" className="text-sm whitespace-nowrap self-center">Saved Question Sets:</Label>
+                <Select value={activeForm.id || "new-entry"} onValueChange={(val) => val === "new-entry" ? handleAddNewEntry() : handleSelectSet(val)} disabled={isProcessing}>
+                  <SelectTrigger id="session-select" className="flex-grow"><SelectValue placeholder="Select a saved set..." /></SelectTrigger>
                   <SelectContent>
-                    {sessionEntries.map((entry, index) => (<SelectItem key={entry.id} value={entry.id}>{entry.roleTitle.trim() || `Untitled JD ${index + 1}`}</SelectItem>))}
+                    <SelectItem value="new-entry">-- New Draft --</SelectItem>
+                    {savedSets.map((entry) => (<SelectItem key={entry.id} value={entry.id}>{entry.roleTitle} ({entry.createdAt.toDate().toLocaleDateString()})</SelectItem>))}
                   </SelectContent>
                 </Select>
                 <div className="flex gap-2">
+                    <TooltipProvider><Tooltip><TooltipTrigger asChild>
                     <Button variant="outline" size="icon" onClick={handleAddNewEntry} disabled={isProcessing} aria-label="Add new JD session"><PlusCircle className="w-5 h-5"/></Button>
-                    <Button variant="outline" size="icon" onClick={handleDeleteEntry} disabled={isProcessing || sessionEntries.length <= 1} aria-label="Delete current JD session"><Trash2 className="w-5 h-5"/></Button>
+                    </TooltipTrigger><TooltipContent>New Draft</TooltipContent></Tooltip></TooltipProvider>
+                    
+                    <TooltipProvider><Tooltip><TooltipTrigger asChild>
+                    <Button variant="outline" size="icon" onClick={handleOpenDeleteDialog} disabled={isProcessing || !activeForm.id} aria-label="Delete current JD session"><Trash2 className="w-5 h-5"/></Button>
+                    </TooltipTrigger><TooltipContent>Delete Selected Set</TooltipContent></Tooltip></TooltipProvider>
                 </div>
               </div>
               <Separator />
               <div className="flex justify-center pt-2">
-                <Button onClick={handleGenerateQuestions} disabled={isProcessing || !currentEntry?.jdContent.trim()} size="lg" className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground shadow-md">
+                <Button onClick={handleGenerateQuestions} disabled={isProcessing || !activeForm.jdContent.trim()} size="lg" className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground shadow-md">
                   {isLoading ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Lightbulb className="w-5 h-5 mr-2" />}
-                  Generate Questions
+                  {activeForm.id ? "Regenerate & Save as New" : "Generate & Save Questions"}
                 </Button>
               </div>
             </div>
@@ -416,32 +494,26 @@ export default function InterviewQuestionGeneratorPage() {
           
           {/* Results Section */}
           <div ref={resultsSectionRef}>
-            {/* Loading State */}
-            {isProcessing && !currentEntry?.questions && (
-              <Card className="shadow-lg"><CardContent className="pt-6 flex flex-col items-center justify-center space-y-4 min-h-[200px]"><Loader2 className="w-12 h-12 animate-spin text-primary" /><p className="text-lg text-muted-foreground">AI is crafting questions...</p></CardContent></Card>
-            )}
-            {/* Error State */}
-            {error && !isLoading && (
-              <Alert variant="destructive" className="shadow-md"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>
-            )}
-            {/* Success State */}
-            {currentEntry?.questions && !isLoading && (
+            {isProcessing && !activeForm.questions && (<Card className="shadow-lg"><CardContent className="pt-6 flex flex-col items-center justify-center space-y-4 min-h-[200px]"><Loader2 className="w-12 h-12 animate-spin text-primary" /><p className="text-lg text-muted-foreground">AI is crafting questions...</p></CardContent></Card>)}
+            {error && !isLoading && (<Alert variant="destructive" className="shadow-md"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>)}
+            
+            {activeForm.questions && !isLoading && (
               <div className="space-y-6 mt-8">
                 <div className="p-4 bg-background">
                   <Separator />
                   <div className="flex flex-col sm:flex-row justify-between items-center py-4 gap-4">
                     <h2 className="text-xl font-semibold text-foreground font-headline text-center md:text-left">
-                      Interview Questions for {currentEntry.questions.roleTitle ? <span className="text-primary">{currentEntry.questions.roleTitle}</span> : 'the Role'}
+                      Interview Questions for {activeForm.roleTitle ? <span className="text-primary">{activeForm.roleTitle}</span> : 'the Role'}
                     </h2>
                      <Button onClick={handleDownloadPdf} disabled={isDownloading} variant="outline" size="sm">
                         {isDownloading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
                         Download PDF
                       </Button>
                   </div>
-                   {currentEntry.questions.focusAreas && (<p className="text-sm text-muted-foreground text-center md:text-left pb-4">Focusing on: {currentEntry.questions.focusAreas}</p>)}
+                   {activeForm.focusAreas && (<p className="text-sm text-muted-foreground text-center md:text-left pb-4">Focusing on: {activeForm.focusAreas}</p>)}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {questionCategories.map(({key, title, icon: Icon}) => {
-                      const questions = currentEntry.questions?.[key as keyof typeof currentEntry.questions];
+                      const questions = activeForm.questions?.[key as keyof typeof activeForm.questions];
                       if (questions && Array.isArray(questions) && questions.length > 0) {
                         return (
                           <motion.div key={key} initial="initial" whileHover="hover" variants={cardHoverVariants} className="h-full">
@@ -462,11 +534,17 @@ export default function InterviewQuestionGeneratorPage() {
                 </div>
               </div>
             )}
-             {/* Initial Placeholder State */}
-             {!isProcessing && !currentEntry?.questions && !error && (
-                 <Card className="shadow-lg"><CardContent className="pt-6"><p className="text-center text-muted-foreground py-8">Enter a job description to get started.</p></CardContent></Card>
+             {!isProcessing && !activeForm.questions && !error && (
+                 <Card className="shadow-lg"><CardContent className="pt-6"><p className="text-center text-muted-foreground py-8">Select a saved set or start a new draft to begin.</p></CardContent></Card>
             )}
           </div>
+
+           <AlertDialog open={!!setToDelete} onOpenChange={(open) => !open && setSetToDelete(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the interview question set for <span className="font-semibold">{setToDelete?.roleTitle}</span>.</AlertDialogDescription></AlertDialogHeader>
+              <AlertDialogFooter><AlertDialogCancel onClick={() => setSetToDelete(null)}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Delete</AlertDialogAction></AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </>
       )}
     </div>

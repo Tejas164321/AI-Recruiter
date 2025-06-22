@@ -16,7 +16,7 @@ import {
   writeBatch,
   deleteDoc,
 } from 'firebase/firestore';
-import type { JobScreeningResult, AtsScoreResult } from '@/lib/types';
+import type { JobScreeningResult, AtsScoreResult, InterviewQuestionsSet } from '@/lib/types';
 
 // A warning is logged if Firestore was not initialized correctly.
 if (!db) {
@@ -70,7 +70,10 @@ export const saveJobScreeningResult = async (resultData: Omit<JobScreeningResult
  * @returns {Promise<JobScreeningResult[]>} A promise that resolves with an array of screening results.
  */
 export const getAllJobScreeningResultsForUser = async (): Promise<JobScreeningResult[]> => {
-  if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
+  if (!db || !auth?.currentUser) {
+    console.error("getAllJobScreeningResultsForUser: Firestore or Auth not available/User not logged in.");
+    return [];
+  };
   const userId = auth.currentUser.uid;
   const q = query(collection(db, "jobScreeningResults"), where("userId", "==", userId), orderBy("createdAt", "desc"));
   const querySnapshot = await getDocs(q);
@@ -128,7 +131,10 @@ export const saveMultipleAtsScoreResults = async (resultsData: Array<Omit<AtsSco
  * @returns {Promise<AtsScoreResult[]>} An array of saved ATS score results.
  */
 export const getAtsScoreResults = async (): Promise<AtsScoreResult[]> => {
-  if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
+  if (!db || !auth?.currentUser) {
+    console.error("getAtsScoreResults: Firestore or Auth not available/User not logged in.");
+    return [];
+  };
   const userId = auth.currentUser.uid;
   const q = query(collection(db, "atsScoreResults"), where("userId", "==", userId), orderBy("createdAt", "desc"));
   const querySnapshot = await getDocs(q);
@@ -179,4 +185,49 @@ export const deleteAllAtsScoreResults = async (): Promise<void> => {
 
   // Commit all batches concurrently.
   await Promise.all(batches.map(batch => batch.commit()));
+};
+
+// --- InterviewQuestionsSet Functions ---
+
+/**
+ * Saves a new set of interview questions to Firestore.
+ * @param {Omit<InterviewQuestionsSet, 'id' | 'userId' | 'createdAt'>} setData - The question set data to save.
+ * @returns {Promise<InterviewQuestionsSet>} The newly created and saved question set object.
+ */
+export const saveInterviewQuestionSet = async (setData: Omit<InterviewQuestionsSet, 'id' | 'userId' | 'createdAt'>): Promise<InterviewQuestionsSet> => {
+  if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
+  const userId = auth.currentUser.uid;
+  
+  const docRef = await addDoc(collection(db, "interviewQuestionSets"), {
+    ...setData,
+    userId,
+    createdAt: serverTimestamp(),
+  });
+
+  return { ...setData, id: docRef.id, userId, createdAt: Timestamp.now() } as InterviewQuestionsSet;
+};
+
+/**
+ * Fetches all saved interview question sets for the currently logged-in user.
+ * @returns {Promise<InterviewQuestionsSet[]>} An array of saved interview question sets.
+ */
+export const getInterviewQuestionSets = async (): Promise<InterviewQuestionsSet[]> => {
+  if (!db || !auth?.currentUser) {
+    console.error("getInterviewQuestionSets: Firestore or Auth not available/User not logged in.");
+    return [];
+  };
+  const userId = auth.currentUser.uid;
+  const q = query(collection(db, "interviewQuestionSets"), where("userId", "==", userId), orderBy("createdAt", "desc"));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InterviewQuestionsSet));
+};
+
+/**
+ * Deletes a specific interview question set from Firestore.
+ * @param {string} setId - The ID of the document to delete.
+ */
+export const deleteInterviewQuestionSet = async (setId: string): Promise<void> => {
+  if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
+  const docRef = doc(db, "interviewQuestionSets", setId);
+  await deleteDoc(docRef);
 };
