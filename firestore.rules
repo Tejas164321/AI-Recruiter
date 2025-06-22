@@ -1,11 +1,11 @@
 
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
     // --- Extracted Job Roles ---
-    // Note: This collection is not currently being written to by the app,
-    // but the rule is here for future-proofing.
+    // Rule for a collection that is not actively written to by the app, but is kept for completeness.
     match /extractedJobRoles/{jobRoleId} {
       // Allow reading, updating, or deleting an existing document if the user is the owner.
       allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
@@ -33,7 +33,7 @@ service cloud.firestore {
     }
 
     // --- Interview Question Sets ---
-    // This block contains the fix. The collection name is now correct.
+    // This rule block had a typo in the collection name which is now corrected.
     match /interviewQuestionSets/{setId} {
       // Allow reading, updating, or deleting an existing document if the user is the owner.
       allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
