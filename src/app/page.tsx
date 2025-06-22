@@ -295,7 +295,7 @@ export default function LandingPage() {
                   custom={feature.delay}
                   className="h-full"
                 >
-                  <Card className="shadow-lg h-full flex flex-col bg-card/50 backdrop-blur-sm border-white/10 transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-2xl hover:shadow-black/30 dark:hover:shadow-none dark:hover:drop-shadow-[0_8px_16px_hsl(var(--primary)/0.3)]">
+                  <Card className="shadow-lg h-full flex flex-col bg-card/50 backdrop-blur-sm border-border/20 transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-2xl dark:hover:shadow-[0_8px_30px_hsl(var(--primary)/0.25)]">
                     <CardHeader className="pb-4">
                       <motion.div 
                         initial={{ opacity: 0, scale: 0.5 }}
@@ -402,3 +402,5 @@ export default function LandingPage() {
     </div>
   );
 }
+
+    
