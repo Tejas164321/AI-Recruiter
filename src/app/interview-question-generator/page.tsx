@@ -299,8 +299,23 @@ export default function InterviewQuestionGeneratorPage() {
       
       const savedSet = await saveInterviewQuestionSet(questionSetToSave);
       
+      // Update the list of all available sets
       setSavedSets(prev => [savedSet, ...prev]);
-      handleSelectSet(savedSet.id); // Select the newly created set
+      
+      // Directly update the active form to reflect the newly created set.
+      // This bypasses the stale state issue of trying to find the new set in the old list.
+      setActiveForm({
+        id: savedSet.id,
+        jdContent: activeForm.jdContent, // Keep the original JD content in the textarea
+        roleTitle: savedSet.roleTitle,
+        focusAreas: savedSet.focusAreas || '',
+        questions: {
+          technicalQuestions: savedSet.technicalQuestions,
+          behavioralQuestions: savedSet.behavioralQuestions,
+          situationalQuestions: savedSet.situationalQuestions,
+          roleSpecificQuestions: savedSet.roleSpecificQuestions,
+        }
+      });
       
       toast({ title: "Questions Generated & Saved", description: "Your new interview question set is ready and saved." });
 
