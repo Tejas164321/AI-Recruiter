@@ -74,8 +74,8 @@ body {
 
 .glowing-btn {
   @apply relative;
-  /* A multi-layered shadow for a long, smooth, faded glow effect */
-  box-shadow: 0px 4px 20px 0px hsl(var(--primary) / 0.15), 0px 10px 60px 0px hsl(var(--primary) / 0.2);
+  /* A multi-layered shadow for a long, smooth, faded black shadow effect */
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1), 0 16px 56px rgba(0,0,0,0.1);
 }
 
 /* Special class for the landing page's unique background */
