@@ -116,6 +116,6 @@ The project follows a standard Next.js App Router structure with some key direct
 ```
 ---
 
-## 📞 Contact
+## connect with - tejas2382004@gmail.com
 
-Created by [Your Name] - feel free to reach out!
+Created by Tejas Patil - feel free to reach out!
