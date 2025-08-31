@@ -3,7 +3,7 @@ name: Keep Contribution Graph Random 🌱
 on:
   schedule:
     - cron: "0 8 * * *"   # Runs daily at 8 AM UTC
-  workflow_dispatch:       # Allow manual trigger
+  workflow_dispatch:
 
 jobs:
   auto-commit:
@@ -12,9 +12,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Setup Git identity
+        run: |
+          git config --global user.name "Tejas Patil"
+          git config --global user.email "tejaspatil1643@gmail.com"
+
       - name: Generate random commits
         run: |
-          # Random number of commits between 1 and 5
           NUM_COMMITS=$(( (RANDOM % 5) + 1 ))
           echo "Making $NUM_COMMITS commits today..."
 
@@ -26,6 +30,4 @@ jobs:
 
       - name: Push changes
         run: |
-          git config --global user.name "Tejas Patil"
-          git config --global user.email "tejas2382004@gmail.com"
           git push
