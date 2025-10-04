@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { useLoading } from "@/contexts/loading-context";
 // Firebase Authentication
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth as firebaseAuthModule } from "@/lib/firebase/config";
 
 /**
@@ -31,6 +31,8 @@ export default function SignupPage() {
 
   // State for form fields and loading status
   const [isLoading, setIsLoading] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -70,7 +72,15 @@ export default function SignupPage() {
 
     try {
       // Attempt to create a new user with Firebase
-      await createUserWithEmailAndPassword(firebaseAuthModule, email, password);
+      const userCredential = await createUserWithEmailAndPassword(firebaseAuthModule, email, password);
+
+      // After user is created, update their profile with the display name
+      if (userCredential.user) {
+        await updateProfile(userCredential.user, {
+            displayName: `${firstName} ${lastName}`.trim()
+        });
+      }
+
       toast({ title: "Sign Up Successful", description: "Your account has been created. Welcome!" });
       // Show page loader while redirecting to dashboard
       setIsPageLoading(true);
@@ -94,14 +104,14 @@ export default function SignupPage() {
   // Show a full-page loader while checking authentication state or if a user is already logged in
   if (isLoadingAuth || currentUser) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen pt-24">
         <Loader2 className="w-16 h-16 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="flex items-center justify-center p-4 pt-8">
+    <div className="flex items-center justify-center p-4 pt-24">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold font-headline">Create an Account</CardTitle>
@@ -109,6 +119,17 @@ export default function SignupPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+             {/* Name Inputs */}
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="first-name">First Name</Label>
+                    <Input id="first-name" placeholder="John" required value={firstName} onChange={(e) => setFirstName(e.target.value)} disabled={isLoading} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="last-name">Last Name</Label>
+                    <Input id="last-name" placeholder="Doe" required value={lastName} onChange={(e) => setLastName(e.target.value)} disabled={isLoading} />
+                </div>
+            </div>
             {/* Email Input */}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>

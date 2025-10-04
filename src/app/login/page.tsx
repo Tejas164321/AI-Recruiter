@@ -91,14 +91,14 @@ export default function LoginPage() {
   // Show a full-page loader while the authentication state is being checked
   if (isLoadingAuth || currentUser) {
     return (
-      <div className="flex items-center justify-center flex-1">
+      <div className="flex items-center justify-center flex-1 pt-24">
         <Loader2 className="w-16 h-16 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-1 items-center justify-center bg-background p-4 pt-8">
+    <div className="flex flex-1 items-center justify-center bg-background p-4 pt-24">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold font-headline">Welcome Back!</CardTitle>
