@@ -60,7 +60,7 @@ export default function DashboardPage() {
   // This prevents a flash of the dashboard content before redirection.
   if (isLoadingAuth || !currentUser) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center flex-1">
         <Loader2 className="w-16 h-16 animate-spin text-primary" />
       </div>
     );

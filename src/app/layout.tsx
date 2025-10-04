@@ -10,6 +10,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { LoadingProvider } from "@/contexts/loading-context"; 
 import { AuthProvider } from "@/contexts/auth-context";
 import { cn } from '@/lib/utils';
+import { SpeedInsights } from "@vercel/speed-insights/next"
+
 
 /**
  * Initializes the Inter font with specified subsets and a CSS variable.
@@ -51,11 +53,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className="h-full">
       <head>
         {/* Font link tags are no longer needed as we are using next/font */}
       </head>
-      <body className={cn(inter.variable, "font-body antialiased")}>
+      <body className={cn(inter.variable, "font-body antialiased h-full")}>
+      <SpeedInsights/>
         {/* ThemeProvider manages light/dark mode */}
         <ThemeProvider
           attribute="class"

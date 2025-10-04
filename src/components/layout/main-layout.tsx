@@ -25,7 +25,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const { isPageLoading } = useLoading();
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-full flex-col bg-background">
       {/* Conditionally render the full-page loader */}
       {isPageLoading && <PageLoader />}
       
@@ -33,7 +33,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       <Header />
       
       {/* The main content area where pages will be rendered */}
-      <main className="flex-1 py-4 md:py-6">{children}</main>
+      <main className="flex-1 flex flex-col">{children}</main>
     </div>
   );
 }

@@ -91,17 +91,17 @@ export default function SignupPage() {
     }
   };
   
-  // Show a full-page loader while checking authentication state
-  if (isLoadingAuth) {
+  // Show a full-page loader while checking authentication state or if a user is already logged in
+  if (isLoadingAuth || currentUser) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center flex-1">
         <Loader2 className="w-16 h-16 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background p-4">
+    <div className="flex flex-1 items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold font-headline">Create an Account</CardTitle>

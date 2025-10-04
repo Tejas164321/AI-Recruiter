@@ -58,15 +58,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []); // The empty dependency array ensures this effect runs only once on mount.
 
-  // While the initial authentication check is running, display a full-page loader.
-  // This prevents content from flashing before the user's status is known.
-  if (isLoadingAuth) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <Loader2 className="h-16 w-16 animate-spin text-primary" />
-      </div>
-    );
-  }
+  // NOTE: The initial loading state is now handled inside the specific pages (Login, Signup)
+  // to allow the main layout to render immediately. This avoids showing a full-screen loader
+  // over pages that don't require authentication, improving the initial page load experience.
 
   // Provide the authentication state to all child components.
   return (
