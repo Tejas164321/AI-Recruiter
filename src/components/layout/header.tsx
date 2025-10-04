@@ -15,8 +15,29 @@ import { motion, useScroll, useMotionValueEvent } from "framer-motion";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-
 const SCROLL_THRESHOLD = 100;
+
+const headerVariants = {
+    top: { 
+        width: '100%',
+        height: '4rem',
+        borderBottomWidth: '1px',
+        borderRadius: '0px',
+        paddingLeft: '1rem',
+        paddingRight: '1rem',
+        marginTop: '0rem'
+    },
+    scrolled: {
+        width: 'auto',
+        height: '3.5rem',
+        borderBottomWidth: '1px',
+        borderRadius: '9999px',
+        paddingLeft: '0.75rem',
+        paddingRight: '0.75rem',
+        marginTop: '0.5rem',
+        boxShadow: '0px 8px 24px hsla(var(--primary), 0.1)',
+    },
+};
 
 /**
  * The main header component for the application.
@@ -27,12 +48,10 @@ export function Header() {
   const { currentUser, isLoadingAuth } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-
   const { scrollY } = useScroll();
   const [isScrolled, setIsScrolled] = useState(false);
 
-  // Listen to scroll events and update the state.
-  // This hook MUST be at the top level of the component.
+  // CORRECT PLACEMENT: All hooks must be at the top level.
   useMotionValueEvent(scrollY, "change", (latest) => {
     setIsScrolled(latest > SCROLL_THRESHOLD);
   });
@@ -55,53 +74,28 @@ export function Header() {
     }
   };
 
-
   return (
-    <motion.header
-      className="fixed top-0 z-50 flex w-full items-center justify-center"
-      initial={false}
-      animate={isScrolled ? "scrolled" : "top"}
-    >
+    <header className="fixed top-0 z-50 flex w-full items-center justify-center">
       <motion.div
         className={cn(
-            "flex items-center justify-between transition-colors duration-300",
+            "flex items-center justify-between transition-colors duration-300 border-border",
             "bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
         )}
-        variants={{
-            top: { 
-                width: '100%',
-                height: '4rem', // h-16
-                borderBottomWidth: '1px',
-                borderColor: 'hsl(var(--border))',
-                borderRadius: '0px',
-                paddingLeft: '1rem',
-                paddingRight: '1rem',
-                marginTop: '0rem'
-            },
-            scrolled: {
-                width: 'auto',
-                height: '3.5rem', // h-14
-                borderBottomWidth: '1px',
-                borderColor: 'hsl(var(--border))',
-                borderRadius: '9999px',
-                paddingLeft: '0.75rem',
-                paddingRight: '0.75rem',
-                marginTop: '0.5rem',
-                boxShadow: '0px 8px 24px hsla(var(--primary), 0.1)',
-            },
-        }}
+        initial="top"
+        animate={isScrolled ? "scrolled" : "top"}
+        variants={headerVariants}
         transition={{
             type: "spring",
             stiffness: 260,
             damping: 25,
         }}
       >
-        {/* Container for all header content */}
         <div className="flex h-full w-full items-center justify-between gap-4">
 
-            {/* Logo and App Name - ONLY visible at top */}
              <motion.div
-                 variants={{ top: { opacity: 1 }, scrolled: { opacity: 0, transition: { duration: 0.1 } } }}
+                 initial={{ opacity: 1}}
+                 animate={{ opacity: isScrolled ? 0 : 1 }}
+                 transition={{ duration: 0.1 }}
                  className={cn("flex items-center gap-2", isScrolled ? "hidden" : "flex")}
             >
                 <Link href="/" aria-label="Go to homepage" className="flex items-center gap-2">
@@ -110,10 +104,8 @@ export function Header() {
                 </Link>
             </motion.div>
 
-            {/* Desktop Navigation */}
-            <nav className={cn("hidden md:flex h-full items-center gap-1", isScrolled ? "justify-center" : "justify-end")}>
-               {/* Center Icon for Scrolled State */}
-                <motion.div variants={{ top: { opacity: 0, scale: 0 }, scrolled: { opacity: 1, scale: 1 } }} className={cn(isScrolled ? "flex" : "hidden")}>
+            <nav className={cn("hidden md:flex h-full items-center", isScrolled ? "gap-1 justify-center flex-1" : "gap-1 justify-end")}>
+                <motion.div initial={{ opacity: 0, scale: 0 }} animate={{ opacity: isScrolled ? 1 : 0, scale: isScrolled ? 1 : 0 }} className={cn("absolute left-1/2 -translate-x-1/2", isScrolled ? "flex" : "hidden")}>
                     <Link href="/" className="p-2" aria-label="Go to homepage">
                         <BrainCircuit className="h-7 w-7 text-primary" />
                     </Link>
@@ -128,29 +120,28 @@ export function Header() {
                     </>
                 ) : (
                     <>
-                    <Button variant="ghost" size="default" asChild disabled={!firebaseAuthModule}><Link href="/login">Sign In</Link></Button>
-                    <Button size="default" asChild disabled={!firebaseAuthModule}><Link href="/signup">Sign Up</Link></Button>
+                    <Button variant="ghost" asChild disabled={!firebaseAuthModule}><Link href="/login">Sign In</Link></Button>
+                    <Button asChild disabled={!firebaseAuthModule}><Link href="/signup">Sign Up</Link></Button>
                     </>
                 )}
                  <ThemeToggleButton />
             </nav>
 
-            {/* Mobile Navigation */}
             <div className="md:hidden flex items-center gap-2">
-                 <motion.div variants={{ top: { opacity: 0, scale: 0 }, scrolled: { opacity: 1, scale: 1 } }} className={cn(isScrolled ? "flex" : "hidden")}>
+                 <motion.div initial={{ opacity: 0, scale: 0 }} animate={{ opacity: isScrolled ? 1 : 0, scale: isScrolled ? 1 : 0 }} className={cn(isScrolled ? "flex" : "hidden")}>
                     <Link href="/" className="p-2" aria-label="Go to homepage">
                         <BrainCircuit className="h-7 w-7 text-primary" />
                     </Link>
                 </motion.div>
-                {!isLoadingAuth && (
-                        currentUser ? (
-                            <Button variant="outline" size="sm" asChild><Link href="/dashboard">Dashboard</Link></Button>
-                        ) : (
-                            <>
-                            <Button variant="ghost" size="sm" asChild><Link href="/login">Sign In</Link></Button>
-                            <Button size="sm" asChild><Link href="/signup">Sign Up</Button>
-                            </>
-                    ))}
+                {!isScrolled && !isLoadingAuth && (
+                    currentUser ? (
+                        <Button variant="outline" size="sm" asChild><Link href="/dashboard">Dashboard</Link></Button>
+                    ) : (
+                        <>
+                        <Button variant="ghost" size="sm" asChild><Link href="/login">Sign In</Link></Button>
+                        <Button size="sm" asChild><Link href="/signup">Sign Up</Link></Button>
+                        </>
+                ))}
                 <Sheet>
                     <SheetTrigger asChild>
                         <Button variant="outline" size="icon"><Menu className="h-6 w-6" /><span className="sr-only">Open menu</span></Button>
@@ -186,6 +177,6 @@ export function Header() {
             </div>
         </div>
       </motion.div>
-    </motion.header>
+    </header>
   );
 }
