@@ -1,6 +1,6 @@
 
 "use client";
-import { Loader2 } from 'lucide-react';
+import { Send } from 'lucide-react';
 
 /**
  * A full-screen overlay loader component.
@@ -14,7 +14,7 @@ export function PageLoader() {
       <div className="flex flex-col items-center gap-4">
         {/* The animated icon */}
         <div className="relative w-20 h-20">
-          <Loader2 className="w-20 h-20 animate-spin text-primary" />
+            <Send className="w-20 h-20 text-primary animate-fly-in-loop" />
         </div>
         <p className="text-lg font-semibold text-primary">Loading...</p>
       </div>

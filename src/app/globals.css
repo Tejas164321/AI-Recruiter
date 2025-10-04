@@ -68,6 +68,29 @@
   }
 }
 
+/* Paper Plane loading animation */
+@keyframes fly-in-loop {
+  0% {
+    transform: translateX(-150%) translateY(50%) rotate(20deg);
+    opacity: 0;
+  }
+  15%, 85% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateX(0) translateY(0) rotate(0deg);
+  }
+  100% {
+    transform: translateX(150%) translateY(-50%) rotate(-20deg);
+    opacity: 0;
+  }
+}
+
+.animate-fly-in-loop {
+  animation: fly-in-loop 2s ease-in-out infinite;
+}
+
+
 /* Timeline styles */
 .timeline-line {
   @apply absolute left-1/2 top-0 h-full w-0.5 -translate-x-1/2 bg-border;
@@ -179,5 +202,3 @@
   position: relative;
   z-index: 1; /* Ensure the image is on top of the ::after mask */
 }
-
-    

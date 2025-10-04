@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { Send } from "lucide-react";
 
 /**
  * Props for the LoadingIndicator component.
@@ -28,7 +28,7 @@ export function LoadingIndicator({ stage }: LoadingIndicatorProps) {
     <div className="flex flex-col items-center justify-center space-y-6 py-10 text-center">
       {/* The animated icon */}
       <div className="relative w-16 h-16">
-        <Loader2 className="w-16 h-16 animate-spin text-primary" />
+        <Send className="w-16 h-16 text-primary animate-fly-in-loop" style={{ animationDelay: '-0.5s' }} />
       </div>
 
       {/* The loading messages */}
