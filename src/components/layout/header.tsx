@@ -16,29 +16,29 @@ import { motion, useScroll, useMotionValueEvent } from "framer-motion";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
+
+/**
+ * Defines the animation variants for the header capsule.
+ * The header is always a capsule; it just changes width and margin on scroll.
+ */
 const headerVariants = {
-    top: {
-        width: '100%',
-        marginTop: '0rem',
-        borderRadius: '0px',
-        boxShadow: '0px 2px 10px hsla(var(--primary), 0.05)',
-        transition: { type: "spring", stiffness: 300, damping: 30 }
-    },
-    scrolled: {
-        width: 'calc(100% - 2rem)',
-        maxWidth: '1200px', 
-        marginTop: '0.5rem',
-        borderRadius: '9999px',
-        boxShadow: '0px 12px 28px hsla(var(--primary), 0.2)',
-        transition: { type: "spring", stiffness: 300, damping: 30 }
-    },
+  top: {
+    marginTop: "0.75rem", // 12px
+    width: "calc(100% - 2rem)", // Responsive width with padding
+    maxWidth: "1280px", // Max width for large screens
+    boxShadow: "0px 8px 20px hsla(var(--primary), 0.15)",
+    transition: { type: "spring", stiffness: 300, damping: 30 },
+  },
+  scrolled: {
+    marginTop: "0.5rem", // 8px
+    width: "calc(100% - 4rem)", // Narrows on scroll
+    maxWidth: "1100px", // Smaller max width on scroll
+    boxShadow: "0px 12px 28px hsla(var(--primary), 0.2)",
+    transition: { type: "spring", stiffness: 300, damping: 30 },
+  },
 };
 
 
-/**
- * The main header component for the application. It starts as a full-width bar
- * and transitions into a slightly narrower, floating capsule on scroll.
- */
 export function Header() {
   const { currentUser, isLoadingAuth } = useAuth();
   const router = useRouter();
@@ -46,6 +46,7 @@ export function Header() {
   const { scrollY } = useScroll();
   const [isScrolled, setIsScrolled] = useState(false);
 
+  // Hook to update the 'isScrolled' state based on scroll position.
   useMotionValueEvent(scrollY, "change", (latest) => {
     setIsScrolled(latest > 50);
   });
@@ -66,29 +67,26 @@ export function Header() {
   };
 
   return (
-    <header className="fixed top-0 z-50 flex w-full items-center justify-center">
+    // The outer container that centers the animating capsule.
+    <header className="fixed top-0 z-50 flex w-full justify-center">
+      
+      {/* The animating capsule itself */}
       <motion.div
         className={cn(
-            "h-16 transition-colors duration-300 border-border border",
-            "bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/60"
+          "h-16 rounded-full border border-border",
+          "bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/60"
         )}
         initial="top"
         animate={isScrolled ? "scrolled" : "top"}
         variants={headerVariants}
       >
         <div className="container flex h-full items-center justify-between px-4 md:px-6">
+          
             {/* --- Left Side: Brand Logo --- */}
-            <Link href="/" aria-label="Go to homepage" className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="rounded-full h-10 w-10">
+            <Link href="/" aria-label="Go to homepage">
+                <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0 rounded-full">
                     <Shell className="h-6 w-6 text-primary" />
                 </Button>
-                <motion.span 
-                    initial={{ opacity: 1, width: 'auto' }}
-                    animate={{ opacity: isScrolled ? 0 : 1, width: isScrolled ? 0 : 'auto', transition: { duration: 0.3 } }}
-                    className="text-2xl font-bold text-primary font-headline hidden sm:inline-block overflow-hidden whitespace-nowrap"
-                >
-                    AI Recruiter
-                </motion.span>
             </Link>
 
             {/* --- Right Side: Desktop Navigation & Actions --- */}
