@@ -76,7 +76,7 @@ export function Header() {
                 borderRadius: '0px',
                 paddingLeft: '1rem',
                 paddingRight: '1rem',
-                marginTop: '0rem',
+                marginTop: '0rem'
             },
             scrolled: {
                 width: 'auto',
