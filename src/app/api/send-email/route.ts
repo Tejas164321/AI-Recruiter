@@ -60,7 +60,8 @@ export async function POST(req: NextRequest) {
             // Create a promise for each email in the current batch.
             const batchPromises = batch.map(recipient => {
                 // Personalize the body by replacing the placeholder with the candidate's name.
-                const personalizedBody = body.replace(/{{candidateName}}/g, recipient.name || 'Candidate');
+                // Fallback to "Student" if the name is somehow missing.
+                const personalizedBody = body.replace(/{{candidateName}}/g, recipient.name || 'Student');
 
                 return transporter.sendMail({
                     from: `"AI Recruiter" <${process.env.GMAIL_EMAIL}>`,

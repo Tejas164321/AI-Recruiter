@@ -47,7 +47,7 @@ const PerformBulkScreeningInputSchema = z.object({
 
 // Zod schema for the AI's direct output when ranking one resume against one JD.
 const AICandidateOutputSchema = z.object({
-  name: z.string().describe('The name of the candidate, extracted from the resume.'),
+  name: z.string().describe('The name of the candidate, extracted from the resume. If no name can be reliably extracted, return "Unnamed Candidate".'),
   score: z.number().describe('The match score (0-100) of the resume to the job description.'),
   atsScore: z.number().describe('The ATS (Applicant Tracking System) compatibility score (0-100), reflecting how well the resume is structured for automated parsing, considering factors like formatting, keyword optimization, and clarity.'),
   keySkills: z.string().describe('Key skills from the resume matching the job description.'),
@@ -190,7 +190,7 @@ const performBulkScreeningFlow = ai.defineFlow(
             // If the AI call failed, create a default entry with error information.
             return {
               id: crypto.randomUUID(),
-              name: "Candidate (Processing Error)",
+              name: "Student",
               score: 0,
               atsScore: 0,
               keySkills: 'Error during processing',
@@ -221,7 +221,7 @@ const performBulkScreeningFlow = ai.defineFlow(
           // Create error entries for all resumes for this failed job role to inform the user.
           const errorCandidatesForThisJobRole: RankedCandidate[] = resumesToRank.map(resume => ({
             id: crypto.randomUUID(),
-            name: "Candidate (Processing Error)",
+            name: "Student",
             score: 0,
             atsScore: 0,
             keySkills: 'Job role processing error',

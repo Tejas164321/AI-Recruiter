@@ -60,10 +60,10 @@ export function EmailComposeModal({ isOpen, onClose, candidates, jobRoleName }: 
    * Handles the sending of the email by calling the backend API.
    */
   const handleSendEmail = async () => {
-    // For this demo, we derive a placeholder email from the candidate's name.
+    // Construct the recipients list, ensuring a fallback for the name and creating a placeholder email.
     const recipients = candidates.map(c => ({
-        name: c.name || "Candidate", // Use candidate name or fallback to "Candidate"
-        email: `${(c.name || "candidate").toLowerCase().replace(/[^a-z0-9]/g, '.')}@example.com`
+        name: c.name || "Student", // Fallback to "Student" if name is missing.
+        email: `${(c.name || "student").toLowerCase().replace(/[^a-z0-9]/g, '.')}@example.com`
     }));
 
     if (recipients.length === 0) {
@@ -110,7 +110,7 @@ export function EmailComposeModal({ isOpen, onClose, candidates, jobRoleName }: 
             <Mail className="w-6 h-6 mr-2" /> Compose Email
           </DialogTitle>
           <DialogDescription>
-            Sending to {candidates.length} candidate(s). Use `{{candidateName}}` to personalize the email body.
+            Sending to {candidates.length} candidate(s). Use `{{'{'}}{{candidateName}}{'}'}}` to personalize the email body.
           </DialogDescription>
         </DialogHeader>
         
@@ -126,7 +126,7 @@ export function EmailComposeModal({ isOpen, onClose, candidates, jobRoleName }: 
            <Alert>
               <Info className="h-4 w-4" />
               <AlertDescription>
-                For this demo, emails are sent to placeholder addresses derived from the candidate's name (e.g., `jane.doe@example.com`).
+                For this demo, emails are sent to placeholder addresses derived from the candidate's name (e.g., `john.doe@example.com`).
               </AlertDescription>
             </Alert>
         </div>
