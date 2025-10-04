@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Dot } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 /**
  * Props for the LoadingIndicator component.
@@ -27,9 +27,7 @@ export function LoadingIndicator({ stage }: LoadingIndicatorProps) {
   return (
     <div className="flex flex-col items-center justify-center space-y-6 py-10 text-center">
       {/* The animated icon */}
-      <div className="bouncing-ball-container">
-        <Dot className="w-10 h-10 text-primary animate-bounce-in-circle" />
-      </div>
+      <Loader2 className="w-12 h-12 text-primary animate-spin" />
 
       {/* The loading messages */}
       <div>

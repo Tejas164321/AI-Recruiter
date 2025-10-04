@@ -1,6 +1,6 @@
 
 "use client";
-import { Dot } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 /**
  * A full-screen overlay loader component.
@@ -13,9 +13,7 @@ export function PageLoader() {
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm">
       <div className="flex flex-col items-center gap-4">
         {/* The animated icon */}
-        <div className="bouncing-ball-container">
-          <Dot className="w-14 h-14 text-primary animate-bounce-in-circle" />
-        </div>
+        <Loader2 className="w-16 h-16 text-primary animate-spin" />
         <p className="text-lg font-semibold text-primary">Loading...</p>
       </div>
     </div>
