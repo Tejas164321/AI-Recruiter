@@ -140,10 +140,16 @@ export default function ResumeRankerPage() {
    * This is stable and prevents re-renders. It combines roles from Firestore and the current session.
    */
   const uniqueJobRolesForDropdown = useMemo(() => {
-      const allRoles = [...extractedJobRoles];
       const roleMap = new Map<string, ExtractedJobRole>();
 
-      // Add roles derived from Firestore history first
+      // Add roles extracted in the current session first to ensure they are available
+      extractedJobRoles.forEach(role => {
+          if(!roleMap.has(role.name)) {
+              roleMap.set(role.name, role);
+          }
+      });
+      
+      // Add roles derived from Firestore history if a role with the same name doesn't already exist from the session
       const sortedResults = [...allScreeningResults].sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
       sortedResults.forEach(result => {
         if (!roleMap.has(result.jobDescriptionName) && currentUser) {
@@ -157,14 +163,8 @@ export default function ResumeRankerPage() {
           });
         }
       });
-      
-      // Add roles extracted in the current session
-      allRoles.forEach(role => {
-          if(!roleMap.has(role.name)) {
-              roleMap.set(role.name, role);
-          }
-      });
 
+      // Return a sorted list
       return Array.from(roleMap.values()).sort((a,b) => b.createdAt.toMillis() - a.createdAt.toMillis());
   }, [allScreeningResults, extractedJobRoles, currentUser]);
 
@@ -212,15 +212,19 @@ export default function ResumeRankerPage() {
       
       if (aiOutput.length > 0) {
         const tempRoles = aiOutput.map(role => ({ ...role, userId: currentUser.uid, createdAt: Timestamp.now() })) as ExtractedJobRole[];
+        
+        // Filter out roles that already exist by name in the dropdown
         const existingRoleNames = new Set(uniqueJobRolesForDropdown.map(r => r.name));
         const trulyNewRoles = tempRoles.filter(r => !existingRoleNames.has(r.name));
 
         if (trulyNewRoles.length > 0) {
+          // Add only the genuinely new roles to the state
           setExtractedJobRoles(prev => [...trulyNewRoles, ...prev]);
-          setSelectedJobRoleId(trulyNewRoles[0].id); // Auto-select the first new role.
+          // Auto-select the first new role to provide immediate feedback
+          setSelectedJobRoleId(trulyNewRoles[0].id); 
           toast({ title: "New Job Role(s) Extracted", description: `${trulyNewRoles.length} new role(s) are ready for screening.` });
         } else {
-          // If the uploaded role already exists, just select it.
+          // If the uploaded role(s) already existed, find and select the first one.
           const firstExistingRole = uniqueJobRolesForDropdown.find(r => r.name === tempRoles[0].name);
           if (firstExistingRole) setSelectedJobRoleId(firstExistingRole.id);
           toast({ title: "Job Role Exists", description: `The role "${tempRoles[0].name}" already exists and has been selected.` });
