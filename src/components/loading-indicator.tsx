@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Shell } from "lucide-react";
+import { Snail } from "lucide-react";
 
 /**
  * Props for the LoadingIndicator component.
@@ -31,7 +31,7 @@ export function LoadingIndicator({ stage }: LoadingIndicatorProps) {
         {/* A pulsing background glow */}
         <div className="absolute inset-0 bg-primary rounded-full animate-pulse opacity-30"></div>
         {/* A spinning brain icon */}
-        <Shell className="absolute inset-0 w-full h-full text-primary animate-spin" />
+        <Snail className="absolute inset-0 w-full h-full text-primary animate-spin" />
       </div>
 
       {/* The loading messages */}

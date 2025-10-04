@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Shell, Loader2, LogOut, LayoutDashboard, Menu, LogIn, UserPlus } from "lucide-react";
+import { Snail, Loader2, LogOut, LayoutDashboard, Menu, LogIn, UserPlus } from "lucide-react";
 import { ThemeToggleButton } from "@/components/theme-toggle-button";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { signOut } from "firebase/auth";
 import { auth as firebaseAuthModule } from "@/lib/firebase/config";
-import { motion, useScroll, useMotionValueEvent } from "framer-motion";
+import { motion, useScroll, useMotionValueEvent, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -24,20 +24,28 @@ import { cn } from "@/lib/utils";
 const headerVariants = {
   top: {
     marginTop: "0.75rem", // 12px
-    width: "calc(100% - 2rem)", // Responsive width with padding
-    maxWidth: "1280px", // Max width for large screens
+    width: "calc(100% - 2rem)", 
+    maxWidth: "1280px", 
     boxShadow: "0px 8px 20px hsla(var(--primary), 0.15)",
     transition: { type: "spring", stiffness: 300, damping: 30 },
   },
   scrolled: {
     marginTop: "0.5rem", // 8px
-    width: "calc(100% - 4rem)", // Narrows on scroll
-    maxWidth: "1100px", // Smaller max width on scroll
+    width: "calc(100% - 4rem)",
+    maxWidth: "1100px",
     boxShadow: "0px 12px 28px hsla(var(--primary), 0.2)",
     transition: { type: "spring", stiffness: 300, damping: 30 },
   },
 };
 
+/**
+ * Defines the animation for the logo text.
+ * It will fade in and out based on the scroll state.
+ */
+const logoTextVariants = {
+    hidden: { opacity: 0, width: 0, x: -10, transition: { duration: 0.2 } },
+    visible: { opacity: 1, width: 'auto', x: 0, transition: { type: 'spring', stiffness: 300, damping: 30, delay: 0.1 } },
+};
 
 export function Header() {
   const { currentUser, isLoadingAuth } = useAuth();
@@ -83,10 +91,23 @@ export function Header() {
         <div className="container flex h-full items-center justify-between px-4 md:px-6">
           
             {/* --- Left Side: Brand Logo --- */}
-            <Link href="/" aria-label="Go to homepage">
+            <Link href="/" aria-label="Go to homepage" className="flex items-center gap-2 overflow-hidden">
                 <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0 rounded-full">
-                    <Shell className="h-6 w-6 text-primary" />
+                    <Snail className="h-6 w-6 text-primary" />
                 </Button>
+                <AnimatePresence>
+                    {!isScrolled && (
+                        <motion.span 
+                            className="font-bold text-primary whitespace-nowrap"
+                            variants={logoTextVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="hidden"
+                        >
+                            AI Recruiter
+                        </motion.span>
+                    )}
+                </AnimatePresence>
             </Link>
 
             {/* --- Right Side: Desktop Navigation & Actions --- */}
@@ -117,7 +138,7 @@ export function Header() {
                     </SheetTrigger>
                     <SheetContent side="right" className="w-[300px] p-4 flex flex-col">
                         <div className="mb-6">
-                            <SheetClose asChild><Link href="/" className="flex items-center gap-2 cursor-pointer"><Shell className="h-7 w-7 text-primary" /><span className="text-xl font-bold text-primary font-headline">AI Recruiter</span></Link></SheetClose>
+                            <SheetClose asChild><Link href="/" className="flex items-center gap-2 cursor-pointer"><Snail className="h-7 w-7 text-primary" /><span className="text-xl font-bold text-primary font-headline">AI Recruiter</span></Link></SheetClose>
                         </div>
                         <Separator className="mb-4" />
                         <div className="flex flex-col gap-3 flex-grow">
