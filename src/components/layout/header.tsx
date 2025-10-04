@@ -82,8 +82,8 @@ export function Header() {
                 borderBottomWidth: '1px',
                 borderColor: 'hsl(var(--border))',
                 borderRadius: '9999px',
-                paddingLeft: '1.25rem', // Increased padding for more space
-                paddingRight: '1.25rem', // Increased padding
+                paddingLeft: '1.25rem',
+                paddingRight: '1.25rem',
                 marginTop: '0.5rem',
                 boxShadow: '0px 8px 24px hsla(var(--primary), 0.1)',
             },
@@ -91,7 +91,7 @@ export function Header() {
         transition={{
             type: "spring",
             stiffness: 260,
-            damping: 25, // Adjusted damping
+            damping: 25,
         }}
       >
         <div className="container flex h-16 items-center justify-between gap-4">
@@ -125,7 +125,7 @@ export function Header() {
             </motion.div>
 
             {/* Desktop Navigation */}
-            <nav className={cn("hidden md:flex items-center gap-2", isScrolled && "flex-1 justify-center")}>
+            <nav className={cn("hidden md:flex flex-1 items-center gap-2", isScrolled ? "justify-center" : "justify-end")}>
             {isLoadingAuth ? (
                     <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 ) : currentUser ? (
