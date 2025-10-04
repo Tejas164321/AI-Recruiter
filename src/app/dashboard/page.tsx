@@ -5,7 +5,7 @@ import Link from "next/link";
 // UI Components
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 // Icons
-import { ArrowRight, BrainCircuit, BarChartBig, MessageSquarePlus, Loader2 } from "lucide-react";
+import { ArrowRight, Shell, BarChartBig, MessageSquarePlus, Loader2 } from "lucide-react";
 // Animation library
 import { motion } from "framer-motion";
 // Hooks and Contexts
@@ -98,7 +98,7 @@ export default function DashboardPage() {
             <Card className="shadow-lg h-full flex flex-col border border-primary/10 hover:border-primary/50 transition-colors duration-300">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <BrainCircuit className="w-12 h-12 text-primary mb-2" /> 
+                  <Shell className="w-12 h-12 text-primary mb-2" /> 
                   <ArrowRight className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" /> 
                 </div>
                 <CardTitle className="text-2xl font-headline text-primary">AI Resume Ranker</CardTitle> 

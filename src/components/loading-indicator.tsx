@@ -1,7 +1,7 @@
 
 "use client";
 
-import { BrainCircuit } from "lucide-react";
+import { Shell } from "lucide-react";
 
 /**
  * Props for the LoadingIndicator component.
@@ -31,7 +31,7 @@ export function LoadingIndicator({ stage }: LoadingIndicatorProps) {
         {/* A pulsing background glow */}
         <div className="absolute inset-0 bg-primary rounded-full animate-pulse opacity-30"></div>
         {/* A spinning brain icon */}
-        <BrainCircuit className="absolute inset-0 w-full h-full text-primary animate-spin" />
+        <Shell className="absolute inset-0 w-full h-full text-primary animate-spin" />
       </div>
 
       {/* The loading messages */}

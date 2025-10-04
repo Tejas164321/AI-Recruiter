@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import Image from "next/image";
 // Icons
-import { ArrowRight, CheckCircle, BarChartBig, ScanSearch, MessageSquarePlus, ShieldCheckIcon, Mail, Phone, BrainCircuit } from "lucide-react";
+import { ArrowRight, CheckCircle, BarChartBig, ScanSearch, MessageSquarePlus, ShieldCheckIcon, Mail, Phone, Shell } from "lucide-react";
 // Animation Library
 import { motion, useMotionValue, useTransform } from "framer-motion";
 // Hooks and Contexts
@@ -169,7 +169,7 @@ export default function LandingPage() {
 
   // Data for the features section.
   const features = [
-    { icon: BrainCircuit, title: "AI-Powered Resume Ranking", description: "Automatically rank candidates based on job description relevance. Get match scores and AI-generated feedback.", items: ["Intelligent Skill Matching", "ATS Compatibility Insights", "Customizable Filtering"], delay: 0.3 },
+    { icon: Shell, title: "AI-Powered Resume Ranking", description: "Automatically rank candidates based on job description relevance. Get match scores and AI-generated feedback.", items: ["Intelligent Skill Matching", "ATS Compatibility Insights", "Customizable Filtering"], delay: 0.3 },
     { icon: ScanSearch, title: "ATS Score Finder", description: "Analyze resumes for Applicant Tracking System (ATS) compatibility. Get scores and suggestions to optimize.", items: ["Resume Structure Analysis", "Keyword Optimization Tips", "Format Compatibility Check"], delay: 0.45 },
     { icon: MessageSquarePlus, title: "AI Interview Question Generator", description: "Craft tailored interview questions from job descriptions. Get categorized questions (technical, behavioral, etc.).", items: ["Categorized Question Sets", "JD-Specific Insights", "Customizable Focus Areas"], delay: 0.6 },
     { icon: ShieldCheckIcon, title: "Secure Authentication & Access", description: "Reliable user authentication to protect your data and provide personalized experiences.", items: ["Email & Password Login", "Protected User Dashboards", "Secure Session Management"], delay: 0.75 }
@@ -281,7 +281,7 @@ export default function LandingPage() {
         <div className="container mx-auto flex flex-col items-center justify-between gap-4 px-4 py-6 sm:flex-row sm:px-6">
           <div className="text-center sm:text-left">
             <Link href="/" className="flex items-center justify-center gap-2 sm:justify-start">
-              <BrainCircuit className="h-6 w-6 text-primary" />
+              <Shell className="h-6 w-6 text-primary" />
               <span className="font-bold text-primary">AI Recruiter</span>
             </Link>
             <p className="mt-2 text-xs text-muted-foreground">&copy; {new Date().getFullYear()} AI Recruiter. All rights reserved.</p>
