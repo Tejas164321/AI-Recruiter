@@ -1,4 +1,3 @@
-
 "use client";
 
 import { BrainCircuit, Loader2, LogOut, LayoutDashboard, Menu, LogIn, UserPlus } from "lucide-react";
@@ -33,6 +32,7 @@ export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
 
   // Listen to scroll events and update the state.
+  // This hook MUST be at the top level of the component.
   useMotionValueEvent(scrollY, "change", (latest) => {
     setIsScrolled(latest > SCROLL_THRESHOLD);
   });
