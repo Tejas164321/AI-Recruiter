@@ -75,14 +75,15 @@ export function Header() {
                 borderRadius: '0px',
                 paddingLeft: '1rem',
                 paddingRight: '1rem',
+                marginTop: '0rem',
             },
             scrolled: {
                 width: 'auto',
                 borderBottomWidth: '1px',
                 borderColor: 'hsl(var(--border))',
                 borderRadius: '9999px',
-                paddingLeft: '0.75rem',
-                paddingRight: '0.75rem',
+                paddingLeft: '1.25rem', // Increased padding for more space
+                paddingRight: '1.25rem', // Increased padding
                 marginTop: '0.5rem',
                 boxShadow: '0px 8px 24px hsla(var(--primary), 0.1)',
             },
@@ -90,10 +91,10 @@ export function Header() {
         transition={{
             type: "spring",
             stiffness: 260,
-            damping: 20,
+            damping: 25, // Adjusted damping
         }}
       >
-        <div className="container flex h-16 items-center justify-between">
+        <div className="container flex h-16 items-center justify-between gap-4">
             {/* Logo and App Name */}
             <motion.div
                  variants={{
@@ -130,10 +131,10 @@ export function Header() {
                 ) : currentUser ? (
                     <>
                     <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                        <Button variant={isScrolled ? "ghost" : "outline"} size={isScrolled ? "sm" : "default"} asChild><Link href="/dashboard"><LayoutDashboard className="mr-2 h-4 w-4" /> {!isScrolled && "Dashboard"}</Link></Button>
+                        <Button variant={isScrolled ? "ghost" : "outline"} size={isScrolled ? "icon" : "default"} asChild><Link href="/dashboard" aria-label="Dashboard"><LayoutDashboard className={cn(!isScrolled && "mr-2")} /> {!isScrolled && "Dashboard"}</Link></Button>
                     </motion.div>
                     <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                        <Button variant="ghost" size={isScrolled ? "sm" : "default"} onClick={handleSignOut} disabled={!firebaseAuthModule}><LogOut className="mr-2 h-4 w-4" /> {!isScrolled && "Sign Out"}</Button>
+                        <Button variant="ghost" size={isScrolled ? "icon" : "default"} onClick={handleSignOut} disabled={!firebaseAuthModule} aria-label="Sign Out"><LogOut className={cn(!isScrolled && "mr-2")} /> {!isScrolled && "Sign Out"}</Button>
                     </motion.div>
                     </>
                 ) : (
