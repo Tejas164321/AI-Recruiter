@@ -95,6 +95,7 @@
   @apply relative;
 }
 
+/* The dashed infinity path */
 .flight-path-container::before {
   content: '';
   @apply absolute top-1/2 left-1/2 w-[80px] h-[40px];
@@ -103,6 +104,17 @@
   border-radius: 50%;
   border: 1px dashed hsl(var(--border));
   animation: path-rotate 12s linear infinite;
+}
+
+/* The new thin circular border */
+.flight-path-container::after {
+  content: '';
+  @apply absolute top-1/2 left-1/2 w-[90px] h-[90px]; /* Slightly larger than the path */
+  margin-left: -45px;
+  margin-top: -45px;
+  border-radius: 50%;
+  border: 1px solid hsl(var(--border) / 0.5); /* Thinner and semi-transparent */
+  animation: path-rotate 18s linear infinite reverse; /* Rotates in the opposite direction */
 }
 
 
