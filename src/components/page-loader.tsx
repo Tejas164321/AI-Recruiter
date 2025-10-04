@@ -14,7 +14,7 @@ export function PageLoader() {
       <div className="flex flex-col items-center gap-4">
         {/* The animated icon */}
         <div className="bouncing-ball-container">
-          <Dot className="w-12 h-12 text-primary animate-bounce-in-circle" />
+          <Dot className="w-14 h-14 text-primary animate-bounce-in-circle" />
         </div>
         <p className="text-lg font-semibold text-primary">Loading...</p>
       </div>

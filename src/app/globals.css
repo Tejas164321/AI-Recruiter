@@ -68,24 +68,26 @@
   }
 }
 
-/* New, simpler bouncing ball animation */
+/* Multi-point bounce animation for a more random effect */
 @keyframes bounce {
-  0%, 100% {
-    transform: translateY(-60%);
-    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
-  }
-  50% {
-    transform: translateY(60%);
-    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
-  }
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(35px, -45px); }
+  20% { transform: translate(-38px, 40px); }
+  30% { transform: translate(30px, -35px); }
+  40% { transform: translate(-32px, 30px); }
+  50% { transform: translate(45px, 25px); }
+  60% { transform: translate(-30px, -40px); }
+  70% { transform: translate(25px, 35px); }
+  80% { transform: translate(-45px, -30px); }
+  90% { transform: translate(38px, 28px); }
 }
 
 .animate-bounce-in-circle {
-  animation: bounce 1.5s infinite;
+  animation: bounce 3s infinite ease-in-out;
 }
 
 .bouncing-ball-container {
-  @apply relative flex items-center justify-center w-24 h-24 rounded-full border-2 border-border;
+  @apply relative flex items-center justify-center w-28 h-28 rounded-full border-2 border-border;
 }
 
 

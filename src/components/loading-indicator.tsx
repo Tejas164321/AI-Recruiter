@@ -28,7 +28,7 @@ export function LoadingIndicator({ stage }: LoadingIndicatorProps) {
     <div className="flex flex-col items-center justify-center space-y-6 py-10 text-center">
       {/* The animated icon */}
       <div className="bouncing-ball-container">
-        <Dot className="w-8 h-8 text-primary animate-bounce-in-circle" />
+        <Dot className="w-10 h-10 text-primary animate-bounce-in-circle" />
       </div>
 
       {/* The loading messages */}
