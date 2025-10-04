@@ -57,7 +57,7 @@ export default function RootLayout({
       <head>
         {/* Font link tags are no longer needed as we are using next/font */}
       </head>
-      <body className={cn(inter.variable, "font-body antialiased h-full")}>
+      <body className={cn(inter.variable, "font-body antialiased")}>
       <SpeedInsights/>
         {/* ThemeProvider manages light/dark mode */}
         <ThemeProvider
