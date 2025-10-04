@@ -4,24 +4,24 @@
 
 @layer base {
   :root {
-    --background: 0 0% 0%; /* Pure Black for AMOLED */
+    --background: 220 18% 11%; /* Matte Cool Dark Gray */
     --foreground: 210 40% 98%;
-    --card: 0 0% 3%; /* Darker gray for cards */
+    --card: 220 18% 14%; /* Slightly lighter matte for cards */
     --card-foreground: 210 40% 98%;
-    --popover: 0 0% 3%; /* Darker gray for popovers */
+    --popover: 220 18% 14%;
     --popover-foreground: 210 40% 98%;
     --primary: 215 100% 60%; /* Saturated Sky Blue (Electric Blue) */
     --primary-foreground: 210 40% 98%;
-    --secondary: 0 0% 8%; /* Darker gray for secondary elements */
+    --secondary: 220 18% 18%; /* Lighter gray for secondary elements */
     --secondary-foreground: 210 40% 98%;
-    --muted: 0 0% 8%; /* Darker gray for muted elements */
+    --muted: 220 18% 18%;
     --muted-foreground: 215 20.2% 65.1%;
     --accent: 163 70% 45%; /* Teal-green */
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 0 0% 10%; /* Darker gray for borders */
-    --input: 0 0% 10%; /* Darker gray for inputs */
+    --border: 220 18% 22%; /* Softer border color */
+    --input: 220 18% 22%;
     --ring: 215 100% 60%;
     --radius: 0.75rem;
     --chart-1: 220 70% 55%;
