@@ -60,8 +60,12 @@ export function EmailComposeModal({ isOpen, onClose, candidates, jobRoleName }: 
    * Handles the sending of the email by calling the backend API.
    */
   const handleSendEmail = async () => {
-    // We assume candidate names are their email prefixes for this hackathon-level project.
-    const recipients = candidates.map(c => `${c.name.toLowerCase().replace(/\s+/g, '.')}@example.com`);
+    // For this demo, we derive a placeholder email from the candidate's name.
+    const recipients = candidates.map(c => ({
+        name: c.name || "Candidate",
+        email: `${(c.name || "candidate").toLowerCase().replace(/\s+/g, '.')}@example.com`
+    }));
+
     if (recipients.length === 0) {
       toast({ title: "No Recipients", description: "No candidates selected to email.", variant: "destructive" });
       return;
@@ -122,7 +126,7 @@ export function EmailComposeModal({ isOpen, onClose, candidates, jobRoleName }: 
            <Alert>
               <Info className="h-4 w-4" />
               <AlertDescription>
-                For this demo, emails are sent to placeholder addresses (e.g., `jane.doe@example.com`).
+                For this demo, emails are sent to placeholder addresses derived from the candidate's name (e.g., `jane.doe@example.com`).
               </AlertDescription>
             </Alert>
         </div>

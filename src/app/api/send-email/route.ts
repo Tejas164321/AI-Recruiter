@@ -3,10 +3,18 @@ import {NextRequest, NextResponse} from 'next/server';
 import nodemailer from 'nodemailer';
 
 /**
+ * Defines the shape of a single recipient object.
+ */
+interface Recipient {
+    name: string;
+    email: string;
+}
+
+/**
  * Defines the expected shape of the request body for sending an email.
  */
 interface SendEmailRequestBody {
-    recipients: string[];
+    recipients: Recipient[];
     subject: string;
     body: string;
 }
@@ -51,12 +59,12 @@ export async function POST(req: NextRequest) {
             
             // Create a promise for each email in the current batch.
             const batchPromises = batch.map(recipient => {
-                // Personalize the body if a placeholder is present.
-                const personalizedBody = body.replace(/{{candidateName}}/g, recipient.split('@')[0]);
+                // Personalize the body by replacing the placeholder with the candidate's name.
+                const personalizedBody = body.replace(/{{candidateName}}/g, recipient.name || 'Candidate');
 
                 return transporter.sendMail({
                     from: `"AI Recruiter" <${process.env.GMAIL_EMAIL}>`,
-                    to: recipient,
+                    to: recipient.email,
                     subject: subject,
                     html: personalizedBody, // Using HTML to allow for rich text formatting.
                 });
@@ -69,7 +77,7 @@ export async function POST(req: NextRequest) {
                 if (result.status === 'fulfilled') {
                     successfullySentCount++;
                 } else {
-                    console.error(`Failed to send email to ${batch[index]}:`, result.reason);
+                    console.error(`Failed to send email to ${batch[index].email}:`, result.reason);
                 }
             });
 
