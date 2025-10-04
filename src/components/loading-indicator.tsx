@@ -27,8 +27,10 @@ export function LoadingIndicator({ stage }: LoadingIndicatorProps) {
   return (
     <div className="flex flex-col items-center justify-center space-y-6 py-10 text-center">
       {/* The animated icon */}
-      <div className="relative w-16 h-16">
-        <Send className="w-16 h-16 text-primary animate-fly-in-loop" style={{ animationDelay: '-0.5s' }} />
+      <div className="relative w-24 h-24 flight-path-container">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+            <Send className="w-8 h-8 text-primary animate-fly-infinity-loop" />
+        </div>
       </div>
 
       {/* The loading messages */}
