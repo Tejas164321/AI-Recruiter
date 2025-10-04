@@ -25,7 +25,7 @@ const headerVariants = {
     marginTop: "0.75rem", // 12px
     width: "calc(100% - 2rem)", 
     maxWidth: "1280px", 
-    boxShadow: "0px 8px 20px hsla(var(--primary), 0.15)",
+    boxShadow: "0px 8px_20px hsla(var(--primary), 0.15)",
     transition: { type: "spring", stiffness: 300, damping: 30 },
   },
   scrolled: {
@@ -91,8 +91,8 @@ export function Header() {
           
             {/* --- Left Side: Brand Logo --- */}
             <Link href="/" aria-label="Go to homepage" className="flex items-center gap-2 overflow-hidden">
-                <Button variant="outline" size="icon" className="rounded-full shrink-0">
-                    <Snail className="h-6 w-6 text-primary" />
+                <Button variant="outline" className="rounded-full shrink-0 h-10 w-10 p-2">
+                    <Snail className="h-full w-full text-primary" />
                 </Button>
                 <AnimatePresence>
                     {!isScrolled && (
