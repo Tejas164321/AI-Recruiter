@@ -142,9 +142,11 @@ export function CandidateTable({ candidates, onViewFeedback, onSendEmail }: Cand
                     {candidate.keySkills.split(',').length > 5 && <Badge variant="outline">...</Badge>}
                   </div>
                 </TableCell>
-                <TableCell className="text-right space-x-1">
-                  <Button variant="ghost" size="sm" onClick={() => onViewFeedback(candidate)} aria-label={`View feedback for ${candidate.name}`} className="hover:text-primary"><MessageSquareText className="w-4 h-4 mr-2" />Feedback</Button>
-                  <Button variant="ghost" size="sm" onClick={() => onSendEmail(candidate)} aria-label={`Send email to ${candidate.name}`} className="hover:text-primary"><Mail className="w-4 h-4 mr-2" />Email</Button>
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end space-x-1">
+                    <Button variant="ghost" size="sm" onClick={() => onViewFeedback(candidate)} aria-label={`View feedback for ${candidate.name}`} className="hover:text-primary"><MessageSquareText className="w-4 h-4 mr-2" />Feedback</Button>
+                    <Button variant="ghost" size="sm" onClick={() => onSendEmail(candidate)} aria-label={`Send email to ${candidate.name}`} className="hover:text-primary"><Mail className="w-4 h-4 mr-2" />Email</Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
