@@ -5,31 +5,31 @@
 
 @layer base {
   :root {
-    --background: 220 17% 5%; /* Slightly desaturated very dark blue */
+    --background: 225 25% 10%; /* Dark Desaturated Blue */
     --foreground: 0 0% 98%;
-    --card: 220 16% 8%; /* Slightly lighter dark blue for cards */
+    --card: 225 20% 15%; /* Slightly Lighter Dark Blue */
     --card-foreground: 0 0% 98%;
-    --popover: 220 17% 5%;
+    --popover: 225 25% 10%;
     --popover-foreground: 0 0% 98%;
-    --primary: 125 100% 60%; /* Saturated Sky Blue (Electric Blue) */
-    --primary-foreground: 210 40% 98%;
-    --secondary: 220 15% 12%; /* Adjusted secondary color */
+    --primary: 35 92% 55%; /* Vibrant Amber/Orange */
+    --primary-foreground: 35 90% 10%;
+    --secondary: 225 20% 20%; /* Darker Blue for secondary elements */
     --secondary-foreground: 0 0% 98%;
-    --muted: 220 15% 12%;
+    --muted: 225 20% 20%;
     --muted-foreground: 240 5% 65%;
-    --accent: 163 70% 45%; /* Teal-green */
-    --accent-foreground: 0 0% 100%;
+    --accent: 45 95% 55%; /* A brighter yellow for accent */
+    --accent-foreground: 45 90% 10%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 220 15% 15%; /* Adjusted border color */
-    --input: 220 15% 15%;
-    --ring: 215 100% 60%;
+    --border: 225 20% 25%; /* Lighter blue for borders */
+    --input: 225 20% 25%;
+    --ring: 35 92% 55%;
     --radius: 0.75rem;
-    --chart-1: 220 70% 55%;
-    --chart-2: 160 60% 50%;
-    --chart-3: 30 80% 60%;
-    --chart-4: 280 65% 65%;
-    --chart-5: 340 75% 60%;
+    --chart-1: 35 90% 50%;
+    --chart-2: 45 90% 50%;
+    --chart-3: 190 80% 50%;
+    --chart-4: 220 80% 60%;
+    --chart-5: 250 80% 60%;
   }
   .light {
     --background: 0 0% 100%;
@@ -38,24 +38,24 @@
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 215 100% 55%; /* Saturated Sky Blue */
-    --primary-foreground: 0 0% 100%;
+    --primary: 35 92% 55%;
+    --primary-foreground: 35 90% 10%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 84% 4.9%;
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 163 70% 38%; /* Teal-green */
-    --accent-foreground: 0 0% 100%;
+    --accent: 45 95% 50%;
+    --accent-foreground: 45 90% 10%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 215 100% 55%;
-    --chart-1: 220 70% 55%;
-    --chart-2: 160 60% 50%;
-    --chart-3: 30 80% 60%;
-    --chart-4: 280 65% 65%;
-    --chart-5: 340 75% 60%;
+    --ring: 35 92% 55%;
+    --chart-1: 35 90% 50%;
+    --chart-2: 45 90% 50%;
+    --chart-3: 190 80% 50%;
+    --chart-4: 220 80% 60%;
+    --chart-5: 250 80% 60%;
   }
 }
 
@@ -115,12 +115,12 @@
 /* Special class for the landing page's unique background */
 .landing-page-gradient {
   background-color: #fbfdff; /* A very light, cool off-white for light mode */
-  background-image: radial-gradient(ellipse 50% 70% at 25% 50%, hsl(215 100% 55% / 0.15), transparent);
+  background-image: radial-gradient(ellipse 50% 70% at 25% 50%, hsl(var(--primary) / 0.15), transparent);
 }
 
 .dark .landing-page-gradient {
-  background-color: #010313;
-  background-image: radial-gradient(ellipse 50% 70% at 25% 50%, rgba(120, 119, 198, 0.25), transparent);
+  background-color: hsl(var(--background));
+  background-image: radial-gradient(ellipse 50% 70% at 25% 50%, hsl(var(--primary) / 0.15), transparent);
 }
 
 @keyframes rotate-sparkle {

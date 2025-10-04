@@ -119,3 +119,25 @@ The project follows a standard Next.js App Router structure with some key direct
 ## 📞 Contact
 
 Created by [Your Name] - feel free to reach out!
+
+---
+## Previous Color Theme
+
+For reference, here is the previous color theme that was being used:
+
+**Dark Theme:**
+```css
+--background: 220 17% 5%;
+--foreground: 0 0% 98%;
+--card: 220 16% 8%;
+--primary: 215 100% 60%;
+--accent: 163 70% 45%;
+```
+
+**Light Theme:**
+```css
+--background: 0 0% 100%;
+--foreground: 222.2 84% 4.9%;
+--primary: 215 100% 55%;
+--accent: 163 70% 38%;
+```
