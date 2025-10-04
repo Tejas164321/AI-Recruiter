@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -66,6 +67,44 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Timeline styles */
+.timeline-line {
+  @apply absolute left-1/2 top-0 h-full w-0.5 -translate-x-1/2 bg-border;
+}
+
+.timeline-item {
+  @apply relative mb-8 flex w-full items-center;
+}
+
+.timeline-item:nth-child(odd) {
+  @apply flex-row-reverse;
+}
+
+.timeline-dot {
+  @apply absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-background bg-primary;
+}
+
+.timeline-content {
+  @apply w-[calc(50%-2rem)] rounded-lg;
+}
+
+/* On mobile, stack everything in a single column */
+@media (max-width: 768px) {
+  .timeline-line {
+    @apply left-6; /* Move line to the left */
+  }
+  .timeline-item, .timeline-item:nth-child(odd) {
+    @apply flex-row; /* All items flow the same way */
+  }
+  .timeline-dot {
+    @apply left-6; /* Align dots with the line */
+  }
+  .timeline-content {
+    @apply w-full pl-16; /* Full width with padding to the right of the line */
+  }
+}
+
 
 .glowing-btn {
   @apply relative;
@@ -140,3 +179,5 @@
   position: relative;
   z-index: 1; /* Ensure the image is on top of the ::after mask */
 }
+
+    

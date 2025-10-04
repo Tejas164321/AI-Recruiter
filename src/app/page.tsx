@@ -169,7 +169,7 @@ export default function LandingPage() {
 
   // Data for the features section.
   const features = [
-    { icon: BarChartBig, title: "AI-Powered Resume Ranking", description: "Automatically rank candidates based on job description relevance. Get match scores and AI-generated feedback.", items: ["Intelligent Skill Matching", "ATS Compatibility Insights", "Customizable Filtering"], delay: 0.3 },
+    { icon: BrainCircuit, title: "AI-Powered Resume Ranking", description: "Automatically rank candidates based on job description relevance. Get match scores and AI-generated feedback.", items: ["Intelligent Skill Matching", "ATS Compatibility Insights", "Customizable Filtering"], delay: 0.3 },
     { icon: ScanSearch, title: "ATS Score Finder", description: "Analyze resumes for Applicant Tracking System (ATS) compatibility. Get scores and suggestions to optimize.", items: ["Resume Structure Analysis", "Keyword Optimization Tips", "Format Compatibility Check"], delay: 0.45 },
     { icon: MessageSquarePlus, title: "AI Interview Question Generator", description: "Craft tailored interview questions from job descriptions. Get categorized questions (technical, behavioral, etc.).", items: ["Categorized Question Sets", "JD-Specific Insights", "Customizable Focus Areas"], delay: 0.6 },
     { icon: ShieldCheckIcon, title: "Secure Authentication & Access", description: "Reliable user authentication to protect your data and provide personalized experiences.", items: ["Email & Password Login", "Protected User Dashboards", "Secure Session Management"], delay: 0.75 }
@@ -220,26 +220,41 @@ export default function LandingPage() {
                 <motion.p initial={{ opacity:0, y:20 }} whileInView={{ opacity:1, y:0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration:0.5, delay:0.5 }} className="max-w-[900px] text-muted-foreground md:text-xl/relaxed">Our platform offers a suite of tools designed to make your hiring process more efficient and effective.</motion.p>
               </div>
             </motion.div>
-            <div className="mx-auto grid max-w-5xl items-stretch gap-8 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 lg:max-w-none mt-12">
+            
+            {/* Timeline structure for features */}
+            <div className="relative mt-12 max-w-5xl mx-auto">
+              <div className="timeline-line"></div>
               {features.map((feature, index) => (
-                <motion.div key={index} variants={sectionVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} custom={feature.delay} className="h-full">
-                  <Card className="shadow-lg h-full flex flex-col bg-card/50 backdrop-blur-sm border-border/20 transition-all hover:-translate-y-2 hover:shadow-[0_8px_30px_hsl(var(--primary)/0.25)]">
-                    <CardHeader className="pb-4">
-                      <motion.div initial={{ opacity: 0, scale: 0.5 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.4, delay: feature.delay + 0.1}} className="flex items-center justify-center bg-primary/10 rounded-full w-12 h-12 mb-4 border-2 border-primary/20"><feature.icon className="h-6 w-6 text-primary" /></motion.div>
-                      <CardTitle className="font-headline">{feature.title}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex flex-col flex-grow">
-                      <CardDescription className="text-muted-foreground">{feature.description}</CardDescription>
-                      <motion.ul className="mt-4 space-y-2 text-sm flex-grow">
-                        {feature.items.map((item, itemIndex) => (
-                          <motion.li key={itemIndex} custom={feature.delay + 0.2 + itemIndex * 0.1} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={itemVariants} className="flex items-center"><CheckCircle className="mr-2 h-4 w-4 text-accent" />{item}</motion.li>
-                        ))}
-                      </motion.ul>
-                    </CardContent>
-                  </Card>
+                <motion.div 
+                    key={index} 
+                    className="timeline-item"
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true, amount: 0.5 }}
+                    variants={sectionVariants}
+                    custom={feature.delay}
+                >
+                  <div className="timeline-dot"></div>
+                  <div className="timeline-content">
+                     <Card className="shadow-lg h-full flex flex-col bg-card/50 backdrop-blur-sm border-border/20 transition-all hover:-translate-y-2 hover:shadow-[0_8px_30px_hsl(var(--primary)/0.25)]">
+                        <CardHeader className="pb-4">
+                          <motion.div initial={{ opacity: 0, scale: 0.5 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.4, delay: feature.delay + 0.1}} className="flex items-center justify-center bg-primary/10 rounded-full w-12 h-12 mb-4 border-2 border-primary/20"><feature.icon className="h-6 w-6 text-primary" /></motion.div>
+                          <CardTitle className="font-headline">{feature.title}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex flex-col flex-grow">
+                          <CardDescription className="text-muted-foreground">{feature.description}</CardDescription>
+                          <motion.ul className="mt-4 space-y-2 text-sm flex-grow">
+                            {feature.items.map((item, itemIndex) => (
+                              <motion.li key={itemIndex} custom={feature.delay + 0.2 + itemIndex * 0.1} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={itemVariants} className="flex items-center"><CheckCircle className="mr-2 h-4 w-4 text-accent" />{item}</motion.li>
+                            ))}
+                          </motion.ul>
+                        </CardContent>
+                      </Card>
+                  </div>
                 </motion.div>
               ))}
             </div>
+
           </div>
         </section>
 
@@ -286,3 +301,5 @@ export default function LandingPage() {
     </div>
   );
 }
+
+    
