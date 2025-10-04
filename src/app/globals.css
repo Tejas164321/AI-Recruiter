@@ -5,24 +5,24 @@
 
 @layer base {
   :root {
-    --background: 240 10% 3.9%; /* Neutral Dark Gray (Almost Black) */
+    --background: 220 17% 5%; /* Slightly desaturated very dark blue */
     --foreground: 0 0% 98%;
-    --card: 240 5% 8%; /* Slightly lighter gray for cards */
+    --card: 220 16% 8%; /* Slightly lighter dark blue for cards */
     --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
+    --popover: 220 17% 5%;
     --popover-foreground: 0 0% 98%;
     --primary: 215 100% 60%; /* Saturated Sky Blue (Electric Blue) */
     --primary-foreground: 210 40% 98%;
-    --secondary: 240 4% 12%; /* Adjusted secondary color */
+    --secondary: 220 15% 12%; /* Adjusted secondary color */
     --secondary-foreground: 0 0% 98%;
-    --muted: 240 4% 12%;
+    --muted: 220 15% 12%;
     --muted-foreground: 240 5% 65%;
     --accent: 163 70% 45%; /* Teal-green */
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 4% 15%; /* Adjusted border color */
-    --input: 240 4% 15%;
+    --border: 220 15% 15%; /* Adjusted border color */
+    --input: 220 15% 15%;
     --ring: 215 100% 60%;
     --radius: 0.75rem;
     --chart-1: 220 70% 55%;
@@ -81,12 +81,12 @@
   @apply flex-row-reverse;
 }
 
-.timeline-dot {
-  @apply absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-background bg-primary;
+.timeline-icon-container {
+  @apply absolute left-1/2 top-1/2 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-background bg-primary;
 }
 
 .timeline-content {
-  @apply w-[calc(50%-2rem)] rounded-lg;
+  @apply w-[calc(50%-3rem)] rounded-lg;
 }
 
 /* On mobile, stack everything in a single column */
@@ -97,11 +97,11 @@
   .timeline-item, .timeline-item:nth-child(odd) {
     @apply flex-row; /* All items flow the same way */
   }
-  .timeline-dot {
-    @apply left-6; /* Align dots with the line */
+  .timeline-icon-container {
+    @apply left-6; /* Align icons with the line */
   }
   .timeline-content {
-    @apply w-full pl-16; /* Full width with padding to the right of the line */
+    @apply w-full pl-20; /* Full width with padding to the right of the line */
   }
 }
 

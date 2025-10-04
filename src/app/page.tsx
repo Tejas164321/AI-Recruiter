@@ -234,16 +234,17 @@ export default function LandingPage() {
                     variants={sectionVariants}
                     custom={feature.delay}
                 >
-                  <div className="timeline-dot"></div>
+                  <div className="timeline-icon-container">
+                    <feature.icon className="h-6 w-6 text-primary-foreground" />
+                  </div>
                   <div className="timeline-content">
                      <Card className="shadow-lg h-full flex flex-col bg-card/50 backdrop-blur-sm border-border/20 transition-all hover:-translate-y-2 hover:shadow-[0_8px_30px_hsl(var(--primary)/0.25)]">
                         <CardHeader className="pb-4">
-                          <motion.div initial={{ opacity: 0, scale: 0.5 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.4, delay: feature.delay + 0.1}} className="flex items-center justify-center bg-primary/10 rounded-full w-12 h-12 mb-4 border-2 border-primary/20"><feature.icon className="h-6 w-6 text-primary" /></motion.div>
                           <CardTitle className="font-headline">{feature.title}</CardTitle>
                         </CardHeader>
                         <CardContent className="flex flex-col flex-grow">
-                          <CardDescription className="text-muted-foreground">{feature.description}</CardDescription>
-                          <motion.ul className="mt-4 space-y-2 text-sm flex-grow">
+                          <CardDescription className="text-muted-foreground mb-4">{feature.description}</CardDescription>
+                          <motion.ul className="space-y-2 text-sm flex-grow">
                             {feature.items.map((item, itemIndex) => (
                               <motion.li key={itemIndex} custom={feature.delay + 0.2 + itemIndex * 0.1} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={itemVariants} className="flex items-center"><CheckCircle className="mr-2 h-4 w-4 text-accent" />{item}</motion.li>
                             ))}
@@ -301,5 +302,3 @@ export default function LandingPage() {
     </div>
   );
 }
-
-    
