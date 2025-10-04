@@ -91,9 +91,9 @@ export function Header() {
           
             {/* --- Left Side: Brand Logo --- */}
             <Link href="/" aria-label="Go to homepage" className="flex items-center gap-2 overflow-hidden">
-                <Button variant="ghost" size="icon" className="h-12 w-12 shrink-0 rounded-full">
-                    <Snail className="h-9 w-9 text-primary" />
-                </Button>
+                <div className="flex h-12 w-12 items-center justify-center rounded-full shrink-0">
+                    <Snail className="h-10 w-10 text-primary" />
+                </div>
                 <AnimatePresence>
                     {!isScrolled && (
                         <motion.span 
