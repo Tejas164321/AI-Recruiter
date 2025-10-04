@@ -9,8 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 // Icons
 import { Mail, Send, Loader2, Info } from "lucide-react";
 // Types and Hooks
@@ -28,7 +26,7 @@ interface EmailComposeModalProps {
 }
 
 // Default email templates
-const defaultSubject = (jobRoleName: string) => `Update on Your Application for ${jobRoleName} at AI Recruiter`;
+const defaultSubject = (jobRoleName: string) => `Update on Your Application for ${jobRoleName}`;
 const defaultBody = (jobRoleName: string) => `Hi {{candidateName}},
 
 Thank you for your interest in the ${jobRoleName} position. We were impressed with your background and would like to move forward with the next steps in our hiring process.
@@ -108,7 +106,7 @@ export function EmailComposeModal({ isOpen, onClose, candidates, jobRoleName }: 
             <Mail className="w-6 h-6 mr-2" /> Compose Email
           </DialogTitle>
           <DialogDescription>
-            Sending to {candidates.length} selected candidate(s). Use `{{candidateName}}` to personalize the email body.
+            Sending to {candidates.length} candidate(s). Use `{{candidateName}}` to personalize the email body.
           </DialogDescription>
         </DialogHeader>
         

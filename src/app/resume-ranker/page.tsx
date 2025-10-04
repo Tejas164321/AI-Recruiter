@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { EmailComposeModal } from "@/components/email-compose-modal";
 // Icons
-import { Users, ScanSearch, Briefcase, Snail, ServerOff, Trash2, Mail } from "lucide-react";
+import { Users, ScanSearch, Briefcase, Mail, ServerOff, Trash2 } from "lucide-react";
 // Hooks and Contexts
 import { useToast } from "@/hooks/use-toast";
 import { useLoading } from "@/contexts/loading-context";
@@ -60,7 +60,6 @@ export default function ResumeRankerPage() {
   const [selectedJobRoleId, setSelectedJobRoleId] = useState<string | null>(null);
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
   const [filters, setFilters] = useState<Filters>(initialFilters);
-  const [selectedCandidates, setSelectedCandidates] = useState<RankedCandidate[]>([]);
   
   // State for loading indicators
   const [isLoadingJDExtraction, setIsLoadingJDExtraction] = useState<boolean>(false);
@@ -71,6 +70,7 @@ export default function ResumeRankerPage() {
   const [selectedCandidateForFeedback, setSelectedCandidateForFeedback] = useState<RankedCandidate | null>(null);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState<boolean>(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState<boolean>(false);
+  const [candidatesForEmail, setCandidatesForEmail] = useState<RankedCandidate[]>([]);
   const [historyToDelete, setHistoryToDelete] = useState<JobScreeningResult | null>(null);
 
   // Refs for scrolling to elements
@@ -151,12 +151,6 @@ export default function ResumeRankerPage() {
       return () => clearTimeout(timer);
     }
   }, [isLoadingScreening]);
-  
-  // Clear candidate selection when the history or job role changes
-  useEffect(() => {
-    setSelectedCandidates([]);
-  }, [selectedHistoryId, selectedJobRoleId]);
-
 
   /**
    * Memoized list of screening history sessions for the currently selected job role.
@@ -261,10 +255,6 @@ export default function ResumeRankerPage() {
         toast({ title: "Screening Processed", description: "No new results were generated."});
       }
       
-      // USER-FRIENDLINESS FIX: Do not clear the resume list after screening.
-      // This allows the user to screen the same resumes against a different JD without re-uploading.
-      // setUploadedResumeFiles([]); 
-      
     } catch (error: any) {
       console.error("Bulk screening error:", error);
       toast({ title: "Bulk Screening Failed", description: error.message.substring(0, 100), variant: "destructive", duration: 10000 });
@@ -328,6 +318,14 @@ export default function ResumeRankerPage() {
     });
   }, [currentScreeningResult, filters]);
 
+  // Handler to open email modal for single or multiple candidates
+  const handleOpenEmailModal = (candidates: RankedCandidate[]) => {
+    if (candidates.length > 0) {
+      setCandidatesForEmail(candidates);
+      setIsEmailModalOpen(true);
+    }
+  };
+
   /**
    * Determines the current loading stage to show a relevant message.
    * @returns {"roles" | "screening" | "general"} The current stage.
@@ -350,7 +348,7 @@ export default function ResumeRankerPage() {
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-8 pt-24">
        {/* Page Header */}
-       <Card className="mb-8 shadow-md"><CardHeader><CardTitle className="text-2xl font-headline text-primary flex items-center"><Snail className="w-7 h-7 mr-3" /> AI-Powered Resume Ranker</CardTitle><CardDescription>Upload job descriptions and resumes to screen candidates. Your roles and screening history are saved.</CardDescription></CardHeader></Card>
+       <Card className="mb-8 shadow-md"><CardHeader><CardTitle className="text-2xl font-headline text-primary flex items-center"><ScanSearch className="w-7 h-7 mr-3" /> AI-Powered Resume Ranker</CardTitle><CardDescription>Upload job descriptions and resumes to screen candidates. Your roles and screening history are saved.</CardDescription></CardHeader></Card>
 
       {/* Conditional Rendering for DB and Auth status */}
       {!isFirestoreAvailable && (<Card className="shadow-lg border-destructive"><CardHeader><CardTitle className="text-destructive flex items-center"><ServerOff className="w-5 h-5 mr-2" /> Database Not Connected</CardTitle></CardHeader><CardContent><p>Database features are disabled.</p></CardContent></Card>)}
@@ -366,7 +364,7 @@ export default function ResumeRankerPage() {
           </div>
           
           {/* Action Button */}
-          <div className="flex justify-center pt-4"><Button ref={processButtonRef} onClick={() => handleScreening(selectedJobRoleId || undefined)} disabled={isProcessing || !selectedJobRoleId || uploadedResumeFiles.length === 0} size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-base px-8 py-6 shadow-md">{(isLoadingScreening) ? <Snail className="w-5 h-5 mr-2 animate-spin" /> : <ScanSearch className="w-5 h-5 mr-2" />}Screen Resumes</Button></div>
+          <div className="flex justify-center pt-4"><Button ref={processButtonRef} onClick={() => handleScreening(selectedJobRoleId || undefined)} disabled={isProcessing || !selectedJobRoleId || uploadedResumeFiles.length === 0} size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-base px-8 py-6 shadow-md">{(isLoadingScreening) ? <ScanSearch className="w-5 h-5 mr-2 animate-spin" /> : <ScanSearch className="w-5 h-5 mr-2" />}Screen Resumes</Button></div>
           
           {/* Results Section */}
           <div ref={resultsSectionRef} className="space-y-8">
@@ -380,14 +378,18 @@ export default function ResumeRankerPage() {
                       <CardTitle className="text-2xl font-headline text-primary">Results for: {currentScreeningResult.jobDescriptionName}</CardTitle>
                       <CardDescription>Screening from {currentScreeningResult.createdAt.toDate().toLocaleString()}. Processed: {currentScreeningResult.candidates.length}. Showing: {displayedCandidates.length}.</CardDescription>
                     </div>
-                     <Button onClick={() => setIsEmailModalOpen(true)} disabled={selectedCandidates.length === 0} variant="outline" >
+                     <Button onClick={() => handleOpenEmailModal(displayedCandidates)} disabled={displayedCandidates.length === 0} variant="outline" >
                       <Mail className="w-4 h-4 mr-2" />
-                      Email ({selectedCandidates.length}) Selected
+                      Email ({displayedCandidates.length}) Filtered Candidates
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <CandidateTable candidates={displayedCandidates} onViewFeedback={handleViewFeedback} selectedCandidates={selectedCandidates} onSelectionChange={setSelectedCandidates}/>
+                  <CandidateTable
+                     candidates={displayedCandidates} 
+                     onViewFeedback={handleViewFeedback}
+                     onSendEmail={(candidate) => handleOpenEmailModal([candidate])}
+                  />
                 </CardContent>
               </Card>
             )}
@@ -400,7 +402,7 @@ export default function ResumeRankerPage() {
           <EmailComposeModal 
             isOpen={isEmailModalOpen} 
             onClose={() => setIsEmailModalOpen(false)} 
-            candidates={selectedCandidates}
+            candidates={candidatesForEmail}
             jobRoleName={currentScreeningResult?.jobDescriptionName || ""}
           />
         </>
