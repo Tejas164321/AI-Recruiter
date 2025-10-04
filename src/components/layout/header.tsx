@@ -64,12 +64,13 @@ export function Header() {
     >
       <motion.div
         className={cn(
-            "flex h-16 items-center justify-between transition-colors duration-300",
+            "flex items-center justify-between transition-colors duration-300",
             "bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
         )}
         variants={{
             top: { 
                 width: '100%',
+                height: '4rem', // h-16
                 borderBottomWidth: '1px',
                 borderColor: 'hsl(var(--border))',
                 borderRadius: '0px',
@@ -79,11 +80,12 @@ export function Header() {
             },
             scrolled: {
                 width: 'auto',
+                height: '3.5rem', // h-14
                 borderBottomWidth: '1px',
                 borderColor: 'hsl(var(--border))',
                 borderRadius: '9999px',
-                paddingLeft: '1.25rem',
-                paddingRight: '1.25rem',
+                paddingLeft: '0.75rem',
+                paddingRight: '0.75rem',
                 marginTop: '0.5rem',
                 boxShadow: '0px 8px 24px hsla(var(--primary), 0.1)',
             },
@@ -94,79 +96,59 @@ export function Header() {
             damping: 25,
         }}
       >
-        <div className="container flex h-16 items-center justify-between gap-4">
-            {/* Logo and App Name */}
-            <motion.div
-                 variants={{
-                    top: { opacity: 1, x: 0 },
-                    scrolled: { opacity: 0, x: -20, transition: { duration: 0.1 } },
-                }}
-                className={cn("mr-4", isScrolled ? "hidden" : "flex items-center gap-2 cursor-pointer")}
+        {/* Container for all header content */}
+        <div className="flex h-full w-full items-center justify-between gap-4">
+
+            {/* Logo and App Name - ONLY visible at top */}
+             <motion.div
+                 variants={{ top: { opacity: 1 }, scrolled: { opacity: 0, transition: { duration: 0.1 } } }}
+                 className={cn("flex items-center gap-2", isScrolled ? "hidden" : "flex")}
             >
-                <Link href="/" aria-label="Go to homepage">
-                  <div className="flex items-center gap-2">
+                <Link href="/" aria-label="Go to homepage" className="flex items-center gap-2">
                      <BrainCircuit className="h-8 w-8 text-primary" />
                     <span className="text-2xl font-bold text-primary font-headline hidden sm:inline-block">AI Recruiter</span>
-                  </div>
                 </Link>
             </motion.div>
 
-            {/* Centered Icon for Scrolled State */}
-            <motion.div
-                variants={{
-                    top: { opacity: 0, scale: 0.8, y: 10, transition: { duration: 0.1 } },
-                    scrolled: { opacity: 1, scale: 1, y: 0 },
-                }}
-                className={cn("absolute left-1/2 -translate-x-1/2", isScrolled ? "flex" : "hidden")}
-             >
-                 <Link href="/" className="p-2" aria-label="Go to homepage">
-                    <BrainCircuit className="h-7 w-7 text-primary" />
-                 </Link>
-            </motion.div>
-
             {/* Desktop Navigation */}
-            <nav className={cn("hidden md:flex flex-1 items-center gap-2", isScrolled ? "justify-center" : "justify-end")}>
-            {isLoadingAuth ? (
+            <nav className={cn("hidden md:flex h-full items-center gap-1", isScrolled ? "justify-center" : "justify-end")}>
+               {/* Center Icon for Scrolled State */}
+                <motion.div variants={{ top: { opacity: 0, scale: 0 }, scrolled: { opacity: 1, scale: 1 } }} className={cn(isScrolled ? "flex" : "hidden")}>
+                    <Link href="/" className="p-2" aria-label="Go to homepage">
+                        <BrainCircuit className="h-7 w-7 text-primary" />
+                    </Link>
+                </motion.div>
+                
+                {isLoadingAuth ? (
                     <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 ) : currentUser ? (
                     <>
-                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                        <Button variant={isScrolled ? "ghost" : "outline"} size={isScrolled ? "icon" : "default"} asChild><Link href="/dashboard" aria-label="Dashboard"><LayoutDashboard className={cn(!isScrolled && "mr-2")} /> {!isScrolled && "Dashboard"}</Link></Button>
-                    </motion.div>
-                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                        <Button variant="ghost" size={isScrolled ? "icon" : "default"} onClick={handleSignOut} disabled={!firebaseAuthModule} aria-label="Sign Out"><LogOut className={cn(!isScrolled && "mr-2")} /> {!isScrolled && "Sign Out"}</Button>
-                    </motion.div>
+                    <Button variant={isScrolled ? "ghost" : "outline"} size={isScrolled ? "icon" : "default"} asChild><Link href="/dashboard" aria-label="Dashboard"><LayoutDashboard /><span className={cn(isScrolled && 'sr-only')}>Dashboard</span></Link></Button>
+                    <Button variant="ghost" size={isScrolled ? "icon" : "default"} onClick={handleSignOut} disabled={!firebaseAuthModule} aria-label="Sign Out"><LogOut /><span className={cn(isScrolled && 'sr-only')}>Sign Out</span></Button>
                     </>
                 ) : (
                     <>
-                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                        <Button variant="ghost" size={isScrolled ? "sm" : "default"} asChild disabled={!firebaseAuthModule}><Link href="/login">Sign In</Link></Button>
-                    </motion.div>
-                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                        <Button size={isScrolled ? "sm" : "default"} asChild disabled={!firebaseAuthModule}><Link href="/signup">Sign Up</Link></Button>
-                    </motion.div>
+                    <Button variant="ghost" size="default" asChild disabled={!firebaseAuthModule}><Link href="/login">Sign In</Link></Button>
+                    <Button size="default" asChild disabled={!firebaseAuthModule}><Link href="/signup">Sign Up</Link></Button>
                     </>
                 )}
-                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                    <ThemeToggleButton />
-                 </motion.div>
+                 <ThemeToggleButton />
             </nav>
 
             {/* Mobile Navigation */}
             <div className="md:hidden flex items-center gap-2">
+                 <motion.div variants={{ top: { opacity: 0, scale: 0 }, scrolled: { opacity: 1, scale: 1 } }} className={cn(isScrolled ? "flex" : "hidden")}>
+                    <Link href="/" className="p-2" aria-label="Go to homepage">
+                        <BrainCircuit className="h-7 w-7 text-primary" />
+                    </Link>
+                </motion.div>
                 {!isLoadingAuth && (
                         currentUser ? (
-                            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                <Button variant="outline" size="sm" asChild><Link href="/dashboard">Dashboard</Link></Button>
-                            </motion.div>
+                            <Button variant="outline" size="sm" asChild><Link href="/dashboard">Dashboard</Link></Button>
                         ) : (
                             <>
-                            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                <Button variant="ghost" size="sm" asChild><Link href="/login">Sign In</Link></Button>
-                            </motion.div>
-                            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                <Button size="sm" asChild><Link href="/signup">Sign Up</Link></Button>
-                            </motion.div>
+                            <Button variant="ghost" size="sm" asChild><Link href="/login">Sign In</Link></Button>
+                            <Button size="sm" asChild><Link href="/signup">Sign Up</Button>
                             </>
                     ))}
                 <Sheet>
