@@ -62,8 +62,8 @@ export function EmailComposeModal({ isOpen, onClose, candidates, jobRoleName }: 
   const handleSendEmail = async () => {
     // For this demo, we derive a placeholder email from the candidate's name.
     const recipients = candidates.map(c => ({
-        name: c.name || "Candidate",
-        email: `${(c.name || "candidate").toLowerCase().replace(/\s+/g, '.')}@example.com`
+        name: c.name || "Candidate", // Use candidate name or fallback to "Candidate"
+        email: `${(c.name || "candidate").toLowerCase().replace(/[^a-z0-9]/g, '.')}@example.com`
     }));
 
     if (recipients.length === 0) {
