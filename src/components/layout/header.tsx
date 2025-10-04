@@ -1,3 +1,4 @@
+
 "use client";
 
 import { BrainCircuit, Loader2, LogOut, LayoutDashboard, Menu, LogIn, UserPlus } from "lucide-react";
@@ -15,34 +16,33 @@ import { motion, useScroll, useMotionValueEvent } from "framer-motion";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-const SCROLL_THRESHOLD = 100;
-
+// --- Animation Variants ---
+// Defines the two states of the header: a larger capsule at the top,
+// and a smaller, more compact capsule when scrolled.
 const headerVariants = {
-    top: { 
-        width: '100%',
-        height: '4rem',
-        borderBottomWidth: '1px',
-        borderRadius: '0px',
-        paddingLeft: '1rem',
-        paddingRight: '1rem',
-        marginTop: '0rem'
+    top: {
+        height: '4rem', // 64px
+        marginTop: '1rem', // 16px
+        paddingLeft: '1.5rem', // 24px
+        paddingRight: '0.75rem', // 12px
+        borderRadius: '9999px',
+        boxShadow: '0px 10px 30px hsla(var(--primary), 0.1)',
+        transition: { type: "spring", stiffness: 300, damping: 30 }
     },
     scrolled: {
-        width: 'auto',
-        height: '3.5rem',
-        borderBottomWidth: '1px',
+        height: '3.5rem', // 56px
+        marginTop: '0.5rem', // 8px
+        paddingLeft: '1rem', // 16px
+        paddingRight: '0.5rem', // 8px
         borderRadius: '9999px',
-        paddingLeft: '0.75rem',
-        paddingRight: '0.75rem',
-        marginTop: '0.5rem',
-        boxShadow: '0px 8px 24px hsla(var(--primary), 0.1)',
+        boxShadow: '0px 12px 28px hsla(var(--primary), 0.2)',
+        transition: { type: "spring", stiffness: 300, damping: 30 }
     },
 };
 
 /**
- * The main header component for the application.
- * It is responsive and displays different navigation items based on authentication status.
- * It also features a dynamic shrinking animation on scroll.
+ * The main header component for the application, reimplemented as a floating capsule
+ * that shrinks on scroll for a modern, dynamic effect.
  */
 export function Header() {
   const { currentUser, isLoadingAuth } = useAuth();
@@ -51,11 +51,11 @@ export function Header() {
   const { scrollY } = useScroll();
   const [isScrolled, setIsScrolled] = useState(false);
 
-  // CORRECT PLACEMENT: All hooks must be at the top level.
+  // Hook to update the 'isScrolled' state based on scroll position.
   useMotionValueEvent(scrollY, "change", (latest) => {
-    setIsScrolled(latest > SCROLL_THRESHOLD);
+    setIsScrolled(latest > 50); // Trigger animation after scrolling 50px
   });
-  
+
   /**
    * Handles the user sign-out process.
    */
@@ -67,7 +67,7 @@ export function Header() {
     try {
       await signOut(firebaseAuthModule);
       toast({ title: "Signed Out", description: "You have been successfully signed out." });
-      router.push('/'); 
+      router.push('/');
     } catch (error) {
       console.error("Sign out error:", error);
       toast({ title: "Sign Out Failed", description: "Could not sign out. Please try again.", variant: "destructive" });
@@ -75,79 +75,51 @@ export function Header() {
   };
 
   return (
-    <header className="fixed top-0 z-50 flex w-full items-center justify-center">
+    <header className="fixed top-0 z-50 flex w-full items-start justify-center">
       <motion.div
         className={cn(
-            "flex items-center justify-between transition-colors duration-300 border-border",
-            "bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+            "flex items-center justify-between transition-colors duration-300 border-border border",
+            "bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/60"
         )}
         initial="top"
         animate={isScrolled ? "scrolled" : "top"}
         variants={headerVariants}
-        transition={{
-            type: "spring",
-            stiffness: 260,
-            damping: 25,
-        }}
       >
         <div className="flex h-full w-full items-center justify-between gap-4">
 
-             <motion.div
-                 initial={{ opacity: 1}}
-                 animate={{ opacity: isScrolled ? 0 : 1 }}
-                 transition={{ duration: 0.1 }}
-                 className={cn("flex items-center gap-2", isScrolled ? "hidden" : "flex")}
-            >
-                <Link href="/" aria-label="Go to homepage" className="flex items-center gap-2">
-                     <BrainCircuit className="h-8 w-8 text-primary" />
-                    <span className="text-2xl font-bold text-primary font-headline hidden sm:inline-block">AI Recruiter</span>
-                </Link>
-            </motion.div>
+            {/* --- Left Side: Brand Logo --- */}
+            <Link href="/" aria-label="Go to homepage" className="flex items-center gap-2 pl-2">
+                 <BrainCircuit className="h-8 w-8 text-primary" />
+                <span className="text-2xl font-bold text-primary font-headline hidden sm:inline-block">AI Recruiter</span>
+            </Link>
 
-            <nav className={cn("hidden md:flex h-full items-center", isScrolled ? "gap-1 justify-center flex-1" : "gap-1 justify-end")}>
-                <motion.div initial={{ opacity: 0, scale: 0 }} animate={{ opacity: isScrolled ? 1 : 0, scale: isScrolled ? 1 : 0 }} className={cn("absolute left-1/2 -translate-x-1/2", isScrolled ? "flex" : "hidden")}>
-                    <Link href="/" className="p-2" aria-label="Go to homepage">
-                        <BrainCircuit className="h-7 w-7 text-primary" />
-                    </Link>
-                </motion.div>
-                
+            {/* --- Right Side: Desktop Navigation & Actions --- */}
+            <nav className="hidden h-full items-center gap-1 md:flex">
                 {isLoadingAuth ? (
                     <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 ) : currentUser ? (
                     <>
-                    <Button variant={isScrolled ? "ghost" : "outline"} size={isScrolled ? "icon" : "default"} asChild><Link href="/dashboard" aria-label="Dashboard"><LayoutDashboard /><span className={cn(isScrolled && 'sr-only')}>Dashboard</span></Link></Button>
-                    <Button variant="ghost" size={isScrolled ? "icon" : "default"} onClick={handleSignOut} disabled={!firebaseAuthModule} aria-label="Sign Out"><LogOut /><span className={cn(isScrolled && 'sr-only')}>Sign Out</span></Button>
+                        <Button variant="ghost" asChild><Link href="/dashboard" aria-label="Dashboard"><LayoutDashboard />Dashboard</Link></Button>
+                        <Button variant="ghost" onClick={handleSignOut} disabled={!firebaseAuthModule} aria-label="Sign Out"><LogOut />Sign Out</Button>
                     </>
                 ) : (
                     <>
-                    <Button variant="ghost" asChild disabled={!firebaseAuthModule}><Link href="/login">Sign In</Link></Button>
-                    <Button asChild disabled={!firebaseAuthModule}><Link href="/signup">Sign Up</Link></Button>
+                        <Button variant="ghost" asChild disabled={!firebaseAuthModule}><Link href="/login">Sign In</Link></Button>
+                        <Button asChild disabled={!firebaseAuthModule}><Link href="/signup">Sign Up</Link></Button>
                     </>
                 )}
-                 <ThemeToggleButton />
+                <Separator orientation="vertical" className="h-6 mx-2" />
+                <ThemeToggleButton />
             </nav>
 
+            {/* --- Right Side: Mobile Menu --- */}
             <div className="md:hidden flex items-center gap-2">
-                 <motion.div initial={{ opacity: 0, scale: 0 }} animate={{ opacity: isScrolled ? 1 : 0, scale: isScrolled ? 1 : 0 }} className={cn(isScrolled ? "flex" : "hidden")}>
-                    <Link href="/" className="p-2" aria-label="Go to homepage">
-                        <BrainCircuit className="h-7 w-7 text-primary" />
-                    </Link>
-                </motion.div>
-                {!isScrolled && !isLoadingAuth && (
-                    currentUser ? (
-                        <Button variant="outline" size="sm" asChild><Link href="/dashboard">Dashboard</Link></Button>
-                    ) : (
-                        <>
-                        <Button variant="ghost" size="sm" asChild><Link href="/login">Sign In</Link></Button>
-                        <Button size="sm" asChild><Link href="/signup">Sign Up</Link></Button>
-                        </>
-                ))}
                 <Sheet>
                     <SheetTrigger asChild>
                         <Button variant="outline" size="icon"><Menu className="h-6 w-6" /><span className="sr-only">Open menu</span></Button>
                     </SheetTrigger>
                     <SheetContent side="right" className="w-[300px] p-4 flex flex-col">
-                    <div className="mb-6">
+                        <div className="mb-6">
                             <SheetClose asChild><Link href="/" className="flex items-center gap-2 cursor-pointer"><BrainCircuit className="h-7 w-7 text-primary" /><span className="text-xl font-bold text-primary font-headline">AI Recruiter</span></Link></SheetClose>
                         </div>
                         <Separator className="mb-4" />
@@ -168,8 +140,8 @@ export function Header() {
                         </div>
                         <div className="mt-auto pt-4 border-t border-border/50">
                             <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">Appearance</span>
-                            <ThemeToggleButton />
+                                <span className="text-sm text-muted-foreground">Appearance</span>
+                                <ThemeToggleButton />
                             </div>
                         </div>
                     </SheetContent>
