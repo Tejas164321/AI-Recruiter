@@ -13,10 +13,8 @@ export function PageLoader() {
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm">
       <div className="flex flex-col items-center gap-4">
         {/* The animated icon */}
-        <div className="relative w-32 h-32 animation-path-container">
-           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-             <Dot className="w-16 h-16 text-primary animate-bounce-infinity-loop" />
-           </div>
+        <div className="bouncing-ball-container">
+          <Dot className="w-12 h-12 text-primary animate-bounce-in-circle" />
         </div>
         <p className="text-lg font-semibold text-primary">Loading...</p>
       </div>

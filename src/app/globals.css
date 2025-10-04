@@ -68,53 +68,24 @@
   }
 }
 
-/* Bouncing ball loading animation */
-@keyframes bounce-infinity-loop {
-  0% { transform: translateX(-35px) translateY(10px) scale(0.8); }
-  12.5% { transform: translateX(0px) translateY(-15px) scale(1); }
-  25% { transform: translateX(35px) translateY(10px) scale(0.8); }
-  37.5% { transform: translateX(0px) translateY(20px) scale(0.6); }
-  50% { transform: translateX(-35px) translateY(10px) scale(0.8); }
-  62.5% { transform: translateX(0px) translateY(-15px) scale(1); }
-  75% { transform: translateX(35px) translateY(10px) scale(0.8); }
-  87.5% { transform: translateX(0px) translateY(20px) scale(0.6); }
-  100% { transform: translateX(-35px) translateY(10px) scale(0.8); }
+/* New, simpler bouncing ball animation */
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(-60%);
+    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+  }
+  50% {
+    transform: translateY(60%);
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  }
 }
 
-.animate-bounce-infinity-loop {
-  animation: bounce-infinity-loop 3s linear infinite;
-  transform-origin: center center;
+.animate-bounce-in-circle {
+  animation: bounce 1.5s infinite;
 }
 
-@keyframes path-rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.animation-path-container {
-  @apply relative;
-}
-
-/* The dashed infinity path */
-.animation-path-container::before {
-  content: '';
-  @apply absolute top-1/2 left-1/2 w-[80px] h-[40px];
-  margin-left: -40px;
-  margin-top: -20px;
-  border-radius: 50%;
-  border: 1px dashed hsl(var(--border));
-  animation: path-rotate 12s linear infinite;
-}
-
-/* The new thin circular border */
-.animation-path-container::after {
-  content: '';
-  @apply absolute top-1/2 left-1/2 w-[90px] h-[90px]; /* Slightly larger than the path */
-  margin-left: -45px;
-  margin-top: -45px;
-  border-radius: 50%;
-  border: 1px solid hsl(var(--border) / 0.5); /* Thinner and semi-transparent */
-  animation: path-rotate 18s linear infinite reverse; /* Rotates in the opposite direction */
+.bouncing-ball-container {
+  @apply relative flex items-center justify-center w-24 h-24 rounded-full border-2 border-border;
 }
 
 
