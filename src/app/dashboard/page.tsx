@@ -78,7 +78,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="container mx-auto p-4 md:p-8">
+    <div className="container mx-auto p-4 md:p-8 pt-8">
       {/* Page Header */}
       <header className="mb-8">
         <h1 className="text-3xl font-bold font-headline text-foreground">Welcome to Your Dashboard, {userName}!</h1>

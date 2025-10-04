@@ -339,7 +339,7 @@ export default function ResumeRankerPage() {
   }, [extractedJobRoles]);
 
   return (
-    <div className="container mx-auto p-4 md:p-8 space-y-8">
+    <div className="container mx-auto p-4 md:p-8 space-y-8 pt-8">
        {/* Page Header */}
        <Card className="mb-8 shadow-md"><CardHeader><CardTitle className="text-2xl font-headline text-primary flex items-center"><Snail className="w-7 h-7 mr-3" /> AI-Powered Resume Ranker</CardTitle><CardDescription>Upload job descriptions and resumes to screen candidates. Your roles and screening history are saved.</CardDescription></CardHeader></Card>
 

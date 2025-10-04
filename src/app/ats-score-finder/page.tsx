@@ -256,7 +256,7 @@ export default function AtsScoreFinderPage() {
   const isProcessing = isProcessingAts || isLoadingResultsFromDB;
 
   return (
-    <div className="container mx-auto p-4 md:p-8 space-y-8">
+    <div className="container mx-auto p-4 md:p-8 space-y-8 pt-8">
       {/* Page Header */}
       <Card className="mb-8 bg-gradient-to-r from-primary/5 via-background to-background border-primary/20 shadow-md">
         <CardHeader>
