@@ -33,8 +33,8 @@ export function MainLayout({ children }: MainLayoutProps) {
       <Header />
       
       {/* The main content area where pages will be rendered */}
-      {/* pt-16 provides padding to offset the fixed header */}
-      <main className="flex-1 flex flex-col pt-16">{children}</main>
+      {/* pt-24 provides padding to offset the fixed header and its margin */}
+      <main className="flex-1 flex flex-col pt-24">{children}</main>
     </div>
   );
 }

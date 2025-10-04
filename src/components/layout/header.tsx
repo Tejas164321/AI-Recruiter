@@ -16,24 +16,23 @@ import { motion, useScroll, useMotionValueEvent } from "framer-motion";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-// --- Animation Variants ---
-// Defines the two states of the header: a larger capsule at the top,
-// and a smaller, more compact capsule when scrolled.
+/**
+ * Defines the animation variants for the header.
+ * - 'top': Full-width bar.
+ * - 'scrolled': A slightly narrower, centered capsule.
+ */
 const headerVariants = {
     top: {
-        height: '4rem', // 64px
-        marginTop: '1rem', // 16px
-        paddingLeft: '1.5rem', // 24px
-        paddingRight: '0.75rem', // 12px
-        borderRadius: '9999px',
-        boxShadow: '0px 10px 30px hsla(var(--primary), 0.1)',
+        width: '100%',
+        marginTop: '0rem',
+        borderRadius: '0px',
+        boxShadow: '0px 2px 10px hsla(var(--primary), 0.1)',
         transition: { type: "spring", stiffness: 300, damping: 30 }
     },
     scrolled: {
-        height: '3.5rem', // 56px
-        marginTop: '0.5rem', // 8px
-        paddingLeft: '1rem', // 16px
-        paddingRight: '0.5rem', // 8px
+        width: '95%',
+        maxWidth: '1400px', // Corresponds to 2xl screen size for consistency
+        marginTop: '0.5rem',
         borderRadius: '9999px',
         boxShadow: '0px 12px 28px hsla(var(--primary), 0.2)',
         transition: { type: "spring", stiffness: 300, damping: 30 }
@@ -41,8 +40,8 @@ const headerVariants = {
 };
 
 /**
- * The main header component for the application, reimplemented as a floating capsule
- * that shrinks on scroll for a modern, dynamic effect.
+ * The main header component for the application. It starts as a full-width bar
+ * and transitions into a slightly narrower, floating capsule on scroll.
  */
 export function Header() {
   const { currentUser, isLoadingAuth } = useAuth();
@@ -78,7 +77,7 @@ export function Header() {
     <header className="fixed top-0 z-50 flex w-full items-start justify-center">
       <motion.div
         className={cn(
-            "flex items-center justify-between transition-colors duration-300 border-border border",
+            "flex h-16 items-center justify-between px-6 transition-colors duration-300 border-border border",
             "bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/60"
         )}
         initial="top"
@@ -88,7 +87,7 @@ export function Header() {
         <div className="flex h-full w-full items-center justify-between gap-4">
 
             {/* --- Left Side: Brand Logo --- */}
-            <Link href="/" aria-label="Go to homepage" className="flex items-center gap-2 pl-2">
+            <Link href="/" aria-label="Go to homepage" className="flex items-center gap-2">
                  <BrainCircuit className="h-8 w-8 text-primary" />
                 <span className="text-2xl font-bold text-primary font-headline hidden sm:inline-block">AI Recruiter</span>
             </Link>
@@ -114,6 +113,7 @@ export function Header() {
 
             {/* --- Right Side: Mobile Menu --- */}
             <div className="md:hidden flex items-center gap-2">
+                 <ThemeToggleButton />
                 <Sheet>
                     <SheetTrigger asChild>
                         <Button variant="outline" size="icon"><Menu className="h-6 w-6" /><span className="sr-only">Open menu</span></Button>
@@ -137,12 +137,6 @@ export function Header() {
                                     <SheetClose asChild><Link href="/signup"><Button disabled={!firebaseAuthModule} className="w-full justify-start"><UserPlus className="mr-2 h-4 w-4" /> Sign Up</Button></Link></SheetClose>
                                 </>
                             )}
-                        </div>
-                        <div className="mt-auto pt-4 border-t border-border/50">
-                            <div className="flex justify-between items-center">
-                                <span className="text-sm text-muted-foreground">Appearance</span>
-                                <ThemeToggleButton />
-                            </div>
                         </div>
                     </SheetContent>
                 </Sheet>
