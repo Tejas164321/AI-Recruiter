@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 // Icons
 import { ArrowUpDown, MessageSquareText, TrendingUp, Tags, Hash } from "lucide-react";
 // Types
@@ -18,6 +19,8 @@ import type { RankedCandidate } from "@/lib/types";
 interface CandidateTableProps {
   candidates: RankedCandidate[];
   onViewFeedback: (candidate: RankedCandidate) => void;
+  selectedCandidates: RankedCandidate[];
+  onSelectionChange: (candidates: RankedCandidate[]) => void;
 }
 
 // Defines the possible keys for sorting the table.
@@ -28,9 +31,9 @@ type SortKey = keyof Pick<RankedCandidate, "name" | "score">;
  * It shows a table on larger screens and a list of cards on mobile, with sorting functionality.
  * @param {CandidateTableProps} props - The component props.
  */
-export function CandidateTable({ candidates, onViewFeedback }: CandidateTableProps) {
+export function CandidateTable({ candidates, onViewFeedback, selectedCandidates, onSelectionChange }: CandidateTableProps) {
   // State to manage the current sorting configuration (key and direction).
-  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: "ascending" | "descending" } | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: "ascending" | "descending" } | null>({ key: "score", direction: "descending" });
 
   // Memoized sorted list of candidates. This recalculates only when candidates or sortConfig change.
   const sortedCandidates = useMemo(() => {
@@ -79,6 +82,22 @@ export function CandidateTable({ candidates, onViewFeedback }: CandidateTablePro
     if (score > 50) return <Badge className="bg-yellow-500 text-black hover:bg-yellow-500/90">{score}/100</Badge>;
     return <Badge variant="destructive">{score}/100</Badge>;
   };
+  
+  const handleSelectAll = (checked: boolean) => {
+    onSelectionChange(checked ? sortedCandidates : []);
+  };
+  
+  const handleSelectOne = (candidate: RankedCandidate, checked: boolean) => {
+    if (checked) {
+      onSelectionChange([...selectedCandidates, candidate]);
+    } else {
+      onSelectionChange(selectedCandidates.filter(c => c.id !== candidate.id));
+    }
+  };
+
+  const isAllSelected = selectedCandidates.length > 0 && selectedCandidates.length === candidates.length;
+  const isSomeSelected = selectedCandidates.length > 0 && selectedCandidates.length < candidates.length;
+
 
   // Display a message if there are no candidates to show.
   if (candidates.length === 0) {
@@ -90,12 +109,15 @@ export function CandidateTable({ candidates, onViewFeedback }: CandidateTablePro
       {/* Mobile View: Renders a list of cards. Hidden on medium screens and up. */}
       <div className="md:hidden space-y-4">
         {sortedCandidates.map((candidate, index) => (
-          <Card key={candidate.id} className="bg-card">
+          <Card key={candidate.id} className={`bg-card transition-all ${selectedCandidates.some(c => c.id === candidate.id) ? 'border-primary shadow-lg' : 'border-border'}`}>
             <CardHeader>
               <div className="flex justify-between items-start gap-4">
-                <div className="flex-grow">
-                  <CardTitle className="text-lg">{candidate.name}</CardTitle>
-                  <CardDescription>Rank #{index + 1}</CardDescription>
+                <div className="flex items-start gap-3">
+                   <Checkbox id={`mobile-select-${candidate.id}`} checked={selectedCandidates.some(c => c.id === candidate.id)} onCheckedChange={(checked) => handleSelectOne(candidate, !!checked)} className="mt-1" />
+                   <div className="flex-grow">
+                      <CardTitle className="text-lg">{candidate.name}</CardTitle>
+                      <CardDescription>Rank #{index + 1}</CardDescription>
+                    </div>
                 </div>
                 <div className="flex-shrink-0 ml-4">{getScoreBadge(candidate.score)}</div>
               </div>
@@ -121,16 +143,26 @@ export function CandidateTable({ candidates, onViewFeedback }: CandidateTablePro
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[5%] text-center">
+                 <Checkbox 
+                  onCheckedChange={handleSelectAll} 
+                  checked={isAllSelected}
+                  aria-label="Select all rows" 
+                  data-state={isSomeSelected ? 'indeterminate' : (isAllSelected ? 'checked' : 'unchecked')}
+                  className="mx-auto"
+                  />
+              </TableHead>
               <TableHead className="w-[5%] text-center"><div className="flex items-center justify-center"><Hash className="w-4 h-4 mr-1" />Rank</div></TableHead>
               <TableHead onClick={() => requestSort("name")} className="cursor-pointer hover:bg-muted/50 w-[25%]"><div className="flex items-center">Candidate Name {getSortIndicator("name")}</div></TableHead>
               <TableHead onClick={() => requestSort("score")} className="cursor-pointer hover:bg-muted/50 w-[15%]"><div className="flex items-center"><TrendingUp className="w-4 h-4 mr-1" />Score {getSortIndicator("score")}</div></TableHead>
-              <TableHead className="w-[40%]"><div className="flex items-center"><Tags className="w-4 h-4 mr-1" />Key Skills</div></TableHead>
+              <TableHead className="w-[35%]"><div className="flex items-center"><Tags className="w-4 h-4 mr-1" />Key Skills</div></TableHead>
               <TableHead className="text-right w-[15%]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {sortedCandidates.map((candidate, index) => (
-              <TableRow key={candidate.id} className="hover:bg-muted/50">
+              <TableRow key={candidate.id} className={`hover:bg-muted/50 ${selectedCandidates.some(c => c.id === candidate.id) ? 'bg-primary/10' : ''}`} data-state={selectedCandidates.some(c => c.id === candidate.id) ? "selected" : ""}>
+                <TableCell className="text-center"><Checkbox checked={selectedCandidates.some(c => c.id === candidate.id)} onCheckedChange={(checked) => handleSelectOne(candidate, !!checked)} /></TableCell>
                 <TableCell className="font-medium text-center">{index + 1}</TableCell>
                 <TableCell className="font-medium">{candidate.name}</TableCell>
                 <TableCell>{getScoreBadge(candidate.score)}</TableCell>

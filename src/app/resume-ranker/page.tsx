@@ -12,8 +12,9 @@ import { FilterControls } from "@/components/filter-controls";
 import { LoadingIndicator } from "@/components/loading-indicator";
 import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { EmailComposeModal } from "@/components/email-compose-modal";
 // Icons
-import { Users, ScanSearch, Briefcase, Snail, ServerOff, Trash2 } from "lucide-react";
+import { Users, ScanSearch, Briefcase, Snail, ServerOff, Trash2, Mail } from "lucide-react";
 // Hooks and Contexts
 import { useToast } from "@/hooks/use-toast";
 import { useLoading } from "@/contexts/loading-context";
@@ -59,6 +60,7 @@ export default function ResumeRankerPage() {
   const [selectedJobRoleId, setSelectedJobRoleId] = useState<string | null>(null);
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
   const [filters, setFilters] = useState<Filters>(initialFilters);
+  const [selectedCandidates, setSelectedCandidates] = useState<RankedCandidate[]>([]);
   
   // State for loading indicators
   const [isLoadingJDExtraction, setIsLoadingJDExtraction] = useState<boolean>(false);
@@ -68,6 +70,7 @@ export default function ResumeRankerPage() {
   // State for modals and dialogs
   const [selectedCandidateForFeedback, setSelectedCandidateForFeedback] = useState<RankedCandidate | null>(null);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState<boolean>(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState<boolean>(false);
   const [historyToDelete, setHistoryToDelete] = useState<JobScreeningResult | null>(null);
 
   // Refs for scrolling to elements
@@ -148,6 +151,12 @@ export default function ResumeRankerPage() {
       return () => clearTimeout(timer);
     }
   }, [isLoadingScreening]);
+  
+  // Clear candidate selection when the history or job role changes
+  useEffect(() => {
+    setSelectedCandidates([]);
+  }, [selectedHistoryId, selectedJobRoleId]);
+
 
   /**
    * Memoized list of screening history sessions for the currently selected job role.
@@ -363,13 +372,37 @@ export default function ResumeRankerPage() {
           <div ref={resultsSectionRef} className="space-y-8">
             {(isProcessing && !currentScreeningResult) && (<Card className="shadow-lg"><CardContent className="pt-6"><LoadingIndicator stage={getLoadingStage()} /></CardContent></Card>)}
             {(!isProcessing || extractedJobRoles.length > 0) && (<><Separator className="my-8" /><FilterControls filters={filters} onFilterChange={handleFilterChange} onResetFilters={resetFilters} extractedJobRoles={uniqueJobRolesForDropdown} selectedJobRoleId={selectedJobRoleId} onJobRoleChange={handleJobRoleChange} isLoading={isProcessing} screeningHistory={screeningHistoryForSelectedRole} selectedHistoryId={selectedHistoryId} onHistoryChange={handleHistoryChange} onDeleteHistory={handleOpenDeleteHistoryDialog}/></>)}
-            {!isLoadingScreening && currentScreeningResult && (<Card className="shadow-lg mb-8"><CardHeader><CardTitle className="text-2xl font-headline text-primary">Results for: {currentScreeningResult.jobDescriptionName}</CardTitle><CardDescription>Screening from {currentScreeningResult.createdAt.toDate().toLocaleString()}. Processed: {currentScreeningResult.candidates.length}. Showing: {displayedCandidates.length}.</CardDescription></CardHeader><CardContent><CandidateTable candidates={displayedCandidates} onViewFeedback={handleViewFeedback} /></CardContent></Card>)}
+            {!isLoadingScreening && currentScreeningResult && (
+              <Card className="shadow-lg mb-8">
+                <CardHeader>
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div>
+                      <CardTitle className="text-2xl font-headline text-primary">Results for: {currentScreeningResult.jobDescriptionName}</CardTitle>
+                      <CardDescription>Screening from {currentScreeningResult.createdAt.toDate().toLocaleString()}. Processed: {currentScreeningResult.candidates.length}. Showing: {displayedCandidates.length}.</CardDescription>
+                    </div>
+                     <Button onClick={() => setIsEmailModalOpen(true)} disabled={selectedCandidates.length === 0} variant="outline" >
+                      <Mail className="w-4 h-4 mr-2" />
+                      Email ({selectedCandidates.length}) Selected
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <CandidateTable candidates={displayedCandidates} onViewFeedback={handleViewFeedback} selectedCandidates={selectedCandidates} onSelectionChange={setSelectedCandidates}/>
+                </CardContent>
+              </Card>
+            )}
             {!isProcessing && !selectedHistoryId && (<p className="text-center text-muted-foreground py-8">{extractedJobRoles.length === 0 ? "Upload a job description to begin." : !selectedJobRoleId ? "Select a job role from the dropdown." : screeningHistoryForSelectedRole.length === 0 ? "Upload resumes and click 'Screen' to create a session for this role." : "Select a screening session to view results."}</p>)}
           </div>
 
           {/* Dialogs and Modals */}
           <AlertDialog open={!!historyToDelete} onOpenChange={(open) => !open && setHistoryToDelete(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the screening session from <span className="font-semibold">{historyToDelete?.createdAt.toDate().toLocaleString()}</span>.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => setHistoryToDelete(null)}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleConfirmDeleteHistory} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
           <FeedbackModal isOpen={isFeedbackModalOpen} onClose={() => setIsFeedbackModalOpen(false)} candidate={selectedCandidateForFeedback}/>
+          <EmailComposeModal 
+            isOpen={isEmailModalOpen} 
+            onClose={() => setIsEmailModalOpen(false)} 
+            candidates={selectedCandidates}
+            jobRoleName={currentScreeningResult?.jobDescriptionName || ""}
+          />
         </>
       )}
     </div>
