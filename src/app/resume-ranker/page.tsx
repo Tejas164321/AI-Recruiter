@@ -85,7 +85,7 @@ export default function ResumeRankerPage() {
    * This retrieves all previously saved screening sessions.
    */
   useEffect(() => {
-    setAppIsLoading(false);
+    setAppIsLoading(false); // IMPORTANT: Immediately disable the full-page loader
     if (currentUser && isFirestoreAvailable) {
       setIsLoadingFromDB(true);
       getAllJobScreeningResultsForUser()
@@ -136,35 +136,35 @@ export default function ResumeRankerPage() {
   }, [isLoadingScreening]);
 
   /**
-   * Memoized list of unique job roles for the dropdown to prevent duplicates from appearing.
-   * This is stable and prevents re-renders. It combines roles from Firestore and the current session.
+   * Memoized list of unique job roles for the dropdown.
+   * This is a critical performance optimization to prevent infinite loops.
+   * It combines roles from the current session and Firestore history into a stable list.
    */
   const uniqueJobRolesForDropdown = useMemo(() => {
       const roleMap = new Map<string, ExtractedJobRole>();
-
-      // Add roles extracted in the current session first to ensure they are available
+      
+      // Prioritize roles extracted in the current session
       extractedJobRoles.forEach(role => {
-          if(!roleMap.has(role.name)) {
-              roleMap.set(role.name, role);
-          }
+          roleMap.set(role.id, role);
       });
       
-      // Add roles derived from Firestore history if a role with the same name doesn't already exist from the session
-      const sortedResults = [...allScreeningResults].sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
-      sortedResults.forEach(result => {
-        if (!roleMap.has(result.jobDescriptionName) && currentUser) {
-          roleMap.set(result.jobDescriptionName, {
+      // Add roles from Firestore history if they don't already exist from the session
+      allScreeningResults.forEach(result => {
+        // A role from history is uniquely identified by its name. If we already have a session role with this name, skip.
+        const hasSessionRoleWithSameName = Array.from(roleMap.values()).some(sessionRole => sessionRole.name === result.jobDescriptionName);
+        if (!hasSessionRoleWithSameName && currentUser) {
+          roleMap.set(result.jobDescriptionId, {
             id: result.jobDescriptionId,
             name: result.jobDescriptionName,
             contentDataUri: result.jobDescriptionDataUri,
-            originalDocumentName: '', // Not available from history alone
+            originalDocumentName: '',
             userId: currentUser.uid,
             createdAt: result.createdAt,
           });
         }
       });
 
-      // Return a sorted list
+      // Sort the final list by creation date, newest first.
       return Array.from(roleMap.values()).sort((a,b) => b.createdAt.toMillis() - a.createdAt.toMillis());
   }, [allScreeningResults, extractedJobRoles, currentUser]);
 
