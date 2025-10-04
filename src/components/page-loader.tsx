@@ -1,6 +1,6 @@
 
 "use client";
-import { Snail } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 /**
  * A full-screen overlay loader component.
@@ -14,10 +14,7 @@ export function PageLoader() {
       <div className="flex flex-col items-center gap-4">
         {/* The animated icon */}
         <div className="relative w-20 h-20">
-          {/* A pulsing background glow with a longer duration */}
-          <div className="absolute inset-0 bg-primary rounded-full animate-pulse [animation-duration:1.5s] opacity-50"></div>
-          {/* A spinning brain icon with a different duration for a dynamic effect */}
-          <Snail className="absolute inset-0 w-full h-full text-primary animate-spin [animation-duration:2.5s]" />
+          <Loader2 className="w-20 h-20 animate-spin text-primary" />
         </div>
         <p className="text-lg font-semibold text-primary">Loading...</p>
       </div>
