@@ -42,11 +42,8 @@ const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
  * screen them, and view ranked results.
  */
 export default function ResumeRankerPage() {
-  // App-wide loading state context
   const { setIsPageLoading: setAppIsLoading } = useLoading();
-  // Authentication context to get the current user
   const { currentUser } = useAuth();
-  // Toast notifications hook
   const { toast } = useToast();
 
   // State for file uploads in the current session
@@ -64,7 +61,7 @@ export default function ResumeRankerPage() {
   // State for loading indicators
   const [isLoadingJDExtraction, setIsLoadingJDExtraction] = useState<boolean>(false);
   const [isLoadingScreening, setIsLoadingScreening] = useState<boolean>(false);
-  const [isLoadingFromDB, setIsLoadingFromDB] = useState<boolean>(false); // Disabled for now
+  const [isLoadingFromDB, setIsLoadingFromDB] = useState(true);
   
   // State for modals and dialogs
   const [selectedCandidateForFeedback, setSelectedCandidateForFeedback] = useState<RankedCandidate | null>(null);
@@ -80,10 +77,27 @@ export default function ResumeRankerPage() {
   // Check if Firestore is available
   const isFirestoreAvailable = !!firestoreDb;
 
-  // Turn off page loader on mount. History loading is disabled.
+  // Turn off page loader on mount and fetch history
   useEffect(() => {
     setAppIsLoading(false);
-  }, [setAppIsLoading]);
+    if (currentUser && isFirestoreAvailable) {
+      setIsLoadingFromDB(true);
+      getAllJobScreeningResultsForUser()
+        .then(results => {
+          setAllScreeningResults(results);
+        })
+        .catch(err => {
+          console.error("Error fetching screening results:", err);
+          toast({ title: "Error Loading History", description: String(err.message || err).substring(0, 100), variant: "destructive" });
+        })
+        .finally(() => {
+          setIsLoadingFromDB(false);
+        });
+    } else {
+        setIsLoadingFromDB(false);
+        setAllScreeningResults([]);
+    }
+  }, [setAppIsLoading, currentUser, isFirestoreAvailable, toast]);
 
 
   // Derived loading state for easier management in the UI
@@ -116,13 +130,27 @@ export default function ResumeRankerPage() {
     }
   }, [isLoadingScreening]);
 
-  /**
-   * Memoized list of unique job roles for the dropdown.
-   * This now only shows roles from the current session.
-   */
   const uniqueJobRolesForDropdown = useMemo(() => {
-      return [...extractedJobRoles].sort((a,b) => b.createdAt.toMillis() - a.createdAt.toMillis());
-  }, [extractedJobRoles]);
+    const rolesFromHistory = allScreeningResults.map(result => ({
+      id: result.jobDescriptionId,
+      name: result.jobDescriptionName,
+      contentDataUri: result.jobDescriptionDataUri,
+      originalDocumentName: `From History (${result.createdAt.toDate().toLocaleDateString()})`,
+      userId: result.userId,
+      createdAt: result.createdAt,
+    }));
+  
+    const allRoles = [...extractedJobRoles, ...rolesFromHistory];
+    const uniqueRolesMap = new Map<string, ExtractedJobRole>();
+  
+    allRoles.forEach(role => {
+      if (!uniqueRolesMap.has(role.id)) {
+        uniqueRolesMap.set(role.id, role);
+      }
+    });
+  
+    return Array.from(uniqueRolesMap.values()).sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+  }, [extractedJobRoles, allScreeningResults]);
 
 
   /**
@@ -131,12 +159,10 @@ export default function ResumeRankerPage() {
    */
   const screeningHistoryForSelectedRole = useMemo(() => {
     if (!selectedJobRoleId) return [];
-    const selectedRole = uniqueJobRolesForDropdown.find(r => r.id === selectedJobRoleId);
-    if (!selectedRole) return [];
     return allScreeningResults
-      .filter(r => r.jobDescriptionName === selectedRole.name)
+      .filter(r => r.jobDescriptionId === selectedJobRoleId)
       .sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
-  }, [selectedJobRoleId, allScreeningResults, uniqueJobRolesForDropdown]);
+  }, [selectedJobRoleId, allScreeningResults]);
 
   /**
    * Memoized object for the currently selected screening result.
@@ -170,8 +196,8 @@ export default function ResumeRankerPage() {
         const tempRoles = aiOutput.map(role => ({ ...role, userId: currentUser.uid, createdAt: Timestamp.now() })) as ExtractedJobRole[];
         
         setExtractedJobRoles(prev => [...tempRoles, ...prev]);
-        setSelectedJobRoleId(tempRoles[0].id); 
-        toast({ title: "Job Role(s) Extracted", description: `${tempRoles.length} role(s) are ready for screening.` });
+        
+        toast({ title: "Job Role(s) Extracted", description: `${tempRoles.length} role(s) are ready. Please select one from the dropdown to proceed.` });
         
       } else {
          toast({ title: "No Job Roles Extracted", description: "AI could not find any distinct roles in the file(s)." });
@@ -319,11 +345,11 @@ export default function ResumeRankerPage() {
           
           {/* Results Section */}
           <div ref={resultsSectionRef} className="space-y-8">
-            {(isProcessing && !currentScreeningResult) && (<Card className="shadow-lg"><CardContent className="pt-6"><LoadingIndicator stage={getLoadingStage()} /></CardContent></Card>)}
+            {(isProcessing) && (<Card className="shadow-lg"><CardContent className="pt-6"><LoadingIndicator stage={getLoadingStage()} /></CardContent></Card>)}
             
-            {(uniqueJobRolesForDropdown.length > 0) && (<><Separator className="my-8" /><FilterControls filters={filters} onFilterChange={handleFilterChange} onResetFilters={resetFilters} extractedJobRoles={uniqueJobRolesForDropdown} selectedJobRoleId={selectedJobRoleId} onJobRoleChange={handleJobRoleChange} isLoading={isProcessing} screeningHistory={screeningHistoryForSelectedRole} selectedHistoryId={selectedHistoryId} onHistoryChange={handleHistoryChange} onDeleteHistory={handleOpenDeleteHistoryDialog}/></>)}
+            {!isProcessing && (uniqueJobRolesForDropdown.length > 0 || extractedJobRoles.length > 0) && (<><Separator className="my-8" /><FilterControls filters={filters} onFilterChange={handleFilterChange} onResetFilters={resetFilters} extractedJobRoles={uniqueJobRolesForDropdown} selectedJobRoleId={selectedJobRoleId} onJobRoleChange={handleJobRoleChange} isLoading={isProcessing} screeningHistory={screeningHistoryForSelectedRole} selectedHistoryId={selectedHistoryId} onHistoryChange={handleHistoryChange} onDeleteHistory={handleOpenDeleteHistoryDialog}/></>)}
             
-            {!isLoadingScreening && currentScreeningResult && (
+            {!isProcessing && currentScreeningResult && (
               <Card className="shadow-lg mb-8">
                 <CardHeader>
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -346,9 +372,10 @@ export default function ResumeRankerPage() {
                 </CardContent>
               </Card>
             )}
-            {!isProcessing && !selectedJobRoleId && uniqueJobRolesForDropdown.length > 0 && (<p className="text-center text-muted-foreground py-8">Select a job role to continue.</p>)}
-            {!isProcessing && !selectedHistoryId && screeningHistoryForSelectedRole.length > 0 && (<p className="text-center text-muted-foreground py-8">Select a screening session to view results.</p>)}
-            {!isProcessing && uniqueJobRolesForDropdown.length === 0 && (<p className="text-center text-muted-foreground py-8">Upload a job description to begin.</p>)}
+            {!isProcessing && !currentScreeningResult && (uniqueJobRolesForDropdown.length > 0 || extractedJobRoles.length > 0) && (
+                 <p className="text-center text-muted-foreground py-8">Select a job role and screening session to view results.</p>
+            )}
+            {!isProcessing && uniqueJobRolesForDropdown.length === 0 && extractedJobRoles.length === 0 && (<p className="text-center text-muted-foreground py-8">Upload a job description to begin.</p>)}
 
           </div>
 
@@ -366,3 +393,5 @@ export default function ResumeRankerPage() {
     </div>
   );
 }
+
+    
