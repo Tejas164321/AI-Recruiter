@@ -44,7 +44,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       {/* to prevent content from being obscured by the floating header. */}
       <main className={cn(
         "flex-1 flex flex-col",
-        { "pt-24": !isLandingPage }
+        { "pt-20": !isLandingPage }
       )}>
         {children}
       </main>
