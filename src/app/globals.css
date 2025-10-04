@@ -4,24 +4,24 @@
 
 @layer base {
   :root {
-    --background: 220 18% 11%; /* Matte Cool Dark Gray */
+    --background: 220 18% 9%; /* Matte Cool Dark Gray - Slightly Darker */
     --foreground: 210 40% 98%;
-    --card: 220 18% 14%; /* Slightly lighter matte for cards */
+    --card: 220 18% 12%; /* Adjusted card color for new background */
     --card-foreground: 210 40% 98%;
-    --popover: 220 18% 14%;
+    --popover: 220 18% 12%;
     --popover-foreground: 210 40% 98%;
     --primary: 215 100% 60%; /* Saturated Sky Blue (Electric Blue) */
     --primary-foreground: 210 40% 98%;
-    --secondary: 220 18% 18%; /* Lighter gray for secondary elements */
+    --secondary: 220 18% 16%; /* Adjusted secondary color */
     --secondary-foreground: 210 40% 98%;
-    --muted: 220 18% 18%;
+    --muted: 220 18% 16%;
     --muted-foreground: 215 20.2% 65.1%;
     --accent: 163 70% 45%; /* Teal-green */
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 220 18% 22%; /* Softer border color */
-    --input: 220 18% 22%;
+    --border: 220 18% 20%; /* Adjusted border color */
+    --input: 220 18% 20%;
     --ring: 215 100% 60%;
     --radius: 0.75rem;
     --chart-1: 220 70% 55%;
