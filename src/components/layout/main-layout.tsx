@@ -22,7 +22,6 @@ interface MainLayoutProps {
  * It includes the header and a global page loader that is shown
  * based on the state from the LoadingContext.
  * It now conditionally adds padding to all pages except the homepage, login, and signup pages.
- * @param {MainLayoutProps} props - The component props.
  */
 export function MainLayout({ children }: MainLayoutProps) {
   const { isPageLoading } = useLoading();
@@ -44,7 +43,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       {/* Conditionally apply top padding to prevent content from being obscured by the floating header. */}
       <main className={cn(
         "flex-1 flex flex-col",
-        { "pt-20": applyPadding }
+        { "pt-24": applyPadding }
       )}>
         {children}
       </main>
