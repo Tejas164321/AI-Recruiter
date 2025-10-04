@@ -82,7 +82,7 @@
 }
 
 .timeline-icon-container {
-  @apply absolute left-1/2 top-1/2 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-background bg-primary;
+  @apply absolute left-1/2 top-1/2 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-primary/50 bg-background;
 }
 
 .timeline-content {
