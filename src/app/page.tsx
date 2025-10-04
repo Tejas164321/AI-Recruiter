@@ -136,13 +136,13 @@ const HeroHeading = () => {
             }}
             onMouseLeave={() => mouse.set({x: Infinity, y: Infinity})}
             className="text-3xl font-bold tracking-tight sm:text-4xl lg:text-4xl xl:text-5xl font-headline"
-            aria-label="Unlock Your Hiring Potential with ResumeRank AI"
+            aria-label="Unlock Your Hiring Potential with AI Recruiter"
         >
             {/* Mobile & Tablet view (flowing text) */}
             <span className="lg:hidden">
                 <AnimatedText text="Unlock Your Hiring Potential with " mouse={mouse} />
                 <span style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.8))", whiteSpace: 'nowrap' }}>
-                    <AnimatedText text="ResumeRank AI" mouse={mouse} isSpecial={true} />
+                    <AnimatedText text="AI Recruiter" mouse={mouse} isSpecial={true} />
                 </span>
             </span>
 
@@ -151,7 +151,7 @@ const HeroHeading = () => {
                 <span className="block"><AnimatedText text="Unlock Your Hiring" mouse={mouse} /></span>
                 <span className="block"><AnimatedText text="Potential with" mouse={mouse} /></span>
                 <span className="block" style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.8))", whiteSpace: 'nowrap' }}>
-                    <AnimatedText text="ResumeRank AI" mouse={mouse} isSpecial={true} />
+                    <AnimatedText text="AI Recruiter" mouse={mouse} isSpecial={true} />
                 </span>
             </span>
         </motion.h1>
@@ -176,7 +176,7 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="flex flex-col flex-1 overflow-x-hidden landing-page-gradient">
+    <div className="flex flex-col min-h-screen overflow-x-hidden landing-page-gradient">
       <main className="flex-1">
         {/* Hero Section */}
         <section className="relative w-full py-24 md:py-32 lg:py-40">
@@ -248,7 +248,7 @@ export default function LandingPage() {
           <div className="container grid items-center justify-center gap-4 px-4 text-center md:px-6">
             <motion.div className="space-y-3" initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }} variants={sectionVariants} custom={0.2}>
               <h2 className="text-3xl font-bold tracking-tighter md:text-4xl/tight font-headline">Ready to Revolutionize Your Hiring?</h2>
-              <p className="mx-auto max-w-[600px] text-muted-foreground md:text-xl/relaxed">Join ResumeRank AI today and start making data-driven hiring decisions.</p>
+              <p className="mx-auto max-w-[600px] text-muted-foreground md:text-xl/relaxed">Join AI Recruiter today and start making data-driven hiring decisions.</p>
             </motion.div>
             <motion.div className="mx-auto w-full max-w-sm space-y-2" initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }} variants={sectionVariants} custom={0.4}>
               <motion.div whileHover={{ scale: 1.05, transition: {type: 'spring', stiffness: 300} }} whileTap={{ scale: 0.95 }}>
@@ -266,9 +266,9 @@ export default function LandingPage() {
           <div className="text-center sm:text-left">
             <Link href="/" className="flex items-center justify-center gap-2 sm:justify-start">
               <BrainCircuit className="h-6 w-6 text-primary" />
-              <span className="font-bold text-primary">ResumeRank AI</span>
+              <span className="font-bold text-primary">AI Recruiter</span>
             </Link>
-            <p className="mt-2 text-xs text-muted-foreground">&copy; {new Date().getFullYear()} ResumeRank AI. All rights reserved.</p>
+            <p className="mt-2 text-xs text-muted-foreground">&copy; {new Date().getFullYear()} AI Recruiter. All rights reserved.</p>
           </div>
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:gap-6">
               <nav className="flex flex-wrap items-center justify-center gap-4 text-sm font-medium sm:gap-6">

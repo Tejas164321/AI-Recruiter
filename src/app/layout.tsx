@@ -28,7 +28,7 @@ const inter = Inter({
  * This information is used for SEO and browser tab information.
  */
 export const metadata: Metadata = {
-  title: 'ResumeRank AI',
+  title: 'AI Recruiter',
   description: 'AI-Powered Resume Screening and Ranking',
   icons: {
     // Defines the icon for the browser tab (favicon).
@@ -53,7 +53,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className="h-full">
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* Font link tags are no longer needed as we are using next/font */}
       </head>

@@ -54,7 +54,7 @@ export function Header() {
         {/* Logo and App Name */}
         <Link href="/" className="flex items-center gap-2 cursor-pointer mr-4" aria-label="Go to homepage">
           <BrainCircuit className="h-8 w-8 text-primary" />
-          <span className="text-2xl font-bold text-primary font-headline hidden sm:inline-block">ResumeRank AI</span>
+          <span className="text-2xl font-bold text-primary font-headline hidden sm:inline-block">AI Recruiter</span>
         </Link>
         
         {/* Desktop Navigation (hidden on small screens) */}
@@ -116,7 +116,7 @@ export function Header() {
                 </SheetTrigger>
                 <SheetContent side="right" className="w-[300px] p-4 flex flex-col">
                    <div className="mb-6">
-                        <SheetClose asChild><Link href="/" className="flex items-center gap-2 cursor-pointer"><BrainCircuit className="h-7 w-7 text-primary" /><span className="text-xl font-bold text-primary font-headline">ResumeRank AI</span></Link></SheetClose>
+                        <SheetClose asChild><Link href="/" className="flex items-center gap-2 cursor-pointer"><BrainCircuit className="h-7 w-7 text-primary" /><span className="text-xl font-bold text-primary font-headline">AI Recruiter</span></Link></SheetClose>
                     </div>
                     <Separator className="mb-4" />
                     <div className="flex flex-col gap-3 flex-grow">

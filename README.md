@@ -1,12 +1,12 @@
-# ResumeRank AI 🚀
+# AI Recruiter 🚀
 
 An AI-powered suite designed to streamline and revolutionize your recruitment workflow.
 
-![ResumeRank AI Hero](./public/hero-hologram.png)
+![AI Recruiter Hero](./public/hero-hologram.png)
 
 ## 📝 Overview
 
-ResumeRank AI is a modern, full-stack web application built to help recruiters and hiring managers make smarter, faster, and data-driven hiring decisions. By leveraging the power of Google's Gemini AI through Genkit, this platform automates the tedious tasks of resume screening, candidate ranking, and interview preparation, allowing you to focus on what truly matters: finding the best talent.
+AI Recruiter is a modern, full-stack web application built to help recruiters and hiring managers make smarter, faster, and data-driven hiring decisions. By leveraging the power of Google's Gemini AI through Genkit, this platform automates the tedious tasks of resume screening, candidate ranking, and interview preparation, allowing you to focus on what truly matters: finding the best talent.
 
 This project is built with a production-ready stack and serves as a comprehensive example of integrating modern web technologies with cutting-edge AI capabilities.
 

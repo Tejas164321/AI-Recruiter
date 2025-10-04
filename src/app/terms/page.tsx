@@ -14,20 +14,20 @@ export default function TermsPage() {
       <h1 className="text-3xl font-bold mb-6 font-headline">Terms of Service</h1>
       <p className="text-muted-foreground mb-4">Last updated: {new Date().toLocaleDateString()}</p>
 
-      <p>Welcome to ResumeRank AI! These terms and conditions outline the rules and regulations for the use of our website.</p>
-      <p>By accessing this website, we assume you accept these terms. Do not continue to use ResumeRank AI if you do not agree to all of the terms and conditions stated on this page.</p>
+      <p>Welcome to AI Recruiter! These terms and conditions outline the rules and regulations for the use of our website.</p>
+      <p>By accessing this website, we assume you accept these terms. Do not continue to use AI Recruiter if you do not agree to all of the terms and conditions stated on this page.</p>
 
       <h2 className="text-2xl font-semibold mt-6 mb-3">Cookies</h2>
-      <p>We employ the use of cookies. By accessing ResumeRank AI, you agree to use cookies in agreement with our Privacy Policy.</p>
+      <p>We employ the use of cookies. By accessing AI Recruiter, you agree to use cookies in agreement with our Privacy Policy.</p>
 
       <h2 className="text-2xl font-semibold mt-6 mb-3">License</h2>
-      <p>Unless otherwise stated, ResumeRank AI and/or its licensors own the intellectual property rights for all material on ResumeRank AI. All rights are reserved.</p>
+      <p>Unless otherwise stated, AI Recruiter and/or its licensors own the intellectual property rights for all material on AI Recruiter. All rights are reserved.</p>
       <p>You must not:</p>
       <ul>
-        <li>Republish material from ResumeRank AI</li>
-        <li>Sell, rent or sub-license material from ResumeRank AI</li>
-        <li>Reproduce, duplicate or copy material from ResumeRank AI</li>
-        <li>Redistribute content from ResumeRank AI</li>
+        <li>Republish material from AI Recruiter</li>
+        <li>Sell, rent or sub-license material from AI Recruiter</li>
+        <li>Reproduce, duplicate or copy material from AI Recruiter</li>
+        <li>Redistribute content from AI Recruiter</li>
       </ul>
 
       <h2 className="text-2xl font-semibold mt-6 mb-3">User-Generated Content</h2>
