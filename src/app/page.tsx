@@ -235,10 +235,10 @@ export default function LandingPage() {
                     custom={feature.delay}
                 >
                   <div className="timeline-icon-container">
-                    <feature.icon className="h-6 w-6 text-primary-foreground" />
+                    <feature.icon className="h-6 w-6 text-primary" />
                   </div>
                   <div className="timeline-content">
-                     <Card className="shadow-lg h-full flex flex-col bg-card/50 backdrop-blur-sm border-border/20 transition-all hover:-translate-y-2 hover:shadow-[0_8px_30px_hsl(var(--primary)/0.25)]">
+                     <Card className="shadow-lg h-full flex flex-col backdrop-blur-sm border-border/20 transition-all hover:-translate-y-2 hover:shadow-[0_8px_30px_hsl(var(--primary)/0.25)]">
                         <CardHeader className="pb-4">
                           <CardTitle className="font-headline">{feature.title}</CardTitle>
                         </CardHeader>
