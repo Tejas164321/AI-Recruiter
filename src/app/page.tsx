@@ -177,9 +177,9 @@ export default function LandingPage() {
 
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden landing-page-gradient">
-      <main className="flex-1 pt-20">
+      <main className="flex-1">
         {/* Hero Section */}
-        <section className="relative w-full py-24 md:py-32 lg:py-40">
+        <section className="relative w-full pt-24 md:pt-32 lg:pt-40">
           <div className="container px-4 md:px-6 relative z-10">
             <div className="grid gap-10 lg:grid-cols-2 lg:gap-12 xl:gap-24 items-center">
               {/* Hero Text Content */}

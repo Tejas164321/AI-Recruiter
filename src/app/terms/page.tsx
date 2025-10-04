@@ -10,7 +10,7 @@
 export default function TermsPage() {
   return (
     // Uses the 'prose' class from tailwindcss-typography for nice text formatting.
-    <div className="container mx-auto p-8 prose dark:prose-invert max-w-4xl">
+    <div className="container mx-auto p-8 prose dark:prose-invert max-w-4xl pt-8">
       <h1 className="text-3xl font-bold mb-6 font-headline">Terms of Service</h1>
       <p className="text-muted-foreground mb-4">Last updated: {new Date().toLocaleDateString()}</p>
 
