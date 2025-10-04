@@ -19,7 +19,6 @@ import { cn } from "@/lib/utils";
 
 /**
  * Defines the animation variants for the header capsule.
- * The header is always a capsule; it just changes width and margin on scroll.
  */
 const headerVariants = {
   top: {
@@ -93,12 +92,12 @@ export function Header() {
             {/* --- Left Side: Brand Logo --- */}
             <Link href="/" aria-label="Go to homepage" className="flex items-center gap-2 overflow-hidden">
                 <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0 rounded-full">
-                    <Snail className="h-6 w-6 text-primary" />
+                    <Snail className="h-8 w-8 text-primary" />
                 </Button>
                 <AnimatePresence>
                     {!isScrolled && (
                         <motion.span 
-                            className="font-bold text-primary whitespace-nowrap"
+                            className="font-bold text-primary whitespace-nowrap text-xl"
                             variants={logoTextVariants}
                             initial="hidden"
                             animate="visible"
