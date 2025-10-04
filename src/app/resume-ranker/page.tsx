@@ -336,11 +336,15 @@ export default function ResumeRankerPage() {
   
   /**
    * Memoized unique list of job roles for the dropdown to prevent duplicates from appearing.
+   * This is stable and prevents re-renders.
    */
   const uniqueJobRolesForDropdown = useMemo(() => {
     const roleMap = new Map<string, ExtractedJobRole>();
-    [...extractedJobRoles].sort((a,b) => b.createdAt.toMillis() - a.createdAt.toMillis()).forEach(role => {
-        if(!roleMap.has(role.name)) roleMap.set(role.name, role);
+    const sortedRoles = [...extractedJobRoles].sort((a,b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+    sortedRoles.forEach(role => {
+        if(!roleMap.has(role.name)) {
+            roleMap.set(role.name, role);
+        }
     });
     return Array.from(roleMap.values());
   }, [extractedJobRoles]);
@@ -369,7 +373,7 @@ export default function ResumeRankerPage() {
           {/* Results Section */}
           <div ref={resultsSectionRef} className="space-y-8">
             {(isProcessing && !currentScreeningResult) && (<Card className="shadow-lg"><CardContent className="pt-6"><LoadingIndicator stage={getLoadingStage()} /></CardContent></Card>)}
-            {(!isProcessing || extractedJobRoles.length > 0) && (<><Separator className="my-8" /><FilterControls filters={filters} onFilterChange={handleFilterChange} onResetFilters={resetFilters} extractedJobRoles={uniqueJobRolesForDropdown} selectedJobRoleId={selectedJobRoleId} onJobRoleChange={handleJobRoleChange} isLoading={isProcessing} screeningHistory={screeningHistoryForSelectedRole} selectedHistoryId={selectedHistoryId} onHistoryChange={handleHistoryChange} onDeleteHistory={handleOpenDeleteHistoryDialog}/></>)}
+            {(!isProcessing || uniqueJobRolesForDropdown.length > 0) && (<><Separator className="my-8" /><FilterControls filters={filters} onFilterChange={handleFilterChange} onResetFilters={resetFilters} extractedJobRoles={uniqueJobRolesForDropdown} selectedJobRoleId={selectedJobRoleId} onJobRoleChange={handleJobRoleChange} isLoading={isProcessing} screeningHistory={screeningHistoryForSelectedRole} selectedHistoryId={selectedHistoryId} onHistoryChange={handleHistoryChange} onDeleteHistory={handleOpenDeleteHistoryDialog}/></>)}
             {!isLoadingScreening && currentScreeningResult && (
               <Card className="shadow-lg mb-8">
                 <CardHeader>
