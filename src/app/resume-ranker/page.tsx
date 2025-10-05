@@ -13,6 +13,7 @@ import { LoadingIndicator } from "@/components/loading-indicator";
 import { Separator } from "@/components/ui/separator";
 import { EmailComposeModal, type EmailRecipient } from "@/components/email-compose-modal";
 import { HistorySheet } from "@/components/history-sheet";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 // Icons
 import { Users, ScanSearch, Briefcase, Snail, ServerOff, Mail } from "lucide-react";
 // Hooks and Contexts
@@ -24,7 +25,7 @@ import { performBulkScreening, type PerformBulkScreeningInput, type PerformBulkS
 import { extractJobRoles as extractJobRolesAI, type ExtractJobRolesInput as ExtractJobRolesAIInput, type ExtractJobRolesOutput as ExtractJobRolesAIOutput } from "@/ai/flows/extract-job-roles";
 import type { ResumeFile, RankedCandidate, Filters, JobDescriptionFile, JobScreeningResult, ExtractedJobRole } from "@/lib/types";
 // Firebase Services
-import { saveJobScreeningResult, getAllJobScreeningResultsForUser } from "@/services/firestoreService";
+import { saveJobScreeningResult, getAllJobScreeningResultsForUser, deleteJobScreeningResult, deleteAllJobScreeningResults } from "@/services/firestoreService";
 import { db as firestoreDb } from "@/lib/firebase/config";
 
 
@@ -41,7 +42,7 @@ export default function ResumeRankerPage() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
 
-  const [extractedJobRoles, setExtractedJobRoles] = useState<ExtractedJobRole[]>([]);
+  const [extractedJobRoles, setExtractedJobRoles] = useState<ExtractJobRolesAIOutput>([]);
   const [uploadedResumeFiles, setUploadedResumeFiles] = useState<ResumeFile[]>([]);
   
   const [allScreeningResults, setAllScreeningResults] = useState<JobScreeningResult[]>([]);
@@ -59,6 +60,10 @@ export default function ResumeRankerPage() {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState<boolean>(false);
   const [isHistorySheetOpen, setIsHistorySheetOpen] = useState<boolean>(false);
   const [emailRecipients, setEmailRecipients] = useState<EmailRecipient[]>([]);
+
+  // State for deletion confirmations
+  const [sessionToDelete, setSessionToDelete] = useState<JobScreeningResult | null>(null);
+  const [isDeleteAllDialogOpen, setIsDeleteAllDialogOpen] = useState<boolean>(false);
 
   const resultsSectionRef = useRef<HTMLDivElement | null>(null);
   const processButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -195,15 +200,46 @@ export default function ResumeRankerPage() {
   };
 
   const handleLoadHistorySession = (result: JobScreeningResult) => {
-    // We set the current screening result to the historical one for display
     setCurrentScreeningResult(result);
-    
-    // Clear the active session job role selection, as we are now in "history view" mode
     setSelectedJobRoleId(null); 
-    
-    setIsHistorySheetOpen(false); // Close the sheet after selection
+    setIsHistorySheetOpen(false);
     setFilters(initialFilters);
     toast({ title: "History Loaded", description: `Showing results for "${result.jobDescriptionName}" from ${result.createdAt.toDate().toLocaleDateString()}.`})
+  };
+
+  const handleDeleteSession = (session: JobScreeningResult) => {
+    setSessionToDelete(session);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!sessionToDelete) return;
+    try {
+      await deleteJobScreeningResult(sessionToDelete.id);
+      setAllScreeningResults(prev => prev.filter(s => s.id !== sessionToDelete.id));
+      if (currentScreeningResult?.id === sessionToDelete.id) {
+        setCurrentScreeningResult(null);
+      }
+      toast({ title: "History Deleted", description: `Session for "${sessionToDelete.jobDescriptionName}" was deleted.` });
+    } catch (error) {
+      toast({ title: "Deletion Failed", description: "Could not delete the session.", variant: "destructive" });
+    } finally {
+      setSessionToDelete(null);
+      setIsHistorySheetOpen(false);
+    }
+  };
+
+  const handleConfirmDeleteAll = async () => {
+    try {
+      await deleteAllJobScreeningResults();
+      setAllScreeningResults([]);
+      setCurrentScreeningResult(null);
+      toast({ title: "History Cleared", description: "All screening history has been deleted." });
+    } catch (error) {
+      toast({ title: "Deletion Failed", description: "Could not clear all history.", variant: "destructive" });
+    } finally {
+      setIsDeleteAllDialogOpen(false);
+      setIsHistorySheetOpen(false);
+    }
   };
 
   const handleFilterChange = (newFilters: Partial<Filters>) => { setFilters(prev => ({ ...prev, ...newFilters })); };
@@ -337,7 +373,23 @@ export default function ResumeRankerPage() {
             onClose={() => setIsHistorySheetOpen(false)}
             history={allScreeningResults}
             onSelectSession={handleLoadHistorySession}
+            onDeleteSession={handleDeleteSession}
+            onClearAllHistory={() => setIsDeleteAllDialogOpen(true)}
            />
+
+          <AlertDialog open={!!sessionToDelete} onOpenChange={(open) => !open && setSessionToDelete(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the history for <span className="font-semibold">{sessionToDelete?.jobDescriptionName}</span>.</AlertDialogDescription></AlertDialogHeader>
+              <AlertDialogFooter><AlertDialogCancel onClick={() => setSessionToDelete(null)}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Delete</AlertDialogAction></AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          
+          <AlertDialog open={isDeleteAllDialogOpen} onOpenChange={setIsDeleteAllDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete all <span className="font-semibold">{allScreeningResults.length}</span> saved screening sessions.</AlertDialogDescription></AlertDialogHeader>
+              <AlertDialogFooter><AlertDialogCancel onClick={() => setIsDeleteAllDialogOpen(false)}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleConfirmDeleteAll} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Yes, delete all</AlertDialogAction></AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </>
       )}
     </div>
