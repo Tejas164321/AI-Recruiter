@@ -9,7 +9,7 @@ import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 // Icons
-import { Search, RotateCw, History, Mail } from "lucide-react";
+import { Search, RotateCw, History } from "lucide-react";
 // Types
 import type { Filters, ExtractedJobRole } from "@/lib/types";
 
@@ -26,9 +26,6 @@ interface FilterControlsProps {
   onViewHistory: () => void;
   isHistoryAvailable: boolean;
   isLoading: boolean;
-  onEmailFilteredCandidates: () => void;
-  isEmailActionable: boolean;
-  emailCandidateCount: number;
 }
 
 /**
@@ -44,9 +41,6 @@ export function FilterControls({
   onViewHistory,
   isHistoryAvailable,
   isLoading,
-  onEmailFilteredCandidates,
-  isEmailActionable,
-  emailCandidateCount,
 }: FilterControlsProps) {
 
   const handleScoreChange = (value: number[]) => onFilterChange({ scoreRange: [value[0], value[1]] });
@@ -66,11 +60,6 @@ export function FilterControls({
               <Button variant="ghost" size="sm" onClick={onResetFilters} disabled={isLoading}>
                   <RotateCw className="w-4 h-4 mr-2" /> Reset
               </Button>
-              {isEmailActionable && (
-                  <Button variant="outline" size="sm" onClick={onEmailFilteredCandidates} disabled={isLoading || emailCandidateCount === 0}>
-                    Send Email ({emailCandidateCount})
-                </Button>
-              )}
           </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">

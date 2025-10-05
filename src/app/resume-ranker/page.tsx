@@ -191,6 +191,8 @@ export default function ResumeRankerPage() {
   }, [toast]); 
 
   const handleJobRoleChange = (roleId: string | null) => { 
+      setExtractedJobRoles([]);
+      setUploadedResumeFiles([]);
       setSelectedJobRoleId(roleId); 
       setFilters(initialFilters);
       // Clear current results when a new session role is selected
@@ -198,6 +200,8 @@ export default function ResumeRankerPage() {
   };
 
   const handleLoadHistorySession = (result: JobScreeningResult) => {
+    setExtractedJobRoles([]);
+    setUploadedResumeFiles([]);
     setCurrentScreeningResult(result);
     setSelectedJobRoleId(null); // Deselect any active session role
     setIsHistorySheetOpen(false);
@@ -252,6 +256,10 @@ export default function ResumeRankerPage() {
       return scoreMatch && keywordMatch;
     });
   }, [currentScreeningResult, filters]);
+
+  const emailableCandidateCount = useMemo(() => {
+    return displayedCandidates.filter(c => c.email).length;
+  }, [displayedCandidates]);
   
   const handleViewFeedback = (candidate: RankedCandidate) => { setSelectedCandidateForFeedback(candidate); setIsFeedbackModalOpen(true); };
   
@@ -305,7 +313,7 @@ export default function ResumeRankerPage() {
             <div className="flex-1"><Card className="shadow-lg h-full"><CardHeader><CardTitle className="flex items-center text-xl font-headline"><Users className="w-6 h-6 mr-3 text-primary" />Upload Resumes</CardTitle><CardDescription>Upload resumes to screen for the selected role.</CardDescription></CardHeader><CardContent><FileUploadArea onFilesUpload={handleResumesUpload} acceptedFileTypes={{ "application/pdf": [".pdf"], "text/plain": [".txt"],"application/msword": [".doc"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"]}} multiple label="PDF, TXT, DOC, DOCX files up to 5MB" id="resume-upload" maxSizeInBytes={MAX_FILE_SIZE_BYTES}/></CardContent></Card></div>
           </div>
           
-          <div className="flex justify-center pt-4"><Button ref={processButtonRef} onClick={() => handleScreening(selectedJobRoleId)} disabled={isProcessing || !selectedJobRoleId || uploadedResumeFiles.length === 0} size="lg" className="text-base px-8 py-6 shiny-button">{(isLoadingScreening) ? <Snail className="w-5 h-5 mr-2 animate-spin" /> : <ScanSearch className="w-5 h-5 mr-2" />}Screen Resumes & Save</Button></div>
+          <div className="flex justify-center pt-4"><Button ref={processButtonRef} onClick={() => handleScreening(selectedJobRoleId)} disabled={isProcessing || !selectedJobRoleId || uploadedResumeFiles.length === 0} size="lg" className="shiny-button">{(isLoadingScreening) ? <Snail className="w-5 h-5 mr-2 animate-spin" /> : <ScanSearch className="w-5 h-5 mr-2" />}Screen Resumes & Save</Button></div>
           
           <div ref={resultsSectionRef} className="space-y-8">
             {isProcessing && !currentScreeningResult && (<Card className="shadow-lg"><CardContent className="pt-6"><LoadingIndicator stage={getLoadingStage()} /></CardContent></Card>)}
@@ -323,9 +331,6 @@ export default function ResumeRankerPage() {
                   onViewHistory={() => setIsHistorySheetOpen(true)}
                   isHistoryAvailable={allScreeningResults.length > 0}
                   isLoading={isProcessing}
-                  onEmailFilteredCandidates={handleEmailFilteredCandidates}
-                  isEmailActionable={!!currentScreeningResult}
-                  emailCandidateCount={displayedCandidates.filter(c => c.email).length}
                 />
               </>
             )}
@@ -333,8 +338,16 @@ export default function ResumeRankerPage() {
             {!isLoadingScreening && currentScreeningResult && (
               <Card className="shadow-lg mb-8">
                 <CardHeader>
-                  <CardTitle className="text-2xl font-headline text-primary">Results for: {currentScreeningResult.jobDescriptionName}</CardTitle>
-                  <CardDescription>Screening from session on {currentScreeningResult.createdAt.toDate().toLocaleString()}. Processed: {currentScreeningResult.candidates.length}. Showing: {displayedCandidates.length}.</CardDescription>
+                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                      <div>
+                        <CardTitle className="text-2xl font-headline text-primary">Results for: {currentScreeningResult.jobDescriptionName}</CardTitle>
+                        <CardDescription>Session from {currentScreeningResult.createdAt.toDate().toLocaleString()}. Processed: {currentScreeningResult.candidates.length}. Showing: {displayedCandidates.length}.</CardDescription>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={handleEmailFilteredCandidates} disabled={isProcessing || emailableCandidateCount === 0}>
+                          <Mail className="w-4 h-4 mr-2" />
+                          Email Filtered ({emailableCandidateCount})
+                      </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <CandidateTableWithActions 
