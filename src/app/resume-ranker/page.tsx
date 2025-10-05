@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
@@ -105,34 +106,6 @@ export default function ResumeRankerPage() {
     }
   }, [isLoadingScreening]);
 
-  const uniqueJobRolesForDropdown = useMemo(() => {
-    const rolesMap = new Map<string, ExtractedJobRole>();
-    
-    // Add roles from the current session extraction
-    extractedJobRoles.forEach(role => {
-        rolesMap.set(role.id, role);
-    });
-
-    // Add roles from historical results, without overwriting new ones
-    allScreeningResults.forEach(result => {
-        const roleFromHistory: ExtractedJobRole = {
-            id: result.jobDescriptionId,
-            name: result.jobDescriptionName,
-            contentDataUri: result.jobDescriptionDataUri,
-            originalDocumentName: `From session on ${result.createdAt.toDate().toLocaleDateString()}`,
-            userId: result.userId,
-            createdAt: result.createdAt,
-        };
-        // Only add if a role with this ID isn't already present from the current session
-        if (!rolesMap.has(roleFromHistory.id)) {
-            rolesMap.set(roleFromHistory.id, roleFromHistory);
-        }
-    });
-
-    return Array.from(rolesMap.values());
-  }, [extractedJobRoles, allScreeningResults]);
-
-
   const handleJobDescriptionUploadAndExtraction = useCallback(async (initialJdUploads: JobDescriptionFile[]) => {
     if (!currentUser?.uid) return;
     setIsLoadingJDExtraction(true);
@@ -163,7 +136,7 @@ export default function ResumeRankerPage() {
   }, [currentUser?.uid, toast]);
 
   const handleScreening = useCallback(async (targetJobRoleId?: string) => {
-    const roleToScreen = uniqueJobRolesForDropdown.find(jr => jr.id === targetJobRoleId);
+    const roleToScreen = extractedJobRoles.find(jr => jr.id === targetJobRoleId);
     if (!currentUser?.uid || !roleToScreen || uploadedResumeFiles.length === 0 || !isFirestoreAvailable) {
       toast({ title: "Cannot Start Screening", description: "Please ensure a job role is selected, resumes are uploaded, and you are logged in.", variant: "destructive" });
       return;
@@ -193,7 +166,7 @@ export default function ResumeRankerPage() {
     } finally {
       setIsLoadingScreening(false);
     }
-  }, [currentUser?.uid, uniqueJobRolesForDropdown, uploadedResumeFiles, toast, isFirestoreAvailable]);
+  }, [currentUser?.uid, extractedJobRoles, uploadedResumeFiles, toast, isFirestoreAvailable]);
   
   const handleResumesUpload = useCallback(async (files: File[]) => {
      const newResumeFilesPromises = files.map(async (file) => {
@@ -222,8 +195,12 @@ export default function ResumeRankerPage() {
   };
 
   const handleLoadHistorySession = (result: JobScreeningResult) => {
-    setSelectedJobRoleId(result.jobDescriptionId);
+    // We set the current screening result to the historical one for display
     setCurrentScreeningResult(result);
+    
+    // Clear the active session job role selection, as we are now in "history view" mode
+    setSelectedJobRoleId(null); 
+    
     setIsHistorySheetOpen(false); // Close the sheet after selection
     setFilters(initialFilters);
     toast({ title: "History Loaded", description: `Showing results for "${result.jobDescriptionName}" from ${result.createdAt.toDate().toLocaleDateString()}.`})
@@ -300,7 +277,7 @@ export default function ResumeRankerPage() {
           <div ref={resultsSectionRef} className="space-y-8">
             {isProcessing && !currentScreeningResult && (<Card className="shadow-lg"><CardContent className="pt-6"><LoadingIndicator stage={getLoadingStage()} /></CardContent></Card>)}
             
-            {(uniqueJobRolesForDropdown.length > 0 || isProcessing) && (
+            {(extractedJobRoles.length > 0 || allScreeningResults.length > 0 || isProcessing) && (
               <>
                 <Separator className="my-8" />
                 <div className="p-6 rounded-lg border shadow-sm space-y-6 bg-card">
@@ -308,7 +285,7 @@ export default function ResumeRankerPage() {
                     filters={filters}
                     onFilterChange={handleFilterChange}
                     onResetFilters={resetFilters}
-                    extractedJobRoles={uniqueJobRolesForDropdown}
+                    extractedJobRoles={extractedJobRoles}
                     selectedJobRoleId={selectedJobRoleId}
                     onJobRoleChange={handleJobRoleChange}
                     onViewHistory={() => setIsHistorySheetOpen(true)}
@@ -343,7 +320,7 @@ export default function ResumeRankerPage() {
 
             {!isProcessing && !currentScreeningResult && (
                 <div className="text-center text-muted-foreground py-8">
-                    {uniqueJobRolesForDropdown.length === 0 ? "Upload a job description to begin." : !selectedJobRoleId ? "Select a job role to see its latest results, or view history." : "No saved results for this role. Upload resumes and click 'Screen' to begin."}
+                    {extractedJobRoles.length === 0 ? "Upload a job description to begin." : !selectedJobRoleId ? "Select a job role to see its latest results, or view history." : "No saved results for this role. Upload resumes and click 'Screen' to begin."}
                 </div>
             )}
           </div>
@@ -353,7 +330,7 @@ export default function ResumeRankerPage() {
             isOpen={isEmailModalOpen} 
             onClose={() => setIsEmailModalOpen(false)} 
             recipients={emailRecipients}
-            jobTitle={uniqueJobRolesForDropdown.find(r => r.id === selectedJobRoleId)?.name || 'the position'}
+            jobTitle={currentScreeningResult?.jobDescriptionName || 'the position'}
            />
            <HistorySheet
             isOpen={isHistorySheetOpen}

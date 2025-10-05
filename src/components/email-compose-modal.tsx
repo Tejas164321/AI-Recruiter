@@ -43,8 +43,8 @@ export function EmailComposeModal({ isOpen, onClose, recipients, jobTitle }: Ema
   useEffect(() => {
     if (isOpen) {
       // When the modal opens, populate the templates with the job title
-      setSubject(DEFAULT_SUBJECT_TEMPLATE.replace("{{jobTitle}}", jobTitle));
-      setBody(DEFAULT_BODY_TEMPLATE.replace(/{{jobTitle}}/g, jobTitle));
+      setSubject(DEFAULT_SUBJECT_TEMPLATE.replace("{{jobTitle}}", jobTitle || "the position"));
+      setBody(DEFAULT_BODY_TEMPLATE.replace(/{{jobTitle}}/g, jobTitle || "the position"));
     }
   }, [isOpen, jobTitle]);
 
