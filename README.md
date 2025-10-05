@@ -116,8 +116,3 @@ The project follows a standard Next.js App Router structure with some key direct
 ```
 ---
 
-## 📞 Contact
-
-Created by [Your Name] - feel free to reach out!
-
----
