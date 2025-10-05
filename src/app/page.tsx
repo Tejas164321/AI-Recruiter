@@ -193,17 +193,18 @@ export default function LandingPage() {
                 {/* Call to Action Buttons */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.6 }} className="flex flex-col gap-4 min-[400px]:flex-row">
                   <motion.div whileHover={{ scale: 1.05, y: -2, transition: {type: 'spring', stiffness: 300} }} whileTap={{ scale: 0.95 }}>
-                    <Button asChild size="lg" className="w-full min-[400px]:w-auto glowing-btn"><Link href={getStartedLink}>{currentUser ? "Go to Dashboard" : "Get Started"}<ArrowRight className="ml-2 h-5 w-5" /></Link></Button>
+                    <Button asChild size="lg"><Link href={getStartedLink}>{currentUser ? "Go to Dashboard" : "Get Started"}<ArrowRight className="ml-2 h-5 w-5" /></Link></Button>
                   </motion.div>
                    <motion.div whileHover={{ scale: 1.05, y: -2, transition: {type: 'spring', stiffness: 300} }} whileTap={{ scale: 0.95 }}>
-                     <Button variant="outline" size="lg" asChild className="w-full min-[400px]:w-auto"><Link href="/#features">Learn More</Link></Button>
+                     <Button variant="outline" size="lg" asChild><Link href="/#features">Learn More</Link></Button>
                   </motion.div>
                 </motion.div>
               </motion.div>
               {/* Hero Image */}
               <motion.div initial={{ opacity: 0, scale: 0.8, y: 50 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ type: 'spring', stiffness: 100, damping: 20, delay: 0.3 }} className="relative glowing-btn rounded-3xl">
                 <div className="sparkle-border-container">
-                  <Image src="/hero-hologram.png" width="600" height="400" alt="Futuristic illustration of a professional analyzing resumes on a holographic interface." className="mx-auto block rounded-[1.375rem] overflow-hidden object-cover sm:w-full lg:order-last" priority/>
+                  <Image src="/hero-hologram.png" width="600" height="400" alt="Futuristic illustration of a professional analyzing resumes on a holographic interface." className="mx-auto hidden dark:block rounded-[1.375rem] overflow-hidden object-cover sm:w-full lg:order-last" priority/>
+                  <Image src="/hero-hologram-light.png" width="600" height="400" alt="Illustration of a professional analyzing resumes on a clean interface." className="mx-auto block dark:hidden rounded-[1.375rem] overflow-hidden object-cover sm:w-full lg:order-last" priority/>
                 </div>
               </motion.div>
             </div>
@@ -268,7 +269,7 @@ export default function LandingPage() {
             </motion.div>
             <motion.div className="mx-auto w-full max-w-sm space-y-2" initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }} variants={sectionVariants} custom={0.4}>
               <motion.div whileHover={{ scale: 1.05, transition: {type: 'spring', stiffness: 300} }} whileTap={{ scale: 0.95 }}>
-                <Button asChild size="lg" className="w-full glowing-btn"><Link href={getStartedLink}>{currentUser ? "Go to Dashboard" : "Sign Up for Free"}<ArrowRight className="ml-2 h-5 w-5" /></Link></Button>
+                <Button asChild size="lg"><Link href={getStartedLink}>{currentUser ? "Go to Dashboard" : "Sign Up for Free"}<ArrowRight className="ml-2 h-5 w-5" /></Link></Button>
               </motion.div>
               <p className="text-xs text-muted-foreground">Get started with our core features. No credit card required.</p>
             </motion.div>
