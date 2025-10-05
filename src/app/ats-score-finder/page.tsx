@@ -295,7 +295,7 @@ export default function AtsScoreFinderPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               <FileUploadArea onFilesUpload={handleResumesUpload} acceptedFileTypes={{"application/pdf": [".pdf"],"application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],"text/plain": [".txt"],"application/msword": [".doc"],}} multiple label={`PDF, DOCX, DOC, TXT files up to 5MB each (max ${MAX_FILES_ATS} files)`} id="ats-resume-upload" maxSizeInBytes={MAX_FILE_SIZE_BYTES}/>
-              <Button ref={analyzeButtonRef} onClick={handleAnalyzeResumes} disabled={isProcessingAts || uploadedResumeFiles.length === 0 || isLoadingResultsFromDB} size="lg" className="w-full md:w-auto shadow-md">
+              <Button ref={analyzeButtonRef} onClick={handleAnalyzeResumes} disabled={isProcessingAts || uploadedResumeFiles.length === 0 || isLoadingResultsFromDB} size="lg" className="w-full md:w-auto shiny-button">
                 {isProcessingAts ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <ScanSearch className="w-5 h-5 mr-2" />}
                 Find ATS Score
               </Button>
