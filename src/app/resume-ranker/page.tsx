@@ -313,25 +313,20 @@ export default function ResumeRankerPage() {
             {(extractedJobRoles.length > 0 || allScreeningResults.length > 0 || isProcessing) && (
               <>
                 <Separator className="my-8" />
-                <div className="p-6 rounded-lg border shadow-sm space-y-6 bg-card">
-                  <FilterControls
-                    filters={filters}
-                    onFilterChange={handleFilterChange}
-                    onResetFilters={resetFilters}
-                    extractedJobRoles={extractedJobRoles}
-                    selectedJobRoleId={selectedJobRoleId}
-                    onJobRoleChange={handleJobRoleChange}
-                    onViewHistory={() => setIsHistorySheetOpen(true)}
-                    isHistoryAvailable={allScreeningResults.length > 0}
-                    isLoading={isProcessing}
-                  />
-                   {currentScreeningResult && (
-                    <Button onClick={handleEmailFilteredCandidates} disabled={isProcessing || displayedCandidates.length === 0}>
-                      <Mail className="mr-2 h-4 w-4" />
-                      Email Filtered Candidates ({displayedCandidates.filter(c => c.email).length})
-                    </Button>
-                  )}
-                </div>
+                <FilterControls
+                  filters={filters}
+                  onFilterChange={handleFilterChange}
+                  onResetFilters={resetFilters}
+                  extractedJobRoles={extractedJobRoles}
+                  selectedJobRoleId={selectedJobRoleId}
+                  onJobRoleChange={handleJobRoleChange}
+                  onViewHistory={() => setIsHistorySheetOpen(true)}
+                  isHistoryAvailable={allScreeningResults.length > 0}
+                  isLoading={isProcessing}
+                  onEmailFilteredCandidates={handleEmailFilteredCandidates}
+                  isEmailActionable={!!currentScreeningResult}
+                  emailCandidateCount={displayedCandidates.filter(c => c.email).length}
+                />
               </>
             )}
 
