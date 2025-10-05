@@ -86,7 +86,7 @@
 }
 
 .timeline-content {
-  @apply w-[calc(50%-2rem)] rounded-lg;
+  @apply w-[calc(50%-1.5rem)] rounded-lg;
 }
 
 /* On mobile, stack everything in a single column */
