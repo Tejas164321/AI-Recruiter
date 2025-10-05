@@ -210,14 +210,9 @@ export default function LandingPage() {
                 transition={{ type: 'spring', stiffness: 100, damping: 20, delay: 0.3 }} 
                 className="relative min-h-[300px] lg:min-h-[400px] flex items-center justify-center"
               >
-                 <div className="w-full h-full block dark:hidden">
+                 <div className="w-full h-full">
                     <FloatingCards />
                  </div>
-                 <div className="w-full h-full hidden dark:block glowing-btn rounded-3xl">
-                    <div className="sparkle-border-container">
-                        <Image src="/hero-hologram.png" width="600" height="400" alt="Futuristic illustration of a professional analyzing resumes on a holographic interface." className="mx-auto rounded-[1.375rem] overflow-hidden object-cover sm:w-full lg:order-last" priority/>
-                    </div>
-                </div>
               </motion.div>
             </div>
           </div>
