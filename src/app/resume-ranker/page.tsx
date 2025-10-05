@@ -190,18 +190,13 @@ export default function ResumeRankerPage() {
   const handleJobRoleChange = (roleId: string | null) => { 
       setSelectedJobRoleId(roleId); 
       setFilters(initialFilters);
-      if (roleId) {
-        // If a role is selected, find the most recent result for it in history and display it.
-        const historicalResult = allScreeningResults.find(r => r.jobDescriptionId === roleId);
-        setCurrentScreeningResult(historicalResult || null);
-      } else {
-         setCurrentScreeningResult(null); // Clear results if no role is selected
-      }
+      // Clear current results when a new session role is selected
+      setCurrentScreeningResult(null);
   };
 
   const handleLoadHistorySession = (result: JobScreeningResult) => {
     setCurrentScreeningResult(result);
-    setSelectedJobRoleId(null); 
+    setSelectedJobRoleId(null); // Deselect any active session role
     setIsHistorySheetOpen(false);
     setFilters(initialFilters);
     toast({ title: "History Loaded", description: `Showing results for "${result.jobDescriptionName}" from ${result.createdAt.toDate().toLocaleDateString()}.`})
@@ -356,7 +351,7 @@ export default function ResumeRankerPage() {
 
             {!isProcessing && !currentScreeningResult && (
                 <div className="text-center text-muted-foreground py-8">
-                    {extractedJobRoles.length === 0 ? "Upload a job description to begin." : !selectedJobRoleId ? "Select a job role to see its latest results, or view history." : "No saved results for this role. Upload resumes and click 'Screen' to begin."}
+                    {extractedJobRoles.length > 0 ? "Select a job role and upload resumes to start screening." : allScreeningResults.length > 0 ? "Upload a job description or select a session from history to begin." : "Upload a job description to get started."}
                 </div>
             )}
           </div>
@@ -395,3 +390,5 @@ export default function ResumeRankerPage() {
     </div>
   );
 }
+
+    

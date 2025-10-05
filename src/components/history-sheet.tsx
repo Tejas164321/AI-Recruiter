@@ -62,32 +62,30 @@ export function HistorySheet({
                 <div key={session.id} className="relative group">
                     <button
                         onClick={(e) => handleSelect(e, session)}
-                        className="w-full text-left p-4 pr-12 rounded-xl border bg-card hover:bg-muted/50 transition-colors"
+                        className="w-full text-left p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors flex justify-between items-center"
                     >
-                        <div className="flex justify-between items-center">
-                            <div className="flex-grow overflow-hidden">
-                                <p className="font-semibold text-foreground truncate" title={session.jobDescriptionName}>
-                                    {session.jobDescriptionName}
-                                </p>
-                                <div className="text-xs text-muted-foreground mt-1 space-y-1">
-                                    <div className="flex items-center">
-                                    <Calendar className="w-3 h-3 mr-1.5" />
-                                    {session.createdAt.toDate().toLocaleString()}
-                                    </div>
-                                    <div className="flex items-center">
-                                    <Users className="w-3 h-3 mr-1.5" />
-                                    {session.candidates.length} candidate(s)
-                                    </div>
+                        <div className="flex-grow overflow-hidden pr-8">
+                            <p className="font-semibold text-foreground truncate" title={session.jobDescriptionName}>
+                                {session.jobDescriptionName}
+                            </p>
+                            <div className="text-xs text-muted-foreground mt-1 space-y-1">
+                                <div className="flex items-center">
+                                <Calendar className="w-3 h-3 mr-1.5" />
+                                {session.createdAt.toDate().toLocaleString()}
+                                </div>
+                                <div className="flex items-center">
+                                <Users className="w-3 h-3 mr-1.5" />
+                                {session.candidates.length} candidate(s)
                                 </div>
                             </div>
-                            <ChevronRight className="w-5 h-5 text-muted-foreground transition-transform group-hover:translate-x-1 absolute right-4 top-1/2 -translate-y-1/2" />
                         </div>
+                        <ChevronRight className="w-5 h-5 text-muted-foreground transition-transform group-hover:translate-x-1 shrink-0" />
                     </button>
                     <Button
                         variant="ghost"
                         size="icon"
                         onClick={(e) => handleDelete(e, session)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/20 hover:text-destructive"
+                        className="absolute right-10 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/20 hover:text-destructive"
                         aria-label="Delete session"
                     >
                         <Trash2 className="w-4 h-4" />
@@ -114,3 +112,5 @@ export function HistorySheet({
     </Sheet>
   );
 }
+
+    
