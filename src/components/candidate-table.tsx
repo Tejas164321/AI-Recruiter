@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 // Icons
-import { ArrowUpDown, MessageSquareText, TrendingUp, Tags, Hash, Mail } from "lucide-react";
+import { ArrowUpDown, MessageSquareText, Tags, Hash, Mail } from "lucide-react";
 // Types
 import type { RankedCandidate } from "@/lib/types";
 
@@ -125,15 +125,9 @@ export function CandidateTable({ candidates, onViewFeedback, onSendEmail }: Cand
             <TableRow>
               <TableHead className="w-[5%] text-center"><div className="flex items-center justify-center"><Hash className="w-4 h-4 mr-1" />Rank</div></TableHead>
               <TableHead onClick={() => requestSort("name")} className="cursor-pointer hover:bg-muted/50 w-[25%]"><div className="flex items-center">Candidate Name {getSortIndicator("name")}</div></TableHead>
-<<<<<<< HEAD
-              <TableHead onClick={() => requestSort("score")} className="cursor-pointer hover:bg-muted/50 w-[15%]"><div className="flex items-center"><TrendingUp className="w-4 h-4 mr-1" />Score {getSortIndicator("score")}</div></TableHead>
-              <TableHead className="w-[35%]"><div className="flex items-center"><Tags className="w-4 h-4 mr-1" />Key Skills</div></TableHead>
-              <TableHead className="text-right w-[20%]">Actions</TableHead>
-=======
               <TableHead onClick={() => requestSort("score")} className="cursor-pointer hover:bg-muted/50 w-[15%]"><div className="flex items-center">Score {getSortIndicator("score")}</div></TableHead>
               <TableHead className="w-[40%]"><div className="flex items-center"><Tags className="w-4 h-4 mr-1" />Key Skills</div></TableHead>
               <TableHead className="text-right w-[15%]">Actions</TableHead>
->>>>>>> mail-service-and-navbar--implemented
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -162,3 +156,5 @@ export function CandidateTable({ candidates, onViewFeedback, onSendEmail }: Cand
     </>
   );
 }
+
+    
