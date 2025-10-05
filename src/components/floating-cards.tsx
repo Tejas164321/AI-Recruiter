@@ -69,6 +69,7 @@ const MiniBarChart = () => (
 
 /**
  * A single floating card component representing a candidate.
+ * It moves in a circular path while staying upright.
  * @param {object} props - The component props.
  * @param {CardData} props.data - The data for the card.
  */
@@ -76,17 +77,17 @@ const FloatingCard = ({ data }: { data: CardData }) => {
   const { size, radius, startAngle } = data.initial;
   const { duration, delay, direction } = data.animation;
   const rotationValue = direction === 'clockwise' ? 360 : -360;
+  const counterRotationValue = direction === 'clockwise' ? -360 : 360;
 
   return (
-    // This is the rotator div. It's positioned at the center and rotates.
+    // This is the rotator div. It's positioned at the center and rotates to create the orbit.
     <motion.div
-      style={{ 
-        position: 'absolute', 
-        top: '50%', 
+      style={{
+        position: 'absolute',
+        top: '50%',
         left: '50%',
-        rotate: startAngle,
       }}
-      animate={{ rotate: startAngle + rotationValue }}
+      animate={{ rotate: [startAngle, startAngle + rotationValue] }}
       transition={{
         duration,
         delay,
@@ -94,10 +95,24 @@ const FloatingCard = ({ data }: { data: CardData }) => {
         repeat: Infinity,
       }}
     >
-      {/* This is the card itself, offset from the center by the radius. */}
-      <motion.div 
-        style={{ width: size, y: -radius }}
-        className="absolute bottom-1/2 left-1/2 -translate-x-1/2"
+      {/* This is the card holder. It is offset from the center by the radius.
+          It performs a counter-rotation to keep the card content upright. */}
+      <motion.div
+        style={{
+          width: size,
+          y: -radius,
+          position: 'absolute',
+          bottom: '50%', // Positioned relative to the rotator's center
+          left: '50%',
+          translateX: '-50%',
+        }}
+        animate={{ rotate: [-startAngle, -startAngle + counterRotationValue] }}
+        transition={{
+          duration,
+          delay,
+          ease: 'linear',
+          repeat: Infinity,
+        }}
       >
         <Card className="w-full shadow-lg border-border/50 bg-card/80 backdrop-blur-sm transition-all duration-300 hover:shadow-primary/20 hover:border-primary/40 hover:-translate-y-1">
           <CardHeader className="p-3">
