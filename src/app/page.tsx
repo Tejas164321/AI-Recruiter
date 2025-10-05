@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -13,6 +12,7 @@ import { ArrowRight, CheckCircle, BarChartBig, ScanSearch, MessageSquarePlus, Sh
 import { motion, useMotionValue, useTransform } from "framer-motion";
 // Hooks and Contexts
 import { useAuth } from "@/contexts/auth-context";
+import { FloatingCards } from "@/components/floating-cards";
 
 
 /**
@@ -200,11 +200,20 @@ export default function LandingPage() {
                   </motion.div>
                 </motion.div>
               </motion.div>
-              {/* Hero Image */}
-              <motion.div initial={{ opacity: 0, scale: 0.8, y: 50 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ type: 'spring', stiffness: 100, damping: 20, delay: 0.3 }} className="relative glowing-btn rounded-3xl">
-                <div className="sparkle-border-container">
-                  <Image src="/hero-hologram.png" width="600" height="400" alt="Futuristic illustration of a professional analyzing resumes on a holographic interface." className="mx-auto hidden dark:block rounded-[1.375rem] overflow-hidden object-cover sm:w-full lg:order-last" priority/>
-                  <Image src="/hero-hologram-light.png" width="600" height="400" alt="Illustration of a professional analyzing resumes on a clean interface." className="mx-auto block dark:hidden rounded-[1.375rem] overflow-hidden object-cover sm:w-full lg:order-last" priority/>
+              {/* Hero Image / Animation */}
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.8, y: 50 }} 
+                animate={{ opacity: 1, scale: 1, y: 0 }} 
+                transition={{ type: 'spring', stiffness: 100, damping: 20, delay: 0.3 }} 
+                className="relative min-h-[300px] lg:min-h-[400px] flex items-center justify-center"
+              >
+                 <div className="w-full h-full block dark:hidden">
+                    <FloatingCards />
+                 </div>
+                 <div className="w-full h-full hidden dark:block glowing-btn rounded-3xl">
+                    <div className="sparkle-border-container">
+                        <Image src="/hero-hologram.png" width="600" height="400" alt="Futuristic illustration of a professional analyzing resumes on a holographic interface." className="mx-auto rounded-[1.375rem] overflow-hidden object-cover sm:w-full lg:order-last" priority/>
+                    </div>
                 </div>
               </motion.div>
             </div>
