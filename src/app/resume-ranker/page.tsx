@@ -12,8 +12,9 @@ import { FilterControls } from "@/components/filter-controls";
 import { LoadingIndicator } from "@/components/loading-indicator";
 import { Separator } from "@/components/ui/separator";
 import { EmailComposeModal, type EmailRecipient } from "@/components/email-compose-modal";
+import { HistorySheet } from "@/components/history-sheet";
 // Icons
-import { Users, ScanSearch, Briefcase, Snail, ServerOff, Mail, AlertTriangle } from "lucide-react";
+import { Users, ScanSearch, Briefcase, Snail, ServerOff, Mail } from "lucide-react";
 // Hooks and Contexts
 import { useToast } from "@/hooks/use-toast";
 import { useLoading } from "@/contexts/loading-context";
@@ -36,7 +37,7 @@ const initialFilters: Filters = {
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
 export default function ResumeRankerPage() {
-  const { setIsPageLoading: setAppIsLoading } = useLoading();
+  const { setAppIsLoading } = useLoading();
   const { currentUser } = useAuth();
   const { toast } = useToast();
 
@@ -56,6 +57,7 @@ export default function ResumeRankerPage() {
   const [selectedCandidateForFeedback, setSelectedCandidateForFeedback] = useState<RankedCandidate | null>(null);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState<boolean>(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState<boolean>(false);
+  const [isHistorySheetOpen, setIsHistorySheetOpen] = useState<boolean>(false);
   const [emailRecipients, setEmailRecipients] = useState<EmailRecipient[]>([]);
 
   const resultsSectionRef = useRef<HTMLDivElement | null>(null);
@@ -219,6 +221,15 @@ export default function ResumeRankerPage() {
          setCurrentScreeningResult(null); // Clear results if no role is selected
       }
   };
+
+  const handleLoadHistorySession = (result: JobScreeningResult) => {
+    setSelectedJobRoleId(result.jobDescriptionId);
+    setCurrentScreeningResult(result);
+    setIsHistorySheetOpen(false); // Close the sheet after selection
+    setFilters(initialFilters);
+    toast({ title: "History Loaded", description: `Showing results for "${result.jobDescriptionName}" from ${result.createdAt.toDate().toLocaleDateString()}.`})
+  };
+
   const handleFilterChange = (newFilters: Partial<Filters>) => { setFilters(prev => ({ ...prev, ...newFilters })); };
   const resetFilters = () => { setFilters(initialFilters); };
 
@@ -294,15 +305,6 @@ export default function ResumeRankerPage() {
               <>
                 <Separator className="my-8" />
                 <div className="p-6 rounded-lg border shadow-sm space-y-6 bg-card">
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <h3 className="text-lg font-semibold text-foreground flex items-center">
-                      <Briefcase className="w-5 h-5 mr-2 text-primary" />
-                      Select Role & Filter Results
-                    </h3>
-                    <Button variant="ghost" size="sm" onClick={resetFilters} disabled={isProcessing}>
-                      Reset Filters
-                    </Button>
-                  </div>
                   <FilterControls
                     filters={filters}
                     onFilterChange={handleFilterChange}
@@ -310,6 +312,8 @@ export default function ResumeRankerPage() {
                     extractedJobRoles={uniqueJobRolesForDropdown}
                     selectedJobRoleId={selectedJobRoleId}
                     onJobRoleChange={handleJobRoleChange}
+                    onViewHistory={() => setIsHistorySheetOpen(true)}
+                    isHistoryAvailable={allScreeningResults.length > 0}
                     isLoading={isProcessing}
                   />
                    {currentScreeningResult && (
@@ -340,7 +344,7 @@ export default function ResumeRankerPage() {
 
             {!isProcessing && !currentScreeningResult && (
                 <div className="text-center text-muted-foreground py-8">
-                    {uniqueJobRolesForDropdown.length === 0 ? "Upload a job description to begin." : !selectedJobRoleId ? "Select a job role to see its latest results." : "No saved results for this role. Upload resumes and click 'Screen' to begin."}
+                    {uniqueJobRolesForDropdown.length === 0 ? "Upload a job description to begin." : !selectedJobRoleId ? "Select a job role to see its latest results, or view history." : "No saved results for this role. Upload resumes and click 'Screen' to begin."}
                 </div>
             )}
           </div>
@@ -352,10 +356,15 @@ export default function ResumeRankerPage() {
             recipients={emailRecipients}
             jobTitle={uniqueJobRolesForDropdown.find(r => r.id === selectedJobRoleId)?.name || 'the position'}
            />
+           <HistorySheet
+            isOpen={isHistorySheetOpen}
+            onClose={() => setIsHistorySheetOpen(false)}
+            history={allScreeningResults}
+            onSelectSession={handleLoadHistorySession}
+           />
         </>
       )}
     </div>
   );
 }
 
-    
