@@ -47,7 +47,12 @@ const PerformBulkScreeningInputSchema = z.object({
 
 // Zod schema for the AI's direct output when ranking one resume against one JD.
 const AICandidateOutputSchema = z.object({
+<<<<<<< HEAD
   name: z.string().describe('The name of the candidate, extracted from the resume. If no name can be reliably extracted, return "Unnamed Candidate".'),
+=======
+  name: z.string().describe('The full name of the candidate, as extracted from the resume.'),
+  email: z.string().describe("The candidate's email address, as extracted from the resume. If not found, return an empty string.").optional(),
+>>>>>>> mail-service-and-navbar--implemented
   score: z.number().describe('The match score (0-100) of the resume to the job description.'),
   atsScore: z.number().describe('The ATS (Applicant Tracking System) compatibility score (0-100), reflecting how well the resume is structured for automated parsing, considering factors like formatting, keyword optimization, and clarity.'),
   keySkills: z.string().describe('Key skills from the resume matching the job description.'),
@@ -112,7 +117,12 @@ Your scoring should be consistent and deterministic given the same inputs.
   {{media url=resumeDataUri}}
 
   Analyze the resume and the job description, then provide the following:
+<<<<<<< HEAD
   - Candidate's full name, as extracted from the resume content. If no name can be reliably extracted, return "Unnamed Candidate".
+=======
+  - Candidate's full name, as extracted from the resume content. If no name can be reliably extracted, return an empty string for the name.
+  - Candidate's email address, as extracted from the resume content. If no email can be reliably extracted, return an empty string for the email.
+>>>>>>> mail-service-and-navbar--implemented
   - A match score (0-100) indicating the resume's relevance to THIS SPECIFIC job description.
   - An ATS (Applicant Tracking System) compatibility score (0-100). This score should reflect how well the resume is structured for automated parsing by ATS software, considering factors like formatting, keyword optimization, and clarity.
   - Key skills from the resume that match THIS SPECIFIC job description (comma-separated).
@@ -173,7 +183,12 @@ const performBulkScreeningFlow = ai.defineFlow(
                 return {
                   ...aiCandidateOutput,
                   id: crypto.randomUUID(),
+<<<<<<< HEAD
                   name: aiCandidateOutput.name || "Unnamed Candidate", // Use extracted name or fallback.
+=======
+                  name: aiCandidateOutput.name || resume.name.replace(/\.[^/.]+$/, "") || "Unnamed Candidate", // Use extracted name or fallback to filename.
+                  email: aiCandidateOutput.email || "",
+>>>>>>> mail-service-and-navbar--implemented
                   resumeDataUri: resume.dataUri,
                   originalResumeName: resume.name,
                 } satisfies RankedCandidate;
@@ -190,7 +205,12 @@ const performBulkScreeningFlow = ai.defineFlow(
             // If the AI call failed, create a default entry with error information.
             return {
               id: crypto.randomUUID(),
+<<<<<<< HEAD
               name: "Student",
+=======
+              name: resume.name.replace(/\.[^/.]+$/, "") || "Candidate (Processing Error)",
+              email: "",
+>>>>>>> mail-service-and-navbar--implemented
               score: 0,
               atsScore: 0,
               keySkills: 'Error during processing',
@@ -221,7 +241,12 @@ const performBulkScreeningFlow = ai.defineFlow(
           // Create error entries for all resumes for this failed job role to inform the user.
           const errorCandidatesForThisJobRole: RankedCandidate[] = resumesToRank.map(resume => ({
             id: crypto.randomUUID(),
+<<<<<<< HEAD
             name: "Student",
+=======
+            name: resume.name.replace(/\.[^/.]+$/, "") || "Candidate (Processing Error)",
+            email: "",
+>>>>>>> mail-service-and-navbar--implemented
             score: 0,
             atsScore: 0,
             keySkills: 'Job role processing error',
@@ -249,3 +274,5 @@ const performBulkScreeningFlow = ai.defineFlow(
     }
   }
 );
+
+    

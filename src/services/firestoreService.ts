@@ -34,7 +34,7 @@ if (!db) {
 export const saveJobScreeningResult = async (resultData: Omit<JobScreeningResult, 'id' | 'userId' | 'createdAt'>): Promise<JobScreeningResult> => {
   if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
   const userId = auth.currentUser.uid;
-  const HISTORY_LIMIT = 10;
+  const HISTORY_LIMIT = 20;
 
   // 1. Query for existing history for this specific job role, ordered oldest to newest.
   const historyQuery = query(
@@ -87,8 +87,41 @@ export const getAllJobScreeningResultsForUser = async (): Promise<JobScreeningRe
 export const deleteJobScreeningResult = async (resultId: string): Promise<void> => {
   if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
   const docRef = doc(db, "jobScreeningResults", resultId);
-  // Firestore security rules should enforce that only the owner can delete this document.
   await deleteDoc(docRef);
+};
+
+
+/**
+ * Deletes all job screening results for the currently logged-in user.
+ * This operation is performed in batches to handle large numbers of documents safely.
+ */
+export const deleteAllJobScreeningResults = async (): Promise<void> => {
+  if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
+  const userId = auth.currentUser.uid;
+  const q = query(collection(db, "jobScreeningResults"), where("userId", "==", userId));
+  const querySnapshot = await getDocs(q);
+
+  if (querySnapshot.empty) return; // Nothing to delete.
+
+  const batches = [];
+  let currentBatch = writeBatch(db);
+  let operationCount = 0;
+
+  for (const docSnapshot of querySnapshot.docs) {
+    currentBatch.delete(docSnapshot.ref);
+    operationCount++;
+    if (operationCount === 500) {
+      batches.push(currentBatch);
+      currentBatch = writeBatch(db);
+      operationCount = 0;
+    }
+  }
+
+  if (operationCount > 0) {
+    batches.push(currentBatch);
+  }
+
+  await Promise.all(batches.map(batch => batch.commit()));
 };
 
 

@@ -44,6 +44,7 @@ export interface ExtractedJobRole {
 export interface RankedCandidate {
   id: string; // A unique ID for this specific ranking entry.
   name: string; // The candidate's name as extracted by the AI.
+  email?: string; // The candidate's email, if extracted.
   score: number; // The match score (0-100) against the job description.
   atsScore: number; // The ATS compatibility score (0-100).
   keySkills: string; // A comma-separated string of key skills that matched.
@@ -120,3 +121,5 @@ export interface InterviewQuestionsSet {
     userId: string; // The ID of the user who owns this set.
     createdAt: Timestamp; // The timestamp of when the questions were generated.
 }
+
+    
