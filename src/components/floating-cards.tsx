@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -36,8 +37,12 @@ const cardsData: CardData[] = [
     animation: { x: ["-8%", "12%", "-8%"], y: ["15%", "-5%", "15%"], rotate: [-5, 3, -5], duration: 20, delay: 4 }
   },
   {
-    id: 4, name: "Alex Johnson", score: 95, skills: ["AWS", "DevOps"],
+    id: 4, name: "Rohan Gupta", score: 95, skills: ["AWS", "DevOps"],
     animation: { x: ["12%", "-8%", "12%"], y: ["-15%", "5%", "-15%"], rotate: [2, -4, 2], duration: 19, delay: 1 }
+  },
+  {
+    id: 5, name: "Aisha Khan", score: 88, skills: ["Marketing", "SEO"],
+    animation: { x: ["5%", "-5%", "5%"], y: ["12%", "-8%", "12%"], rotate: [-2, 4, -2], duration: 24, delay: 3 }
   },
 ];
 
@@ -66,9 +71,9 @@ const FloatingCard = ({ data }: { data: CardData }) => {
     <motion.div
       className="absolute"
       style={{
-        width: '160px',
-        top: `${(data.id * 20)}%`, // Stagger vertical start position
-        left: `${(data.id % 2) * 50 + 10}%`, // Stagger horizontal start position
+        width: '180px',
+        top: `${(data.id * 18)}%`, // Stagger vertical start position
+        left: `${(data.id % 2) * 45 + 10}%`, // Stagger horizontal start position
         perspective: 800,
       }}
       animate={{
