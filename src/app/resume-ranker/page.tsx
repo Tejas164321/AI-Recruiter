@@ -24,7 +24,7 @@ import { performBulkScreening, type PerformBulkScreeningInput, type PerformBulkS
 import { extractJobRoles as extractJobRolesAI, type ExtractJobRolesInput as ExtractJobRolesAIInput, type ExtractJobRolesOutput as ExtractJobRolesAIOutput } from "@/ai/flows/extract-job-roles";
 import type { ResumeFile, RankedCandidate, Filters, JobDescriptionFile, JobScreeningResult, ExtractedJobRole } from "@/lib/types";
 // Firebase Services
-import { saveJobScreeningResult, getAllJobScreeningResultsForUser, deleteJobScreeningResult } from "@/services/firestoreService";
+import { saveJobScreeningResult } from "@/services/firestoreService";
 import { db as firestoreDb } from "@/lib/firebase/config";
 import { Timestamp } from "firebase/firestore";
 
@@ -49,64 +49,38 @@ export default function ResumeRankerPage() {
   // State for file uploads in the current session
   const [uploadedResumeFiles, setUploadedResumeFiles] = useState<ResumeFile[]>([]);
   
-  // State for data from Firestore and local session
+  // State for data from the current session
   const [extractedJobRoles, setExtractedJobRoles] = useState<ExtractedJobRole[]>([]);
-  const [allScreeningResults, setAllScreeningResults] = useState<JobScreeningResult[]>([]);
-  
+  const [currentScreeningResult, setCurrentScreeningResult] = useState<JobScreeningResult | null>(null);
+
   // State for UI control and selections
   const [selectedJobRoleId, setSelectedJobRoleId] = useState<string | null>(null);
-  const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
   const [filters, setFilters] = useState<Filters>(initialFilters);
   
   // State for loading indicators
   const [isLoadingJDExtraction, setIsLoadingJDExtraction] = useState<boolean>(false);
   const [isLoadingScreening, setIsLoadingScreening] = useState<boolean>(false);
-  const [isLoadingFromDB, setIsLoadingFromDB] = useState(true);
   
   // State for modals and dialogs
   const [selectedCandidateForFeedback, setSelectedCandidateForFeedback] = useState<RankedCandidate | null>(null);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState<boolean>(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [candidatesForEmail, setCandidatesForEmail] = useState<RankedCandidate[]>([]);
-  const [historyToDelete, setHistoryToDelete] = useState<JobScreeningResult | null>(null);
 
   // Refs for scrolling to elements
   const resultsSectionRef = useRef<HTMLDivElement | null>(null);
   const processButtonRef = useRef<HTMLButtonElement | null>(null);
 
-  // Check if Firestore is available
   const isFirestoreAvailable = !!firestoreDb;
 
-  // Turn off page loader on mount and fetch history
+  // Turn off the global page loader as soon as the component starts to mount.
   useEffect(() => {
     setAppIsLoading(false);
-    if (currentUser && isFirestoreAvailable) {
-      setIsLoadingFromDB(true);
-      getAllJobScreeningResultsForUser()
-        .then(results => {
-          setAllScreeningResults(results);
-        })
-        .catch(err => {
-          console.error("Error fetching screening results:", err);
-          toast({ title: "Error Loading History", description: String(err.message || err).substring(0, 100), variant: "destructive" });
-        })
-        .finally(() => {
-          setIsLoadingFromDB(false);
-        });
-    } else {
-        setIsLoadingFromDB(false);
-        setAllScreeningResults([]);
-    }
-  }, [setAppIsLoading, currentUser, isFirestoreAvailable, toast]);
-
+  }, [setAppIsLoading]);
 
   // Derived loading state for easier management in the UI
-  const isProcessing = isLoadingJDExtraction || isLoadingScreening || isLoadingFromDB;
+  const isProcessing = isLoadingJDExtraction || isLoadingScreening;
 
-  /**
-   * Effect to scroll the main action button into view when both JDs and resumes have been uploaded.
-   * This guides the user to the next logical step.
-   */
   useEffect(() => {
     const readyToProcess = extractedJobRoles.length > 0 && uploadedResumeFiles.length > 0 && !isProcessing;
     if (readyToProcess && processButtonRef.current) {
@@ -117,10 +91,6 @@ export default function ResumeRankerPage() {
     }
   }, [extractedJobRoles.length, uploadedResumeFiles.length, isProcessing]);
 
-  /**
-   * Effect to scroll to the results section when a screening process begins.
-   * This automatically brings the results into view for the user.
-   */
   useEffect(() => {
     if (isLoadingScreening && resultsSectionRef.current) {
       const timer = setTimeout(() => {
@@ -130,58 +100,10 @@ export default function ResumeRankerPage() {
     }
   }, [isLoadingScreening]);
 
-  const uniqueJobRolesForDropdown = useMemo(() => {
-    const rolesFromHistory = allScreeningResults.map(result => ({
-      id: result.jobDescriptionId,
-      name: result.jobDescriptionName,
-      contentDataUri: result.jobDescriptionDataUri,
-      originalDocumentName: `From History (${result.createdAt.toDate().toLocaleDateString()})`,
-      userId: result.userId,
-      createdAt: result.createdAt,
-    }));
-  
-    const allRoles = [...extractedJobRoles, ...rolesFromHistory];
-    const uniqueRolesMap = new Map<string, ExtractedJobRole>();
-  
-    allRoles.forEach(role => {
-      if (!uniqueRolesMap.has(role.id)) {
-        uniqueRolesMap.set(role.id, role);
-      }
-    });
-  
-    return Array.from(uniqueRolesMap.values()).sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
-  }, [extractedJobRoles, allScreeningResults]);
-
-
-  /**
-   * Memoized list of screening history sessions for the currently selected job role.
-   * This filters the master list of results to only show relevant history.
-   */
-  const screeningHistoryForSelectedRole = useMemo(() => {
-    if (!selectedJobRoleId) return [];
-    return allScreeningResults
-      .filter(r => r.jobDescriptionId === selectedJobRoleId)
-      .sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
-  }, [selectedJobRoleId, allScreeningResults]);
-
-  /**
-   * Memoized object for the currently selected screening result.
-   * This finds the full result object based on the selected history ID.
-   */
-  const currentScreeningResult = useMemo(() => {
-    return allScreeningResults.find(result => result.id === selectedHistoryId) || null;
-  }, [selectedHistoryId, allScreeningResults]);
-
-  /**
-   * Callback to handle job description file uploads.
-   * It calls the AI to extract distinct job roles from the uploaded files.
-   * @param {JobDescriptionFile[]} initialJdUploads - The files uploaded by the user.
-   */
   const handleJobDescriptionUploadAndExtraction = useCallback(async (initialJdUploads: JobDescriptionFile[]) => {
     if (!currentUser?.uid) return;
     setIsLoadingJDExtraction(true);
     try {
-      // First, convert all file objects to data URIs.
       const jdUploads = await Promise.all(initialJdUploads.map(async (jdFile) => {
         const dataUri = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader(); reader.onload = () => resolve(reader.result as string); reader.onerror = reject; reader.readAsDataURL(jdFile.file);
@@ -194,11 +116,9 @@ export default function ResumeRankerPage() {
       
       if (aiOutput.length > 0) {
         const tempRoles = aiOutput.map(role => ({ ...role, userId: currentUser.uid, createdAt: Timestamp.now() })) as ExtractedJobRole[];
-        
         setExtractedJobRoles(prev => [...tempRoles, ...prev]);
-        
-        toast({ title: "Job Role(s) Extracted", description: `${tempRoles.length} role(s) are ready. Please select one from the dropdown to proceed.` });
-        
+        setSelectedJobRoleId(tempRoles[0].id);
+        toast({ title: "Job Role(s) Extracted", description: `${tempRoles.length} role(s) are ready.` });
       } else {
          toast({ title: "No Job Roles Extracted", description: "AI could not find any distinct roles in the file(s)." });
       }
@@ -209,13 +129,8 @@ export default function ResumeRankerPage() {
     }
   }, [currentUser?.uid, toast]);
 
-  /**
-   * Callback to perform the main screening operation.
-   * It calls the AI to rank uploaded resumes against the selected job role.
-   * @param {string} [targetJobRoleId] - The ID of the job role to screen against.
-   */
-  const handleScreening = useCallback(async (targetJobRoleId?: string) => {
-    const roleToScreen = uniqueJobRolesForDropdown.find(jr => jr.id === targetJobRoleId);
+  const handleScreening = useCallback(async () => {
+    const roleToScreen = extractedJobRoles.find(jr => jr.id === selectedJobRoleId);
     if (!currentUser?.uid || !isFirestoreAvailable || !roleToScreen || uploadedResumeFiles.length === 0) {
       toast({ title: "Cannot Start Screening", description: "Please select a job role and upload resumes first.", variant: "destructive" });
       return;
@@ -234,11 +149,9 @@ export default function ResumeRankerPage() {
       const outputFromAI: PerformBulkScreeningOutput = await performBulkScreening(input);
       
       if (outputFromAI.length > 0 && outputFromAI[0]) {
-        // Save the result to Firestore and update the local state.
-        const savedResult = await saveJobScreeningResult(outputFromAI[0] as any);
-        setAllScreeningResults(prev => [savedResult, ...prev]);
-        setSelectedHistoryId(savedResult.id); // Auto-select the new screening session.
-        toast({ title: "Screening Complete & Saved", description: "New screening session has been saved." });
+        const resultWithTimestamp = { ...outputFromAI[0], userId: currentUser.uid, createdAt: Timestamp.now() } as Omit<JobScreeningResult, 'id'>;
+        setCurrentScreeningResult({ ...resultWithTimestamp, id: "session_result" });
+        toast({ title: "Screening Complete", description: "Results are displayed below." });
       } else {
         toast({ title: "Screening Processed", description: "No new results were generated."});
       }
@@ -249,12 +162,8 @@ export default function ResumeRankerPage() {
     } finally {
       setIsLoadingScreening(false);
     }
-  }, [currentUser?.uid, uniqueJobRolesForDropdown, uploadedResumeFiles, toast, isFirestoreAvailable]);
+  }, [currentUser?.uid, selectedJobRoleId, extractedJobRoles, uploadedResumeFiles, toast, isFirestoreAvailable]);
 
-  /**
-   * Callback to handle resume file uploads from the FileUploadArea component.
-   * @param {File[]} files - An array of File objects.
-   */
   const handleResumesUpload = useCallback(async (files: File[]) => {
      const newResumeFilesPromises = files.map(async (file) => {
       const dataUri = await new Promise<string>((resolve, reject) => {
@@ -269,32 +178,16 @@ export default function ResumeRankerPage() {
     }
   }, [toast]); 
 
-  // Handlers for changing selections and deleting history
-  const handleJobRoleChange = useCallback((roleId: string | null) => { setSelectedJobRoleId(roleId); setSelectedHistoryId(null); setFilters(initialFilters); }, []);
-  const handleHistoryChange = useCallback((historyId: string | null) => { setSelectedHistoryId(historyId); setFilters(initialFilters); }, []);
-  const handleOpenDeleteHistoryDialog = (historyId: string) => { setHistoryToDelete(allScreeningResults.find(r => r.id === historyId) || null); };
-  const handleConfirmDeleteHistory = async () => {
-    if (!historyToDelete) return;
-    try {
-        await deleteJobScreeningResult(historyToDelete.id);
-        toast({ title: "History Deleted", description: `Screening session from ${historyToDelete.createdAt.toDate().toLocaleString()} deleted.` });
-        setAllScreeningResults(prev => prev.filter(r => r.id !== historyToDelete.id));
-        if (selectedHistoryId === historyToDelete.id) setSelectedHistoryId(null); // Clear selection if the active history was deleted.
-    } catch (error) {
-        toast({ title: "Deletion Failed", description: "Could not delete the history item.", variant: "destructive" });
-    } finally {
-        setHistoryToDelete(null);
-    }
+  const handleJobRoleChange = (roleId: string | null) => {
+    setSelectedJobRoleId(roleId);
+    setFilters(initialFilters);
+    setCurrentScreeningResult(null); // Clear previous results when role changes
   };
-  
-  // Handlers for modals and filters
+
   const handleViewFeedback = (candidate: RankedCandidate) => { setSelectedCandidateForFeedback(candidate); setIsFeedbackModalOpen(true); };
   const handleFilterChange = (newFilters: Partial<Filters>) => { setFilters(prev => ({ ...prev, ...newFilters })); };
   const resetFilters = () => { setFilters(initialFilters); };
 
-  /**
-   * Memoized list of candidates to display, after applying filters.
-   */
   const displayedCandidates = useMemo(() => {
     if (!currentScreeningResult?.candidates) return [];
     return currentScreeningResult.candidates.filter(candidate => {
@@ -306,7 +199,6 @@ export default function ResumeRankerPage() {
     });
   }, [currentScreeningResult, filters]);
 
-  // Handler to open email modal for single or multiple candidates
   const handleOpenEmailModal = (candidates: RankedCandidate[]) => {
     if (candidates.length > 0) {
       setCandidatesForEmail(candidates);
@@ -314,40 +206,43 @@ export default function ResumeRankerPage() {
     }
   };
 
-  /**
-   * Determines the current loading stage to show a relevant message.
-   * @returns {"roles" | "screening" | "general"} The current stage.
-   */
   const getLoadingStage = (): "roles" | "screening" | "general" => {
     if (isLoadingJDExtraction) return "roles"; if (isLoadingScreening) return "screening"; return "general";
+  }
+  
+  if (!currentUser) {
+    return (
+      <div className="container mx-auto p-4 md:p-8 space-y-8 pt-24">
+        <Card className="shadow-lg">
+            <CardContent className="pt-6 text-center">
+                <p className="text-lg text-muted-foreground">
+                    Please <a href="/login" className="text-primary underline">log in</a> to use the Resume Ranker.
+                </p>
+            </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-8 pt-24">
-       {/* Page Header */}
        <Card className="mb-8 shadow-md"><CardHeader><CardTitle className="text-2xl font-headline text-primary flex items-center"><ScanSearch className="w-7 h-7 mr-3" /> AI-Powered Resume Ranker</CardTitle><CardDescription>Upload job descriptions and resumes to screen candidates. Your roles and screening history are saved.</CardDescription></CardHeader></Card>
 
-      {/* Conditional Rendering for DB and Auth status */}
       {!isFirestoreAvailable && (<Card className="shadow-lg border-destructive"><CardHeader><CardTitle className="text-destructive flex items-center"><ServerOff className="w-5 h-5 mr-2" /> Database Not Connected</CardTitle></CardHeader><CardContent><p>Database features are disabled.</p></CardContent></Card>)}
-      {!currentUser && isFirestoreAvailable && (<Card className="shadow-lg"><CardContent className="pt-6 text-center"><p className="text-lg text-muted-foreground">Please <a href="/login" className="text-primary underline">log in</a> to use the Resume Ranker.</p></CardContent></Card>)}
-
-      {/* Main Content */}
-      {currentUser && isFirestoreAvailable && (
+      
+      {isFirestoreAvailable && (
         <>
-          {/* Upload Section */}
           <div className="flex flex-col md:flex-row gap-8">
-            <div className="flex-1"><Card className="shadow-lg h-full"><CardHeader><CardTitle className="flex items-center text-xl font-headline"><Briefcase className="w-6 h-6 mr-3 text-primary" />Upload Job Descriptions</CardTitle><CardDescription>Upload one or more JD files. Roles will be extracted and saved.</CardDescription></CardHeader><CardContent><FileUploadArea onFilesUpload={(files) => handleJobDescriptionUploadAndExtraction(files.map(f => ({ id: crypto.randomUUID(), file: f, dataUri: '', name: f.name })))} acceptedFileTypes={{ "application/pdf": [".pdf"], "text/plain": [".txt"],"application/msword": [".doc"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"]}} multiple={true} label="PDF, TXT, DOC, DOCX files up to 5MB" id="job-description-upload" maxSizeInBytes={MAX_FILE_SIZE_BYTES}/></CardContent></Card></div>
+            <div className="flex-1"><Card className="shadow-lg h-full"><CardHeader><CardTitle className="flex items-center text-xl font-headline"><Briefcase className="w-6 h-6 mr-3 text-primary" />Upload Job Descriptions</CardTitle><CardDescription>Upload one or more JD files. Roles will be extracted for this session.</CardDescription></CardHeader><CardContent><FileUploadArea onFilesUpload={(files) => handleJobDescriptionUploadAndExtraction(files.map(f => ({ id: crypto.randomUUID(), file: f, dataUri: '', name: f.name })))} acceptedFileTypes={{ "application/pdf": [".pdf"], "text/plain": [".txt"],"application/msword": [".doc"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"]}} multiple={true} label="PDF, TXT, DOC, DOCX files up to 5MB" id="job-description-upload" maxSizeInBytes={MAX_FILE_SIZE_BYTES}/></CardContent></Card></div>
             <div className="flex-1"><Card className="shadow-lg h-full"><CardHeader><CardTitle className="flex items-center text-xl font-headline"><Users className="w-6 h-6 mr-3 text-primary" />Upload Resumes</CardTitle><CardDescription>Upload candidate resumes to be screened against a job role.</CardDescription></CardHeader><CardContent><FileUploadArea onFilesUpload={handleResumesUpload} acceptedFileTypes={{ "application/pdf": [".pdf"], "text/plain": [".txt"],"application/msword": [".doc"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"]}} multiple label="PDF, TXT, DOC, DOCX files up to 5MB" id="resume-upload" maxSizeInBytes={MAX_FILE_SIZE_BYTES}/></CardContent></Card></div>
           </div>
           
-          {/* Action Button */}
-          <div className="flex justify-center pt-4"><Button ref={processButtonRef} onClick={() => handleScreening(selectedJobRoleId || undefined)} disabled={isProcessing || !selectedJobRoleId || uploadedResumeFiles.length === 0} size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-base px-8 py-6 shadow-md">{(isLoadingScreening) ? <ScanSearch className="w-5 h-5 mr-2 animate-spin" /> : <ScanSearch className="w-5 h-5 mr-2" />}Screen Resumes</Button></div>
+          <div className="flex justify-center pt-4"><Button ref={processButtonRef} onClick={handleScreening} disabled={isProcessing || !selectedJobRoleId || uploadedResumeFiles.length === 0} size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-base px-8 py-6 shadow-md">{(isLoadingScreening) ? <ScanSearch className="w-5 h-5 mr-2 animate-spin" /> : <ScanSearch className="w-5 h-5 mr-2" />}Screen Resumes</Button></div>
           
-          {/* Results Section */}
           <div ref={resultsSectionRef} className="space-y-8">
             {(isProcessing) && (<Card className="shadow-lg"><CardContent className="pt-6"><LoadingIndicator stage={getLoadingStage()} /></CardContent></Card>)}
             
-            {!isProcessing && (uniqueJobRolesForDropdown.length > 0 || extractedJobRoles.length > 0) && (<><Separator className="my-8" /><FilterControls filters={filters} onFilterChange={handleFilterChange} onResetFilters={resetFilters} extractedJobRoles={uniqueJobRolesForDropdown} selectedJobRoleId={selectedJobRoleId} onJobRoleChange={handleJobRoleChange} isLoading={isProcessing} screeningHistory={screeningHistoryForSelectedRole} selectedHistoryId={selectedHistoryId} onHistoryChange={handleHistoryChange} onDeleteHistory={handleOpenDeleteHistoryDialog}/></>)}
+            {!isProcessing && extractedJobRoles.length > 0 && (<><Separator className="my-8" /><FilterControls filters={filters} onFilterChange={handleFilterChange} onResetFilters={resetFilters} extractedJobRoles={extractedJobRoles} selectedJobRoleId={selectedJobRoleId} onJobRoleChange={handleJobRoleChange} isLoading={isProcessing} screeningHistory={[]} selectedHistoryId={null} onHistoryChange={()=>{}} onDeleteHistory={()=>{}} /></>)}
             
             {!isProcessing && currentScreeningResult && (
               <Card className="shadow-lg mb-8">
@@ -355,7 +250,7 @@ export default function ResumeRankerPage() {
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div>
                       <CardTitle className="text-2xl font-headline text-primary">Results for: {currentScreeningResult.jobDescriptionName}</CardTitle>
-                      <CardDescription>Screening from {currentScreeningResult.createdAt.toDate().toLocaleString()}. Processed: {currentScreeningResult.candidates.length}. Showing: {displayedCandidates.length}.</CardDescription>
+                      <CardDescription>Screening from this session. Processed: {currentScreeningResult.candidates.length}. Showing: {displayedCandidates.length}.</CardDescription>
                     </div>
                      <Button onClick={() => handleOpenEmailModal(displayedCandidates)} disabled={displayedCandidates.length === 0} variant="outline" >
                       <Mail className="w-4 h-4 mr-2" />
@@ -372,15 +267,11 @@ export default function ResumeRankerPage() {
                 </CardContent>
               </Card>
             )}
-            {!isProcessing && !currentScreeningResult && (uniqueJobRolesForDropdown.length > 0 || extractedJobRoles.length > 0) && (
-                 <p className="text-center text-muted-foreground py-8">Select a job role and screening session to view results.</p>
-            )}
-            {!isProcessing && uniqueJobRolesForDropdown.length === 0 && extractedJobRoles.length === 0 && (<p className="text-center text-muted-foreground py-8">Upload a job description to begin.</p>)}
+            {!isProcessing && !currentScreeningResult && extractedJobRoles.length > 0 && (<p className="text-center text-muted-foreground py-8">Select a job role and screen resumes to view results.</p>)}
+            {!isProcessing && extractedJobRoles.length === 0 && (<p className="text-center text-muted-foreground py-8">Upload a job description to begin.</p>)}
 
           </div>
 
-          {/* Dialogs and Modals */}
-          <AlertDialog open={!!historyToDelete} onOpenChange={(open) => !open && setHistoryToDelete(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the screening session from <span className="font-semibold">{historyToDelete?.createdAt.toDate().toLocaleString()}</span>.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => setHistoryToDelete(null)}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleConfirmDeleteHistory} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
           <FeedbackModal isOpen={isFeedbackModalOpen} onClose={() => setIsFeedbackModalOpen(false)} candidate={selectedCandidateForFeedback}/>
           <EmailComposeModal 
             isOpen={isEmailModalOpen} 

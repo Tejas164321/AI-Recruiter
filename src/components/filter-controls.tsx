@@ -55,6 +55,8 @@ export function FilterControls({
   const handleJobRoleSelectChange = (roleId: string) => onJobRoleChange(roleId === "none" ? null : roleId);
   const handleHistorySelectChange = (historyId: string) => onHistoryChange(historyId === "none" ? null : historyId);
 
+  const hasHistory = screeningHistory && screeningHistory.length > 0;
+
   return (
     <div className="p-6 rounded-lg border shadow-sm space-y-6 bg-card">
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -85,6 +87,7 @@ export function FilterControls({
               </Select>
             </div>
           </div>
+          {hasHistory && (
           <div className="space-y-2">
              <Label htmlFor="historySelect">Screening History</Label>
             <div className="flex items-center gap-2">
@@ -105,6 +108,7 @@ export function FilterControls({
                   </TooltipTrigger><TooltipContent><p>Delete selected session</p></TooltipContent></Tooltip></TooltipProvider>
             </div>
           </div>
+          )}
         </div>
 
         {/* Column 2: Filters (Keyword and Score) */}
@@ -113,15 +117,17 @@ export function FilterControls({
             <Label htmlFor="skillKeyword">Search by Name/Skill/File</Label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input id="skillKeyword" type="text" placeholder="e.g., React, John Doe" value={filters.skillKeyword} onChange={handleKeywordChange} className="pl-10" disabled={isLoading || !selectedHistoryId}/>
+              <Input id="skillKeyword" type="text" placeholder="e.g., React, John Doe" value={filters.skillKeyword} onChange={handleKeywordChange} className="pl-10" disabled={isLoading || !selectedJobRoleId}/>
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="scoreRange">Match Score Range: {filters.scoreRange[0]} - {filters.scoreRange[1]}</Label>
-            <Slider id="scoreRange" min={0} max={100} step={1} value={[filters.scoreRange[0], filters.scoreRange[1]]} onValueChange={handleScoreChange} className="pt-2" disabled={isLoading || !selectedHistoryId}/>
+            <Slider id="scoreRange" min={0} max={100} step={1} value={[filters.scoreRange[0], filters.scoreRange[1]]} onValueChange={handleScoreChange} className="pt-2" disabled={isLoading || !selectedJobRoleId}/>
           </div>
         </div>
       </div>
     </div>
   );
 }
+
+    
