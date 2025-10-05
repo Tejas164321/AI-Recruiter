@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
@@ -37,7 +36,7 @@ const initialFilters: Filters = {
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
 export default function ResumeRankerPage() {
-  const { setAppIsLoading } = useLoading();
+  const { setIsPageLoading } = useLoading();
   const { currentUser } = useAuth();
   const { toast } = useToast();
 
@@ -65,7 +64,7 @@ export default function ResumeRankerPage() {
   const isFirestoreAvailable = !!firestoreDb;
 
   useEffect(() => {
-    setAppIsLoading(false);
+    setIsPageLoading(false);
     if (currentUser && isFirestoreAvailable) {
         setIsLoadingHistory(true);
         getAllJobScreeningResultsForUser()
@@ -82,7 +81,7 @@ export default function ResumeRankerPage() {
     } else {
         setIsLoadingHistory(false);
     }
-  }, [currentUser, isFirestoreAvailable, setAppIsLoading, toast]);
+  }, [currentUser, isFirestoreAvailable, setIsPageLoading, toast]);
 
 
   const isProcessing = isLoadingJDExtraction || isLoadingScreening || isLoadingHistory;
