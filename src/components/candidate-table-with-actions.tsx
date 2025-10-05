@@ -7,8 +7,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 // Icons
-import { ArrowUpDown, MessageSquareText, Mail, Tags, Hash } from "lucide-react";
+import { ArrowUpDown, MessageSquareText, Mail, Tags, Hash, AlertTriangle } from "lucide-react";
 // Types
 import type { RankedCandidate } from "@/lib/types";
 
@@ -54,6 +55,28 @@ export function CandidateTableWithActions({ candidates, onViewFeedback, onEmailC
     if (score > 50) return <Badge className="bg-yellow-500 text-black hover:bg-yellow-500/90">{score}/100</Badge>;
     return <Badge variant="destructive">{score}/100</Badge>;
   };
+  
+  const CandidateEmail = ({ candidate }: { candidate: RankedCandidate }) => {
+    if (candidate.email) {
+      return <span className="text-sm text-muted-foreground truncate" title={candidate.email}>{candidate.email}</span>;
+    }
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center text-sm text-yellow-600 dark:text-yellow-400">
+              <AlertTriangle className="w-4 h-4 mr-1.5" />
+              <span>Not Found</span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>The AI could not extract an email from this resume.</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  };
+
 
   if (candidates.length === 0) {
     return <p className="text-center text-muted-foreground py-8">No candidates to display for this filter combination.</p>;
@@ -67,14 +90,18 @@ export function CandidateTableWithActions({ candidates, onViewFeedback, onEmailC
           <Card key={candidate.id} className="bg-card">
             <CardHeader>
               <div className="flex justify-between items-start gap-4">
-                <div className="flex-grow">
-                  <CardTitle className="text-lg">{candidate.name}</CardTitle>
+                <div className="flex-grow overflow-hidden">
+                  <CardTitle className="text-lg truncate">{candidate.name}</CardTitle>
                   <CardDescription>Rank #{index + 1}</CardDescription>
                 </div>
                 <div className="flex-shrink-0 ml-4">{getScoreBadge(candidate.score)}</div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4 pt-0">
+               <div>
+                  <h4 className="text-sm font-semibold text-muted-foreground mb-1">Email</h4>
+                  <CandidateEmail candidate={candidate} />
+               </div>
                <div>
                 <h4 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center"><Tags className="w-4 h-4 mr-2" />Key Skills</h4>
                 <div className="flex flex-wrap gap-1">
@@ -84,7 +111,7 @@ export function CandidateTableWithActions({ candidates, onViewFeedback, onEmailC
               </div>
             </CardContent>
             <CardFooter className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => onEmailCandidate(candidate)}><Mail className="w-4 h-4 mr-2" />Email</Button>
+              <Button variant="outline" size="sm" onClick={() => onEmailCandidate(candidate)} disabled={!candidate.email}><Mail className="w-4 h-4 mr-2" />Email</Button>
               <Button variant="outline" size="sm" onClick={() => onViewFeedback(candidate)}><MessageSquareText className="w-4 h-4 mr-2" />Feedback</Button>
             </CardFooter>
           </Card>
@@ -97,10 +124,11 @@ export function CandidateTableWithActions({ candidates, onViewFeedback, onEmailC
           <TableHeader>
             <TableRow>
               <TableHead className="w-[5%] text-center"><div className="flex items-center justify-center"><Hash className="w-4 h-4 mr-1" />Rank</div></TableHead>
-              <TableHead onClick={() => requestSort("name")} className="cursor-pointer hover:bg-muted/50 w-[25%]"><div className="flex items-center">Candidate Name {getSortIndicator("name")}</div></TableHead>
-              <TableHead onClick={() => requestSort("score")} className="cursor-pointer hover:bg-muted/50 w-[15%]"><div className="flex items-center">Score {getSortIndicator("score")}</div></TableHead>
-              <TableHead className="w-[40%]"><div className="flex items-center"><Tags className="w-4 h-4 mr-1" />Key Skills</div></TableHead>
-              <TableHead className="text-right w-[15%]">Actions</TableHead>
+              <TableHead onClick={() => requestSort("name")} className="cursor-pointer hover:bg-muted/50 w-[20%]"><div className="flex items-center">Candidate Name {getSortIndicator("name")}</div></TableHead>
+              <TableHead className="w-[15%]"><div className="flex items-center"><Mail className="w-4 h-4 mr-1" />Email</div></TableHead>
+              <TableHead onClick={() => requestSort("score")} className="cursor-pointer hover:bg-muted/50 w-[10%]"><div className="flex items-center">Score {getSortIndicator("score")}</div></TableHead>
+              <TableHead className="w-[30%]"><div className="flex items-center"><Tags className="w-4 h-4 mr-1" />Key Skills</div></TableHead>
+              <TableHead className="text-right w-[20%]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -108,6 +136,7 @@ export function CandidateTableWithActions({ candidates, onViewFeedback, onEmailC
               <TableRow key={candidate.id} className="hover:bg-muted/50">
                 <TableCell className="font-medium text-center">{index + 1}</TableCell>
                 <TableCell className="font-medium">{candidate.name}</TableCell>
+                <TableCell><CandidateEmail candidate={candidate} /></TableCell>
                 <TableCell>{getScoreBadge(candidate.score)}</TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
@@ -117,7 +146,7 @@ export function CandidateTableWithActions({ candidates, onViewFeedback, onEmailC
                 </TableCell>
                 <TableCell className="text-right">
                     <div className="flex items-center justify-end space-x-1">
-                        <Button variant="ghost" size="sm" onClick={() => onEmailCandidate(candidate)} className="hover:text-primary"><Mail className="w-4 h-4 mr-2" />Email</Button>
+                        <Button variant="ghost" size="sm" onClick={() => onEmailCandidate(candidate)} className="hover:text-primary" disabled={!candidate.email}><Mail className="w-4 h-4 mr-2" />Email</Button>
                         <Button variant="ghost" size="sm" onClick={() => onViewFeedback(candidate)} className="hover:text-primary"><MessageSquareText className="w-4 h-4 mr-2" />Feedback</Button>
                     </div>
                 </TableCell>
@@ -129,3 +158,5 @@ export function CandidateTableWithActions({ candidates, onViewFeedback, onEmailC
     </>
   );
 }
+
+    

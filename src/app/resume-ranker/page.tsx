@@ -13,7 +13,7 @@ import { LoadingIndicator } from "@/components/loading-indicator";
 import { Separator } from "@/components/ui/separator";
 import { EmailComposeModal, type EmailRecipient } from "@/components/email-compose-modal";
 // Icons
-import { Users, ScanSearch, Briefcase, Snail, ServerOff, Mail } from "lucide-react";
+import { Users, ScanSearch, Briefcase, Snail, ServerOff, Mail, AlertTriangle } from "lucide-react";
 // Hooks and Contexts
 import { useToast } from "@/hooks/use-toast";
 import { useLoading } from "@/contexts/loading-context";
@@ -22,8 +22,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { performBulkScreening, type PerformBulkScreeningInput, type PerformBulkScreeningOutput } from "@/ai/flows/rank-candidates";
 import { extractJobRoles as extractJobRolesAI, type ExtractJobRolesInput as ExtractJobRolesAIInput, type ExtractJobRolesOutput as ExtractJobRolesAIOutput } from "@/ai/flows/extract-job-roles";
 import type { ResumeFile, RankedCandidate, Filters, JobDescriptionFile, JobScreeningResult, ExtractedJobRole } from "@/lib/types";
-// Firebase Services (using a placeholder as it's not fully implemented)
-const isFirestoreAvailable = false; 
+
 
 // Initial state for filters
 const initialFilters: Filters = {
@@ -84,6 +83,7 @@ export default function ResumeRankerPage() {
   const handleJobDescriptionUploadAndExtraction = useCallback(async (initialJdUploads: JobDescriptionFile[]) => {
     if (!currentUser?.uid) return;
     setIsLoadingJDExtraction(true);
+    setCurrentScreeningResult(null); // Clear previous results
     try {
       const jdUploads = await Promise.all(initialJdUploads.map(async (jdFile) => {
         const dataUri = await new Promise<string>((resolve, reject) => {
@@ -96,11 +96,11 @@ export default function ResumeRankerPage() {
       const aiOutput: ExtractJobRolesAIOutput = await extractJobRolesAI(aiInput);
       
       if (aiOutput.length > 0) {
-        setExtractedJobRoles(prev => [...aiOutput, ...prev].filter((role, index, self) => index === self.findIndex(r => r.name === role.name)));
+        setExtractedJobRoles(aiOutput);
         setSelectedJobRoleId(aiOutput[0].id);
-        toast({ title: "Job Role(s) Extracted", description: `${aiOutput.length} role(s) are ready for screening.` });
+        toast({ title: "Job Role(s) Extracted", description: `${aiOutput.length} new role(s) are ready for screening.` });
       } else {
-        toast({ title: "No Job Roles Extracted", description: "AI could not find any distinct roles in the file(s)." });
+        toast({ title: "No Job Roles Extracted", description: "AI could not find any distinct roles in the file(s).", variant: "destructive" });
       }
     } catch (error: any) {
       toast({ title: "Job Role Extraction Failed", description: `An error occurred: ${error.message.substring(0, 100)}`, variant: "destructive" });
@@ -123,7 +123,7 @@ export default function ResumeRankerPage() {
       const outputFromAI: PerformBulkScreeningOutput = await performBulkScreening(input);
       
       if (outputFromAI.length > 0 && outputFromAI[0]) {
-        // This is a session-only result, not saved to DB
+        // This is a session-only result
         const result: JobScreeningResult = {
             ...outputFromAI[0],
             id: `session-${Date.now()}`,
@@ -133,7 +133,7 @@ export default function ResumeRankerPage() {
         setCurrentScreeningResult(result);
         toast({ title: "Screening Complete", description: "Results are displayed below for this session." });
       } else {
-        toast({ title: "Screening Processed", description: "No new results were generated."});
+        toast({ title: "Screening Processed", description: "No new results were generated.", variant: 'destructive'});
       }
       
     } catch (error: any) {
@@ -158,7 +158,11 @@ export default function ResumeRankerPage() {
     }
   }, [toast]); 
 
-  const handleJobRoleChange = (roleId: string | null) => { setSelectedJobRoleId(roleId); setFilters(initialFilters); };
+  const handleJobRoleChange = (roleId: string | null) => { 
+      setSelectedJobRoleId(roleId); 
+      setFilters(initialFilters); 
+      setCurrentScreeningResult(null); // Clear results when role changes
+  };
   const handleFilterChange = (newFilters: Partial<Filters>) => { setFilters(prev => ({ ...prev, ...newFilters })); };
   const resetFilters = () => { setFilters(initialFilters); };
 
@@ -176,16 +180,26 @@ export default function ResumeRankerPage() {
   const handleViewFeedback = (candidate: RankedCandidate) => { setSelectedCandidateForFeedback(candidate); setIsFeedbackModalOpen(true); };
   
   const handleEmailSingleCandidate = (candidate: RankedCandidate) => {
-      setEmailRecipients([{ name: candidate.name, email: 'placeholder@example.com' }]); // Replace with actual email later
+      if (!candidate.email) {
+        toast({ title: "Email Not Found", description: `Could not find an email address for ${candidate.name}.`, variant: "destructive"});
+        return;
+      }
+      setEmailRecipients([{ name: candidate.name, email: candidate.email }]); 
       setIsEmailModalOpen(true);
   };
   
   const handleEmailFilteredCandidates = () => {
-      if (displayedCandidates.length === 0) {
-          toast({ title: "No Candidates Selected", description: "There are no candidates matching the current filters to email.", variant: "destructive" });
+      const recipientsWithEmail = displayedCandidates.filter(c => c.email);
+      if (recipientsWithEmail.length === 0) {
+          toast({ title: "No Candidates to Email", description: "No candidates with extracted email addresses match the current filters.", variant: "destructive" });
           return;
       }
-      setEmailRecipients(displayedCandidates.map(c => ({ name: c.name, email: 'placeholder@example.com' })));
+      
+      if (recipientsWithEmail.length < displayedCandidates.length) {
+          toast({ title: "Some Emails Missing", description: `Could not find email addresses for ${displayedCandidates.length - recipientsWithEmail.length} candidate(s). Only sending to ${recipientsWithEmail.length}.` });
+      }
+
+      setEmailRecipients(recipientsWithEmail.map(c => ({ name: c.name, email: c.email || '' })));
       setIsEmailModalOpen(true);
   };
 
@@ -193,14 +207,19 @@ export default function ResumeRankerPage() {
     if (isLoadingJDExtraction) return "roles"; if (isLoadingScreening) return "screening"; return "general";
   }
 
+  if (!currentUser) {
+     return (
+        <div className="container mx-auto p-4 md:p-8 space-y-8 pt-24">
+            <Card className="shadow-lg"><CardContent className="pt-6 text-center"><p className="text-lg text-muted-foreground">Please <a href="/login" className="text-primary underline">log in</a> to use the Resume Ranker.</p></CardContent></Card>
+        </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-8 pt-24">
       <Card className="mb-8 shadow-md"><CardHeader><CardTitle className="text-2xl font-headline text-primary flex items-center"><Snail className="w-7 h-7 mr-3" /> AI-Powered Resume Ranker</CardTitle><CardDescription>Upload job descriptions and resumes to screen candidates for your current session.</CardDescription></CardHeader></Card>
 
-      {!currentUser && (<Card className="shadow-lg"><CardContent className="pt-6 text-center"><p className="text-lg text-muted-foreground">Please <a href="/login" className="text-primary underline">log in</a> to use the Resume Ranker.</p></CardContent></Card>)}
-
-      {currentUser && (
-        <>
+      <>
           <div className="flex flex-col md:flex-row gap-8">
             <div className="flex-1"><Card className="shadow-lg h-full"><CardHeader><CardTitle className="flex items-center text-xl font-headline"><Briefcase className="w-6 h-6 mr-3 text-primary" />Upload Job Descriptions</CardTitle><CardDescription>Upload one or more JD files to extract roles.</CardDescription></CardHeader><CardContent><FileUploadArea onFilesUpload={(files) => handleJobDescriptionUploadAndExtraction(files.map(f => ({ id: crypto.randomUUID(), file: f, dataUri: '', name: f.name })))} acceptedFileTypes={{ "application/pdf": [".pdf"], "text/plain": [".txt"],"application/msword": [".doc"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"]}} multiple={true} label="PDF, TXT, DOC, DOCX files up to 5MB" id="job-description-upload" maxSizeInBytes={MAX_FILE_SIZE_BYTES}/></CardContent></Card></div>
             <div className="flex-1"><Card className="shadow-lg h-full"><CardHeader><CardTitle className="flex items-center text-xl font-headline"><Users className="w-6 h-6 mr-3 text-primary" />Upload Resumes</CardTitle><CardDescription>Upload candidate resumes to be screened.</CardDescription></CardHeader><CardContent><FileUploadArea onFilesUpload={handleResumesUpload} acceptedFileTypes={{ "application/pdf": [".pdf"], "text/plain": [".txt"],"application/msword": [".doc"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"]}} multiple label="PDF, TXT, DOC, DOCX files up to 5MB" id="resume-upload" maxSizeInBytes={MAX_FILE_SIZE_BYTES}/></CardContent></Card></div>
@@ -211,7 +230,7 @@ export default function ResumeRankerPage() {
           <div ref={resultsSectionRef} className="space-y-8">
             {isProcessing && !currentScreeningResult && (<Card className="shadow-lg"><CardContent className="pt-6"><LoadingIndicator stage={getLoadingStage()} /></CardContent></Card>)}
             
-            {(!isProcessing || currentScreeningResult) && (
+            {(extractedJobRoles.length > 0) && (
               <>
                 <Separator className="my-8" />
                 <div className="p-6 rounded-lg border shadow-sm space-y-6 bg-card">
@@ -233,10 +252,10 @@ export default function ResumeRankerPage() {
                     onJobRoleChange={handleJobRoleChange}
                     isLoading={isProcessing}
                   />
-                  {currentScreeningResult && (
+                   {currentScreeningResult && (
                     <Button onClick={handleEmailFilteredCandidates} disabled={isProcessing || displayedCandidates.length === 0}>
                       <Mail className="mr-2 h-4 w-4" />
-                      Email Filtered Candidates ({displayedCandidates.length})
+                      Email Filtered Candidates ({displayedCandidates.filter(c => c.email).length})
                     </Button>
                   )}
                 </div>
@@ -274,8 +293,8 @@ export default function ResumeRankerPage() {
             jobTitle={extractedJobRoles.find(r => r.id === selectedJobRoleId)?.name || 'the position'}
            />
         </>
-      )}
     </div>
   );
 }
 
+    
