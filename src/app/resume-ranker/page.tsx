@@ -1,17 +1,11 @@
-
 "use client";
 
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useToast } from "@/hooks/use-toast";
 // UI Components
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileUploadArea } from "@/components/file-upload-area";
-<<<<<<< HEAD
-import { FeedbackModal } from "@/components/feedback-modal";
-import { EmailComposeModal } from "@/components/email-compose-modal";
-// Icons
-import { Users, ScanSearch, Briefcase, ServerOff } from "lucide-react";
-=======
 import { CandidateTableWithActions } from "@/components/candidate-table-with-actions";
 import { FeedbackModal } from "@/components/feedback-modal";
 import { FilterControls } from "@/components/filter-controls";
@@ -22,68 +16,33 @@ import { HistorySheet } from "@/components/history-sheet";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 // Icons
 import { Users, ScanSearch, Briefcase, Snail, ServerOff, Mail } from "lucide-react";
->>>>>>> mail-service-and-navbar--implemented
 // Hooks and Contexts
 import { useLoading } from "@/contexts/loading-context";
 import { useAuth } from "@/contexts/auth-context";
-<<<<<<< HEAD
-// Types
-import type { ResumeFile, RankedCandidate, JobDescriptionFile } from "@/lib/types";
-=======
 // AI Flows and Types
 import { performBulkScreening, type PerformBulkScreeningInput, type PerformBulkScreeningOutput } from "@/ai/flows/rank-candidates";
 import { extractJobRoles as extractJobRolesAI, type ExtractJobRolesInput as ExtractJobRolesAIInput, type ExtractJobRolesOutput as ExtractJobRolesAIOutput } from "@/ai/flows/extract-job-roles";
-import type { ResumeFile, RankedCandidate, Filters, JobDescriptionFile, JobScreeningResult, ExtractedJobRole } from "@/lib/types";
+import type { ResumeFile, RankedCandidate, Filters, JobScreeningResult, ExtractedJobRole } from "@/lib/types";
 // Firebase Services
 import { saveJobScreeningResult, getAllJobScreeningResultsForUser, deleteJobScreeningResult, deleteAllJobScreeningResults } from "@/services/firestoreService";
 import { db as firestoreDb } from "@/lib/firebase/config";
 
->>>>>>> mail-service-and-navbar--implemented
 
 // Max file size for uploads
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
-<<<<<<< HEAD
-/**
- * Resume Ranker Page Component.
- * This is the core feature page where users can upload JDs and resumes.
- * NOTE: Core logic has been temporarily removed to fix a critical loading issue.
- */
-export default function ResumeRankerPage() {
-  const { setAppIsLoading } = useLoading();
-  const { currentUser } = useAuth();
-=======
+const initialFilters: Filters = {
+  scoreRange: [0, 100],
+  skillKeyword: "",
+};
+
 export default function ResumeRankerPage() {
   const { setIsPageLoading } = useLoading();
   const { currentUser } = useAuth();
   const { toast } = useToast();
->>>>>>> mail-service-and-navbar--implemented
 
   const [extractedJobRoles, setExtractedJobRoles] = useState<ExtractJobRolesAIOutput>([]);
   const [uploadedResumeFiles, setUploadedResumeFiles] = useState<ResumeFile[]>([]);
-<<<<<<< HEAD
-  const [uploadedJdFiles, setUploadedJdFiles] = useState<JobDescriptionFile[]>([]);
-
-  // State for modals
-  const [selectedCandidateForFeedback, setSelectedCandidateForFeedback] = useState<RankedCandidate | null>(null);
-  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
-  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
-  const [candidatesForEmail, setCandidatesForEmail] = useState<RankedCandidate[]>([]);
-
-
-  // Turn off the global page loader as soon as the component mounts.
-  useEffect(() => {
-    setAppIsLoading(false);
-  }, [setAppIsLoading]);
-
-  // Dummy handler for JDs - will be reimplemented
-  const handleJobDescriptionUpload = useCallback(async (files: File[]) => {
-      const newJdFiles = files.map(f => ({ id: crypto.randomUUID(), file: f, dataUri: '', name: f.name }));
-      setUploadedJdFiles(newJdFiles);
-  }, []);
-
-  // Dummy handler for Resumes - will be reimplemented
-=======
   
   const [allScreeningResults, setAllScreeningResults] = useState<JobScreeningResult[]>([]);
   const [currentScreeningResult, setCurrentScreeningResult] = useState<JobScreeningResult | null>(null);
@@ -151,19 +110,20 @@ export default function ResumeRankerPage() {
     }
   }, [isLoadingScreening]);
 
-  const handleJobDescriptionUploadAndExtraction = useCallback(async (initialJdUploads: JobDescriptionFile[]) => {
+  const handleJobDescriptionUploadAndExtraction = useCallback(async (files: File[]) => {
     if (!currentUser?.uid) return;
     setIsLoadingJDExtraction(true);
     setCurrentScreeningResult(null); // Clear previous results
     try {
-      const jdUploads = await Promise.all(initialJdUploads.map(async (jdFile) => {
+      const jdUploadsPromises = files.map(async (file) => {
         const dataUri = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader(); reader.onload = () => resolve(reader.result as string); reader.onerror = reject; reader.readAsDataURL(jdFile.file);
+          const reader = new FileReader(); reader.onload = () => resolve(reader.result as string); reader.onerror = reject; reader.readAsDataURL(file);
         });
-        return { ...jdFile, dataUri };
-      }));
+        return { name: file.name, dataUri };
+      });
+      const jdUploads = await Promise.all(jdUploadsPromises);
       
-      const aiInput: ExtractJobRolesAIInput = { jobDescriptionDocuments: jdUploads.map(jd => ({ name: jd.name, dataUri: jd.dataUri })) };
+      const aiInput: ExtractJobRolesAIInput = { jobDescriptionDocuments: jdUploads };
       const aiOutput: ExtractJobRolesAIOutput = await extractJobRolesAI(aiInput);
       
       if (aiOutput.length > 0) {
@@ -213,56 +173,22 @@ export default function ResumeRankerPage() {
     }
   }, [currentUser?.uid, extractedJobRoles, uploadedResumeFiles, toast, isFirestoreAvailable]);
   
->>>>>>> mail-service-and-navbar--implemented
   const handleResumesUpload = useCallback(async (files: File[]) => {
-     const newResumeFiles = files.map(f => ({ id: crypto.randomUUID(), file: f, dataUri: '', name: f.name }));
-     setUploadedResumeFiles(newResumeFiles);
-  }, []); 
+    const newResumeFilesPromises = files.map(async (file) => {
+      const dataUri = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader(); reader.onload = () => resolve(reader.result as string); reader.onerror = reject; reader.readAsDataURL(file);
+      });
+      return { id: crypto.randomUUID(), file, dataUri, name: file.name };
+    });
 
-<<<<<<< HEAD
-  // If the user is not logged in, show a message.
-  if (!currentUser) {
-    return (
-      <div className="container mx-auto p-4 md:p-8 space-y-8 pt-24">
-        <Card className="shadow-lg">
-            <CardContent className="pt-6 text-center">
-                <p className="text-lg text-muted-foreground">
-                    Please <a href="/login" className="text-primary underline">log in</a> to use the Resume Ranker.
-                </p>
-            </CardContent>
-        </Card>
-      </div>
-    )
-  }
+    try {
+        const newResumeFiles = await Promise.all(newResumeFilesPromises);
+        setUploadedResumeFiles(newResumeFiles);
+    } catch(error) {
+        toast({ title: "Error processing resumes", description: "Could not read one or more resume files.", variant: "destructive" });
+    }
+  }, [toast]); 
 
-  return (
-    <div className="container mx-auto p-4 md:p-8 space-y-8 pt-24">
-       <Card className="mb-8 shadow-md"><CardHeader><CardTitle className="text-2xl font-headline text-primary flex items-center"><ScanSearch className="w-7 h-7 mr-3" /> AI-Powered Resume Ranker</CardTitle><CardDescription>Upload job descriptions and resumes to screen candidates.</CardDescription></CardHeader></Card>
-
-        <>
-          <div className="flex flex-col md:flex-row gap-8">
-            <div className="flex-1"><Card className="shadow-lg h-full"><CardHeader><CardTitle className="flex items-center text-xl font-headline"><Briefcase className="w-6 h-6 mr-3 text-primary" />Upload Job Descriptions</CardTitle><CardDescription>Upload one or more JD files.</CardDescription></CardHeader><CardContent><FileUploadArea onFilesUpload={handleJobDescriptionUpload} acceptedFileTypes={{ "application/pdf": [".pdf"], "text/plain": [".txt"],"application/msword": [".doc"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"]}} multiple={true} label="PDF, TXT, DOC, DOCX files up to 5MB" id="job-description-upload" maxSizeInBytes={MAX_FILE_SIZE_BYTES}/></CardContent></Card></div>
-            <div className="flex-1"><Card className="shadow-lg h-full"><CardHeader><CardTitle className="flex items-center text-xl font-headline"><Users className="w-6 h-6 mr-3 text-primary" />Upload Resumes</CardTitle><CardDescription>Upload candidate resumes to be screened.</CardDescription></CardHeader><CardContent><FileUploadArea onFilesUpload={handleResumesUpload} acceptedFileTypes={{ "application/pdf": [".pdf"], "text/plain": [".txt"],"application/msword": [".doc"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"]}} multiple label="PDF, TXT, DOC, DOCX files up to 5MB" id="resume-upload" maxSizeInBytes={MAX_FILE_SIZE_BYTES}/></CardContent></Card></div>
-          </div>
-          
-          <div className="flex justify-center pt-4">
-            <Button onClick={() => {}} disabled={true} size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-base px-8 py-6 shadow-md">
-              <ScanSearch className="w-5 h-5 mr-2" />
-              Screen Resumes (Temporarily Disabled)
-            </Button>
-          </div>
-          
-          <div className="space-y-8">
-            <Card className="shadow-lg">
-                <CardHeader>
-                    <CardTitle className="text-xl font-headline text-primary">Results</CardTitle>
-                    <CardDescription>Screening functionality is temporarily disabled to resolve a loading issue. Please check back later.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-center text-muted-foreground py-8">Upload files above and click "Screen Resumes" to see results here.</p>
-                </CardContent>
-            </Card>
-=======
   const handleJobRoleChange = (roleId: string | null) => { 
       setSelectedJobRoleId(roleId); 
       setFilters(initialFilters);
@@ -295,7 +221,6 @@ export default function ResumeRankerPage() {
       toast({ title: "Deletion Failed", description: "Could not delete the session.", variant: "destructive" });
     } finally {
       setSessionToDelete(null);
-      setIsHistorySheetOpen(false);
     }
   };
 
@@ -375,7 +300,7 @@ export default function ResumeRankerPage() {
       {isFirestoreAvailable && (
         <>
           <div className="flex flex-col md:flex-row gap-8">
-            <div className="flex-1"><Card className="shadow-lg h-full"><CardHeader><CardTitle className="flex items-center text-xl font-headline"><Briefcase className="w-6 h-6 mr-3 text-primary" />Upload Job Descriptions</CardTitle><CardDescription>Create new roles for this session.</CardDescription></CardHeader><CardContent><FileUploadArea onFilesUpload={(files) => handleJobDescriptionUploadAndExtraction(files.map(f => ({ id: crypto.randomUUID(), file: f, dataUri: '', name: f.name })))} acceptedFileTypes={{ "application/pdf": [".pdf"], "text/plain": [".txt"],"application/msword": [".doc"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"]}} multiple={true} label="PDF, TXT, DOC, DOCX files up to 5MB" id="job-description-upload" maxSizeInBytes={MAX_FILE_SIZE_BYTES}/></CardContent></Card></div>
+            <div className="flex-1"><Card className="shadow-lg h-full"><CardHeader><CardTitle className="flex items-center text-xl font-headline"><Briefcase className="w-6 h-6 mr-3 text-primary" />Upload Job Descriptions</CardTitle><CardDescription>Create new roles for this session.</CardDescription></CardHeader><CardContent><FileUploadArea onFilesUpload={handleJobDescriptionUploadAndExtraction} acceptedFileTypes={{ "application/pdf": [".pdf"], "text/plain": [".txt"],"application/msword": [".doc"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"]}} multiple={true} label="PDF, TXT, DOC, DOCX files up to 5MB" id="job-description-upload" maxSizeInBytes={MAX_FILE_SIZE_BYTES}/></CardContent></Card></div>
             <div className="flex-1"><Card className="shadow-lg h-full"><CardHeader><CardTitle className="flex items-center text-xl font-headline"><Users className="w-6 h-6 mr-3 text-primary" />Upload Resumes</CardTitle><CardDescription>Upload resumes to screen for the selected role.</CardDescription></CardHeader><CardContent><FileUploadArea onFilesUpload={handleResumesUpload} acceptedFileTypes={{ "application/pdf": [".pdf"], "text/plain": [".txt"],"application/msword": [".doc"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"]}} multiple label="PDF, TXT, DOC, DOCX files up to 5MB" id="resume-upload" maxSizeInBytes={MAX_FILE_SIZE_BYTES}/></CardContent></Card></div>
           </div>
           
@@ -430,18 +355,12 @@ export default function ResumeRankerPage() {
                     {extractedJobRoles.length > 0 ? "Select a job role and upload resumes to start screening." : allScreeningResults.length > 0 ? "Upload a job description or select a session from history to begin." : "Upload a job description to get started."}
                 </div>
             )}
->>>>>>> mail-service-and-navbar--implemented
           </div>
 
           <FeedbackModal isOpen={isFeedbackModalOpen} onClose={() => setIsFeedbackModalOpen(false)} candidate={selectedCandidateForFeedback}/>
           <EmailComposeModal 
             isOpen={isEmailModalOpen} 
             onClose={() => setIsEmailModalOpen(false)} 
-<<<<<<< HEAD
-            candidates={candidatesForEmail}
-            jobRoleName={""}
-          />
-=======
             recipients={emailRecipients}
             jobTitle={currentScreeningResult?.jobDescriptionName || 'the position'}
            />
@@ -467,8 +386,8 @@ export default function ResumeRankerPage() {
               <AlertDialogFooter><AlertDialogCancel onClick={() => setIsDeleteAllDialogOpen(false)}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleConfirmDeleteAll} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Yes, delete all</AlertDialogAction></AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
->>>>>>> mail-service-and-navbar--implemented
         </>
+      )}
     </div>
   );
 }
