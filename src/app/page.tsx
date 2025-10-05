@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import Image from "next/image";
 // Icons
-import { ArrowRight, CheckCircle, BarChartBig, ScanSearch, MessageSquarePlus, ShieldCheckIcon, Mail, Phone, Snail } from "lucide-react";
+import { ArrowRight, CheckCircle, BarChartBig, ScanSearch, MessageSquarePlus, ShieldCheckIcon, Mail, Phone, BrainCircuit, Snail } from "lucide-react";
 // Animation Library
 import { motion, useMotionValue, useTransform } from "framer-motion";
 // Hooks and Contexts
@@ -152,7 +152,9 @@ const HeroHeading = () => {
                 <span className="block"><AnimatedText text="Unlock Your Hiring" mouse={mouse} /></span>
                 <span className="block"><AnimatedText text="Potential with" mouse={mouse} /></span>
                 <span className="block" style={{ whiteSpace: 'nowrap' }}>
-                    <AnimatedText text="AI Recruiter" mouse={mouse} isSpecial={true} />
+                    <AnimatedText text="AI" mouse={mouse} isSpecial={true} />
+                    <AnimatedText text=" " mouse={mouse} />
+                    <AnimatedText text="Recruiter" mouse={mouse} isSpecial={true} />
                 </span>
             </span>
         </motion.h1>
@@ -170,7 +172,7 @@ export default function LandingPage() {
 
   // Data for the features section.
   const features = [
-    { icon: Snail, title: "AI-Powered Resume Ranking", description: "Automatically rank candidates based on job description relevance. Get match scores and AI-generated feedback.", items: ["Intelligent Skill Matching", "ATS Compatibility Insights", "Customizable Filtering"], delay: 0.3 },
+    { icon: BrainCircuit, title: "AI-Powered Resume Ranking", description: "Automatically rank candidates based on job description relevance. Get match scores and AI-generated feedback.", items: ["Intelligent Skill Matching", "ATS Compatibility Insights", "Customizable Filtering"], delay: 0.3 },
     { icon: ScanSearch, title: "ATS Score Finder", description: "Analyze resumes for Applicant Tracking System (ATS) compatibility. Get scores and suggestions to optimize.", items: ["Resume Structure Analysis", "Keyword Optimization Tips", "Format Compatibility Check"], delay: 0.45 },
     { icon: MessageSquarePlus, title: "AI Interview Question Generator", description: "Craft tailored interview questions from job descriptions. Get categorized questions (technical, behavioral, etc.).", items: ["Categorized Question Sets", "JD-Specific Insights", "Customizable Focus Areas"], delay: 0.6 },
     { icon: ShieldCheckIcon, title: "Secure Authentication & Access", description: "Reliable user authentication to protect your data and provide personalized experiences.", items: ["Email & Password Login", "Protected User Dashboards", "Secure Session Management"], delay: 0.75 }
@@ -194,7 +196,7 @@ export default function LandingPage() {
                 {/* Call to Action Buttons */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.6 }} className="flex flex-col gap-4 min-[400px]:flex-row">
                   <motion.div whileHover={{ scale: 1.05, y: -2, transition: {type: 'spring', stiffness: 300} }} whileTap={{ scale: 0.95 }}>
-                    <Button asChild size="lg"><Link href={getStartedLink}>{currentUser ? "Go to Dashboard" : "Get Started"}<ArrowRight className="ml-2 h-5 w-5" /></Link></Button>
+                    <Button asChild size="lg" className="shiny-button"><Link href={getStartedLink}>{currentUser ? "Go to Dashboard" : "Get Started"}<ArrowRight className="ml-2 h-5 w-5" /></Link></Button>
                   </motion.div>
                    <motion.div whileHover={{ scale: 1.05, y: -2, transition: {type: 'spring', stiffness: 300} }} whileTap={{ scale: 0.95 }}>
                      <Button variant="outline" size="lg" asChild><Link href="/#features">Learn More</Link></Button>
@@ -279,7 +281,7 @@ export default function LandingPage() {
             </motion.div>
             <motion.div className="mx-auto w-full max-w-sm space-y-2" initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }} variants={sectionVariants} custom={0.4}>
               <motion.div whileHover={{ scale: 1.05, transition: {type: 'spring', stiffness: 300} }} whileTap={{ scale: 0.95 }}>
-                <Button asChild size="lg"><Link href={getStartedLink}>{currentUser ? "Go to Dashboard" : "Sign Up for Free"}<ArrowRight className="ml-2 h-5 w-5" /></Link></Button>
+                <Button asChild size="lg" className="shiny-button"><Link href={getStartedLink}>{currentUser ? "Go to Dashboard" : "Sign Up for Free"}<ArrowRight className="ml-2 h-5 w-5" /></Link></Button>
               </motion.div>
               <p className="text-xs text-muted-foreground">Get started with our core features. No credit card required.</p>
             </motion.div>
