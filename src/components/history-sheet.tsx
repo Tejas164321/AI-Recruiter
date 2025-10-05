@@ -85,7 +85,7 @@ export function HistorySheet({
                         variant="ghost"
                         size="icon"
                         onClick={(e) => handleDelete(e, session)}
-                        className="absolute right-10 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/20 hover:text-destructive"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/20 hover:text-destructive"
                         aria-label="Delete session"
                     >
                         <Trash2 className="w-4 h-4" />
@@ -112,5 +112,3 @@ export function HistorySheet({
     </Sheet>
   );
 }
-
-    

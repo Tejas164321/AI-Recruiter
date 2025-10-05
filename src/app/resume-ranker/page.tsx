@@ -390,5 +390,3 @@ export default function ResumeRankerPage() {
     </div>
   );
 }
-
-    
