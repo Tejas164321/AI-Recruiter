@@ -13,6 +13,10 @@ interface CardData {
   name: string;
   score: number;
   skills: string[];
+  initial: {
+    top: string;
+    left: string;
+  };
   animation: {
     x: string[];
     y: string[];
@@ -22,27 +26,32 @@ interface CardData {
   };
 }
 
-// Data for the different cards to be displayed
+// Data for the different cards to be displayed with more varied positions and movements
 const cardsData: CardData[] = [
   {
     id: 1, name: "Priya Patel", score: 92, skills: ["React", "Node.js"], 
-    animation: { x: ["-5%", "5%", "-5%"], y: ["-10%", "10%", "-10%"], rotate: [-3, 5, -3], duration: 18, delay: 0 }
+    initial: { top: '5%', left: '15%' },
+    animation: { x: ["-10%", "5%", "-10%"], y: ["-15%", "10%", "-15%"], rotate: [-5, 3, -5], duration: 20, delay: 0 }
   },
   {
     id: 2, name: "John Smith", score: 85, skills: ["Python", "SQL"], 
-    animation: { x: ["10%", "-10%", "10%"], y: ["8%", "-12%", "8%"], rotate: [4, -2, 4], duration: 22, delay: 2 }
+    initial: { top: '30%', left: '60%' },
+    animation: { x: ["10%", "-12%", "10%"], y: ["15%", "-20%", "15%"], rotate: [4, -3, 4], duration: 24, delay: 2.5 }
   },
   {
     id: 3, name: "Emily Chen", score: 78, skills: ["Figma", "UX"],
-    animation: { x: ["-8%", "12%", "-8%"], y: ["15%", "-5%", "15%"], rotate: [-5, 3, -5], duration: 20, delay: 4 }
+    initial: { top: '65%', left: '5%' },
+    animation: { x: ["-8%", "15%", "-8%"], y: ["20%", "-10%", "20%"], rotate: [-4, 5, -4], duration: 22, delay: 4 }
   },
   {
     id: 4, name: "Rohan Gupta", score: 95, skills: ["AWS", "DevOps"],
-    animation: { x: ["12%", "-8%", "12%"], y: ["-15%", "5%", "-15%"], rotate: [2, -4, 2], duration: 19, delay: 1 }
+    initial: { top: '0%', left: '70%' },
+    animation: { x: ["15%", "-10%", "15%"], y: ["-10%", "15%", "-10%"], rotate: [3, -5, 3], duration: 21, delay: 1.5 }
   },
   {
     id: 5, name: "Aisha Khan", score: 88, skills: ["Marketing", "SEO"],
-    animation: { x: ["5%", "-5%", "5%"], y: ["12%", "-8%", "12%"], rotate: [-2, 4, -2], duration: 24, delay: 3 }
+    initial: { top: '50%', left: '30%' },
+    animation: { x: ["8%", "-12%", "8%"], y: ["-20%", "15%", "-20%"], rotate: [-3, 4, -3], duration: 25, delay: 3 }
   },
 ];
 
@@ -71,9 +80,9 @@ const FloatingCard = ({ data }: { data: CardData }) => {
     <motion.div
       className="absolute"
       style={{
-        width: '180px',
-        top: `${(data.id * 18)}%`, // Stagger vertical start position
-        left: `${(data.id % 2) * 45 + 10}%`, // Stagger horizontal start position
+        width: '220px', // Increased card size
+        top: data.initial.top,
+        left: data.initial.left,
         perspective: 800,
       }}
       animate={{
