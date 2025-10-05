@@ -86,7 +86,7 @@
 }
 
 .timeline-content {
-  @apply w-[calc(50%-3rem)] rounded-lg;
+  @apply w-[calc(50%-2rem)] rounded-lg;
 }
 
 /* On mobile, stack everything in a single column */
@@ -160,7 +160,7 @@
   animation: rotate-sparkle 15s linear infinite;
 
   /* The key change: Add a drop-shadow and a slight blur to create the spreading glow */
-  filter: drop-shadow(0 0 8px hsl(var(--primary))) blur(1px);
+  filter: blur(1px);
 }
 
 .sparkle-border-container::after {
@@ -186,7 +186,7 @@
     background-image: linear-gradient(145deg, hsl(var(--primary) / 0.9), hsl(var(--primary) / 1));
     border: 1px solid hsl(var(--primary) / 0.5);
     box-shadow: 0 4px 15px hsl(var(--primary) / 0.2), 0 1px 2px hsl(var(--primary) / 0.1) inset;
-    color: white;
+    color: hsl(var(--primary-foreground));
   }
   .dark .shiny-button {
      @apply text-primary-foreground;
