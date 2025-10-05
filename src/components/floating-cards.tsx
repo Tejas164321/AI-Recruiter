@@ -141,7 +141,7 @@ const FloatingCard = ({ data }: { data: CardData }) => {
  */
 export const FloatingCards = () => {
   return (
-    <div className="relative w-full h-full min-h-[400px]">
+    <div className="relative w-full h-full min-h-[400px] mt-8">
       {cardsData.map((card) => (
         <FloatingCard key={card.id} data={card} />
       ))}
