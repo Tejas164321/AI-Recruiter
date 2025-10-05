@@ -12,46 +12,44 @@ interface CardData {
   id: number;
   name: string;
   score: number;
-  skills: string[];
   initial: {
-    top: string;
-    left: string;
+    size: number;
+    radius: number;
+    startAngle: number;
   };
   animation: {
-    x: string[];
-    y: string[];
-    rotate: number[];
     duration: number;
     delay: number;
+    direction: 'clockwise' | 'counter-clockwise';
   };
 }
 
-// Data for the different cards to be displayed with more varied positions and movements
+// Data for the different cards to be displayed with circular paths
 const cardsData: CardData[] = [
   {
-    id: 1, name: "Priya Patel", score: 92, skills: ["React", "Node.js"], 
-    initial: { top: '5%', left: '15%' },
-    animation: { x: ["-10%", "5%", "-10%"], y: ["-15%", "10%", "-15%"], rotate: [-5, 3, -5], duration: 20, delay: 0 }
+    id: 1, name: "Priya Patel", score: 92, 
+    initial: { size: 200, radius: 120, startAngle: 0 },
+    animation: { duration: 25, delay: 0, direction: 'clockwise' }
   },
   {
-    id: 2, name: "John Smith", score: 85, skills: ["Python", "SQL"], 
-    initial: { top: '30%', left: '60%' },
-    animation: { x: ["10%", "-12%", "10%"], y: ["15%", "-20%", "15%"], rotate: [4, -3, 4], duration: 24, delay: 2.5 }
+    id: 2, name: "John Smith", score: 85, 
+    initial: { size: 180, radius: 180, startAngle: 120 },
+    animation: { duration: 30, delay: 2, direction: 'counter-clockwise' }
   },
   {
-    id: 3, name: "Emily Chen", score: 78, skills: ["Figma", "UX"],
-    initial: { top: '65%', left: '5%' },
-    animation: { x: ["-8%", "15%", "-8%"], y: ["20%", "-10%", "20%"], rotate: [-4, 5, -4], duration: 22, delay: 4 }
+    id: 3, name: "Emily Chen", score: 78,
+    initial: { size: 170, radius: 80, startAngle: 240 },
+    animation: { duration: 28, delay: 4, direction: 'clockwise' }
   },
   {
-    id: 4, name: "Rohan Gupta", score: 95, skills: ["AWS", "DevOps"],
-    initial: { top: '0%', left: '70%' },
-    animation: { x: ["15%", "-10%", "15%"], y: ["-10%", "15%", "-10%"], rotate: [3, -5, 3], duration: 21, delay: 1.5 }
+    id: 4, name: "Rohan Gupta", score: 95,
+    initial: { size: 190, radius: 220, startAngle: 60 },
+    animation: { duration: 35, delay: 1, direction: 'counter-clockwise' }
   },
   {
-    id: 5, name: "Aisha Khan", score: 88, skills: ["Marketing", "SEO"],
-    initial: { top: '50%', left: '30%' },
-    animation: { x: ["8%", "-12%", "8%"], y: ["-20%", "15%", "-20%"], rotate: [-3, 4, -3], duration: 25, delay: 3 }
+    id: 5, name: "Aisha Khan", score: 88,
+    initial: { size: 210, radius: 150, startAngle: 300 },
+    animation: { duration: 26, delay: 3, direction: 'clockwise' }
   },
 ];
 
@@ -75,44 +73,48 @@ const MiniBarChart = () => (
  * @param {CardData} props.data - The data for the card.
  */
 const FloatingCard = ({ data }: { data: CardData }) => {
-    
+  const { size, radius, startAngle } = data.initial;
+  const { duration, delay, direction } = data.animation;
+  const rotationValue = direction === 'clockwise' ? 360 : -360;
+
   return (
+    // This is the rotator div. It's positioned at the center and rotates.
     <motion.div
-      className="absolute"
-      style={{
-        width: '220px', // Increased card size
-        top: data.initial.top,
-        left: data.initial.left,
-        perspective: 800,
+      style={{ 
+        position: 'absolute', 
+        top: '50%', 
+        left: '50%',
+        rotate: startAngle,
       }}
-      animate={{
-        x: data.animation.x,
-        y: data.animation.y,
-        rotate: data.animation.rotate,
-      }}
+      animate={{ rotate: startAngle + rotationValue }}
       transition={{
-        duration: data.animation.duration,
-        ease: 'easeInOut',
+        duration,
+        delay,
+        ease: 'linear',
         repeat: Infinity,
-        repeatType: 'mirror',
-        delay: data.animation.delay,
       }}
     >
-      <Card className="w-full shadow-lg border-border/50 bg-card/80 backdrop-blur-sm transition-all duration-300 hover:shadow-primary/20 hover:border-primary/40 hover:-translate-y-1">
-        <CardHeader className="p-3">
-          <div className="flex items-center space-x-2">
-            <div className="p-1.5 bg-muted rounded-full"><User className="w-4 h-4 text-muted-foreground" /></div>
-            <p className="text-sm font-semibold truncate">{data.name}</p>
-          </div>
-        </CardHeader>
-        <CardContent className="p-3 pt-0 space-y-2">
-            <div className="flex justify-between items-center">
-                <Badge variant="outline">{data.score}/100</Badge>
-                {data.score > 90 ? <Star className="w-4 h-4 text-yellow-500" /> : <Activity className="w-4 h-4 text-muted-foreground"/>}
+      {/* This is the card itself, offset from the center by the radius. */}
+      <motion.div 
+        style={{ width: size, y: -radius }}
+        className="absolute bottom-1/2 left-1/2 -translate-x-1/2"
+      >
+        <Card className="w-full shadow-lg border-border/50 bg-card/80 backdrop-blur-sm transition-all duration-300 hover:shadow-primary/20 hover:border-primary/40 hover:-translate-y-1">
+          <CardHeader className="p-3">
+            <div className="flex items-center space-x-2">
+              <div className="p-1.5 bg-muted rounded-full"><User className="w-4 h-4 text-muted-foreground" /></div>
+              <p className="text-sm font-semibold truncate">{data.name}</p>
             </div>
-            <MiniBarChart />
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent className="p-3 pt-0 space-y-2">
+              <div className="flex justify-between items-center">
+                  <Badge variant="outline">{data.score}/100</Badge>
+                  {data.score > 90 ? <Star className="w-4 h-4 text-yellow-500" /> : <Activity className="w-4 h-4 text-muted-foreground"/>}
+              </div>
+              <MiniBarChart />
+          </CardContent>
+        </Card>
+      </motion.div>
     </motion.div>
   );
 };
@@ -124,7 +126,7 @@ const FloatingCard = ({ data }: { data: CardData }) => {
  */
 export const FloatingCards = () => {
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-full min-h-[400px]">
       {cardsData.map((card) => (
         <FloatingCard key={card.id} data={card} />
       ))}
