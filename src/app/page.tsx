@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -141,7 +142,7 @@ const HeroHeading = () => {
             {/* Mobile & Tablet view (flowing text) */}
             <span className="lg:hidden">
                 <AnimatedText text="Unlock Your Hiring Potential with " mouse={mouse} />
-                <span style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.8))", whiteSpace: 'nowrap' }}>
+                <span style={{ whiteSpace: 'nowrap' }}>
                     <AnimatedText text="AI Recruiter" mouse={mouse} isSpecial={true} />
                 </span>
             </span>
@@ -150,7 +151,7 @@ const HeroHeading = () => {
             <span className="hidden lg:inline">
                 <span className="block"><AnimatedText text="Unlock Your Hiring" mouse={mouse} /></span>
                 <span className="block"><AnimatedText text="Potential with" mouse={mouse} /></span>
-                <span className="block" style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.8))", whiteSpace: 'nowrap' }}>
+                <span className="block" style={{ whiteSpace: 'nowrap' }}>
                     <AnimatedText text="AI Recruiter" mouse={mouse} isSpecial={true} />
                 </span>
             </span>
