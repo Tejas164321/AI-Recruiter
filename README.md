@@ -34,6 +34,117 @@ This project is built with a production-ready stack and serves as a comprehensiv
 
 ---
 
+## 🏗️ Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            ResumeRank AI Architecture                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           User Interface Layer                              │
+│                                                                             │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐              │
+│  │   Landing Page  │  │   Dashboard     │  │   Auth Pages    │              │
+│  │   (Next.js)     │  │   (Protected)   │  │   (Login/Signup)│              │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘              │
+│                                                                             │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐              │
+│  │ Resume Ranker   │  │ ATS Score Finder│  │ Interview Q Gen │              │
+│  │   Feature       │  │   Feature       │  │   Feature       │              │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘              │
+│                                                                             │
+│  Built with: Next.js (App Router), React, ShadCN UI, Tailwind CSS           │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        Authentication & Data Layer                          │
+│                                                                             │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐              │
+│  │ Firebase Auth   │  │ Firestore DB    │  │ User Sessions   │              │
+│  │ (Email/Password)│  │ (NoSQL)         │  │ (Secure)        │              │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘              │
+│                                                                             │
+│    Stores: User data, Job Descriptions, Resumes, Screening Results          │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            AI Processing Layer                              │
+│                                                                             │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐              │
+│  │   Genkit Flows  │  │   AI Prompts    │  │   Data Analysis │              │
+│  │  (Server Actions│  │   (Structured)  │  │   (Resume/JD)   │              │
+│  │   in Next.js)   │  │                 │  │                 │              │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘              │
+│                                                                             │
+│  Flows: Rank Candidates, Calculate ATS Score, Generate Interview Questions  │
+│                                                                             │
+│  ┌─────────────────┐                                                        │
+│  │ Google AI Gemini│                                                        │
+│  │   (LLM Model)   │                                                        │
+│  └─────────────────┘                                                        │
+│                                                                             │
+│  Powered by: Genkit Framework, Google AI API                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            Deployment & Hosting                             │
+│                                                                             │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐              │
+│  │ Firebase App    │  │   CI/CD         │  │   Environment   │              │
+│  │   Hosting       │  │   (GitHub)      │  │   Variables     │              │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘              │
+│                                                                             │
+│          Ready for production deployment with Firebase                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Architecture Description
+
+The architecture of ResumeRank AI is designed as a modern, scalable full-stack web application that integrates cutting-edge AI capabilities with robust backend services. It follows a layered architecture pattern to ensure separation of concerns, maintainability, and extensibility.
+
+#### 1. **User Interface Layer**
+   - **Technology**: Next.js with App Router, React components, ShadCN UI library, Tailwind CSS for styling.
+   - **Purpose**: Provides the frontend interface for user interactions, including landing pages, authentication forms, dashboard, and feature-specific pages (Resume Ranker, ATS Score Finder, Interview Question Generator).
+   - **Key Features**: Responsive design, light/dark mode support, drag-and-drop file uploads, real-time loading indicators, and toast notifications.
+   - **Data Flow**: Handles user input (file uploads, form submissions), displays results, and manages client-side state with React contexts (AuthContext, LoadingContext).
+
+#### 2. **Authentication & Data Layer**
+   - **Technology**: Firebase Authentication and Firestore NoSQL database.
+   - **Purpose**: Manages user authentication (email/password), session handling, and secure data storage.
+   - **Data Storage**: User profiles, uploaded job descriptions (as data URIs), candidate resumes, screening results, and generated interview questions.
+   - **Security**: All data is tied to authenticated users, ensuring privacy and data isolation.
+
+#### 3. **AI Processing Layer**
+   - **Technology**: Genkit framework integrated with Google AI's Gemini 2.0 Flash model.
+   - **Purpose**: Handles all AI-driven operations through structured flows and prompts.
+   - **Key Components**:
+     - **AI Flows**: Server-side functions (rank-candidates, calculate-ats-score, extract-job-roles, generate-jd-interview-questions) that orchestrate AI processing.
+     - **Prompts**: Structured prompts that guide the LLM to perform specific tasks like resume analysis, scoring, and question generation.
+     - **Data Processing**: Converts uploaded files to data URIs for AI consumption, processes AI responses, and formats results for frontend display.
+   - **AI Capabilities**: Leverages Gemini's natural language understanding for intelligent candidate ranking, ATS compatibility analysis, and contextual interview question creation.
+
+#### 4. **Deployment & Hosting Layer**
+   - **Technology**: Firebase App Hosting for seamless deployment, GitHub Actions for CI/CD.
+   - **Purpose**: Ensures reliable, scalable hosting with automatic builds and environment management.
+   - **Configuration**: Environment variables for API keys, Firebase config, and other secrets.
+
+#### Data Flow Overview
+1. **User Interaction**: User uploads job descriptions and resumes via the UI.
+2. **Authentication**: Firebase Auth verifies user identity.
+3. **Data Storage**: Files are temporarily processed and stored in Firestore.
+4. **AI Processing**: Genkit flows invoke Google AI Gemini to analyze documents and generate results.
+5. **Result Delivery**: Processed data (scores, feedback, questions) is stored and displayed to the user.
+6. **Persistence**: All results are saved in Firestore for future access and analysis.
+
+This architecture ensures high performance, security, and scalability while providing a seamless user experience for AI-powered recruitment workflows.
+
+---
+
 ## 🚀 Getting Started
 
 Follow these instructions to get a copy of the project up and running on your local machine for development and testing purposes.
