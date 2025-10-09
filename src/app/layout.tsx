@@ -10,6 +10,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { LoadingProvider } from "@/contexts/loading-context"; 
 import { AuthProvider } from "@/contexts/auth-context";
 import { cn } from '@/lib/utils';
+import { SpeedInsights } from "@vercel/speed-insights/next"
+
 
 /**
  * Initializes the Inter font with specified subsets and a CSS variable.
@@ -26,7 +28,7 @@ const inter = Inter({
  * This information is used for SEO and browser tab information.
  */
 export const metadata: Metadata = {
-  title: 'ResumeRank AI',
+  title: 'AI Recruiter',
   description: 'AI-Powered Resume Screening and Ranking',
   icons: {
     // Defines the icon for the browser tab (favicon).
@@ -56,10 +58,11 @@ export default function RootLayout({
         {/* Font link tags are no longer needed as we are using next/font */}
       </head>
       <body className={cn(inter.variable, "font-body antialiased")}>
+      <SpeedInsights/>
         {/* ThemeProvider manages light/dark mode */}
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="light"
           enableSystem
           disableTransitionOnChange
         >

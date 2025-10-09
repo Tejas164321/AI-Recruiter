@@ -36,7 +36,7 @@ type SortOption = 'score-desc' | 'score-asc' | 'date-desc';
  */
 export default function AtsScoreFinderPage() {
   // App-wide loading state context
-  const { setIsPageLoading: setAppIsLoading } = useLoading();
+  const { setIsPageLoading } = useLoading();
   // Authentication context to get the current user
   const { currentUser } = useAuth();
   // Toast notifications hook
@@ -70,7 +70,7 @@ export default function AtsScoreFinderPage() {
 
   // Effect to fetch saved ATS results from Firestore when the component mounts or user changes
   useEffect(() => {
-    setAppIsLoading(false); // Turn off the general page loader
+    setIsPageLoading(false); // Turn off the general page loader
     if (currentUser && isFirestoreAvailable) {
       setIsLoadingResultsFromDB(true);
       getAtsScoreResults()
@@ -85,7 +85,7 @@ export default function AtsScoreFinderPage() {
         setIsLoadingResultsFromDB(false);
         setAtsResults([]);
     }
-  }, [currentUser, toast, setAppIsLoading, isFirestoreAvailable]);
+  }, [currentUser, toast, setIsPageLoading, isFirestoreAvailable]);
 
   // Effect to scroll the "Analyze" button into view when files are uploaded
   useEffect(() => {
@@ -256,7 +256,7 @@ export default function AtsScoreFinderPage() {
   const isProcessing = isProcessingAts || isLoadingResultsFromDB;
 
   return (
-    <div className="container mx-auto p-4 md:p-8 space-y-8">
+    <div className="container mx-auto p-4 md:p-8 space-y-8 pt-24">
       {/* Page Header */}
       <Card className="mb-8 bg-gradient-to-r from-primary/5 via-background to-background border-primary/20 shadow-md">
         <CardHeader>
@@ -295,7 +295,7 @@ export default function AtsScoreFinderPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               <FileUploadArea onFilesUpload={handleResumesUpload} acceptedFileTypes={{"application/pdf": [".pdf"],"application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],"text/plain": [".txt"],"application/msword": [".doc"],}} multiple label={`PDF, DOCX, DOC, TXT files up to 5MB each (max ${MAX_FILES_ATS} files)`} id="ats-resume-upload" maxSizeInBytes={MAX_FILE_SIZE_BYTES}/>
-              <Button ref={analyzeButtonRef} onClick={handleAnalyzeResumes} disabled={isProcessingAts || uploadedResumeFiles.length === 0 || isLoadingResultsFromDB} size="lg" className="w-full md:w-auto bg-accent hover:bg-accent/90 text-accent-foreground shadow-md">
+              <Button ref={analyzeButtonRef} onClick={handleAnalyzeResumes} disabled={isProcessingAts || uploadedResumeFiles.length === 0 || isLoadingResultsFromDB} size="lg" className="w-full md:w-auto shiny-button">
                 {isProcessingAts ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <ScanSearch className="w-5 h-5 mr-2" />}
                 Find ATS Score
               </Button>

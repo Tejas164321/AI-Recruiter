@@ -10,11 +10,11 @@
 export default function PrivacyPage() {
   return (
     // Uses the 'prose' class from tailwindcss-typography for nice text formatting.
-    <div className="container mx-auto p-8 prose dark:prose-invert max-w-4xl">
+    <div className="container mx-auto p-8 prose dark:prose-invert max-w-4xl pt-8">
       <h1 className="text-3xl font-bold mb-6 font-headline">Privacy Policy</h1>
       <p className="text-muted-foreground mb-4">Last updated: {new Date().toLocaleDateString()}</p>
 
-      <p>Your privacy is important to us. It is ResumeRank AI&apos;s policy to respect your privacy regarding any information we may collect from you across our website and other sites we own and operate.</p>
+      <p>Your privacy is important to us. It is AI Recruiter&apos;s policy to respect your privacy regarding any information we may collect from you across our website and other sites we own and operate.</p>
 
       <h2 className="text-2xl font-semibold mt-6 mb-3">1. Information We Collect</h2>
       <p>We only ask for personal information when we truly need it to provide a service to you. We collect it by fair and lawful means, with your knowledge and consent.</p>

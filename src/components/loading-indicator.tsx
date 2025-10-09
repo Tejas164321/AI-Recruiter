@@ -1,7 +1,7 @@
 
 "use client";
 
-import { BrainCircuit } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 /**
  * Props for the LoadingIndicator component.
@@ -27,12 +27,7 @@ export function LoadingIndicator({ stage }: LoadingIndicatorProps) {
   return (
     <div className="flex flex-col items-center justify-center space-y-6 py-10 text-center">
       {/* The animated icon */}
-      <div className="relative w-16 h-16">
-        {/* A pulsing background glow */}
-        <div className="absolute inset-0 bg-primary rounded-full animate-pulse opacity-30"></div>
-        {/* A spinning brain icon */}
-        <BrainCircuit className="absolute inset-0 w-full h-full text-primary animate-spin" />
-      </div>
+      <Loader2 className="w-12 h-12 text-primary animate-spin" />
 
       {/* The loading messages */}
       <div>

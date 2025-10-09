@@ -2,7 +2,7 @@
 // Import the main 'genkit' function from the Genkit library.
 import {genkit} from 'genkit';
 // Import the Google AI plugin for Genkit, which allows interaction with Google's AI models like Gemini.
-import {googleAI} from '@genkit-ai/googleai';
+import {googleAI} from '@genkit-ai/google-genai';
 
 /**
  * Initializes and configures the global Genkit instance for the application.

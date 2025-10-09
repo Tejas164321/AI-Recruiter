@@ -1,34 +1,35 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 0%; /* Pure Black for AMOLED */
-    --foreground: 210 40% 98%;
-    --card: 0 0% 3%; /* Darker gray for cards */
-    --card-foreground: 210 40% 98%;
-    --popover: 0 0% 3%; /* Darker gray for popovers */
-    --popover-foreground: 210 40% 98%;
-    --primary: 215 100% 60%; /* Saturated Sky Blue (Electric Blue) */
-    --primary-foreground: 210 40% 98%;
-    --secondary: 0 0% 8%; /* Darker gray for secondary elements */
-    --secondary-foreground: 210 40% 98%;
-    --muted: 0 0% 8%; /* Darker gray for muted elements */
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 163 70% 45%; /* Teal-green */
-    --accent-foreground: 0 0% 100%;
+    --background: 220 17% 5%;
+    --foreground: 0 0% 98%;
+    --card: 220 16% 8%;
+    --card-foreground: 0 0% 98%;
+    --popover: 220 17% 5%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 215 100% 60%;
+    --primary-foreground: 215 85% 15%;
+    --secondary: 220 16% 12%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 220 16% 12%;
+    --muted-foreground: 240 5% 65%;
+    --accent: 163 70% 45%;
+    --accent-foreground: 163 80% 10%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 0 0% 10%; /* Darker gray for borders */
-    --input: 0 0% 10%; /* Darker gray for inputs */
+    --destructive-foreground: 0 0% 98%;
+    --border: 220 16% 15%;
+    --input: 220 16% 15%;
     --ring: 215 100% 60%;
     --radius: 0.75rem;
-    --chart-1: 220 70% 55%;
-    --chart-2: 160 60% 50%;
-    --chart-3: 30 80% 60%;
-    --chart-4: 280 65% 65%;
-    --chart-5: 340 75% 60%;
+    --chart-1: 215 90% 55%;
+    --chart-2: 163 70% 45%;
+    --chart-3: 190 80% 50%;
+    --chart-4: 250 80% 60%;
+    --chart-5: 350 80% 60%;
   }
   .light {
     --background: 0 0% 100%;
@@ -37,24 +38,24 @@
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 215 100% 55%; /* Saturated Sky Blue */
-    --primary-foreground: 0 0% 100%;
+    --primary: 215 100% 55%;
+    --primary-foreground: 215 85% 10%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 84% 4.9%;
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 163 70% 38%; /* Teal-green */
-    --accent-foreground: 0 0% 100%;
+    --accent: 163 70% 38%;
+    --accent-foreground: 163 80% 5%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 215 100% 55%;
-    --chart-1: 220 70% 55%;
-    --chart-2: 160 60% 50%;
-    --chart-3: 30 80% 60%;
-    --chart-4: 280 65% 65%;
-    --chart-5: 340 75% 60%;
+    --chart-1: 215 90% 55%;
+    --chart-2: 163 70% 40%;
+    --chart-3: 190 80% 45%;
+    --chart-4: 250 80% 55%;
+    --chart-5: 350 80% 55%;
   }
 }
 
@@ -67,6 +68,44 @@
   }
 }
 
+/* Timeline styles */
+.timeline-line {
+  @apply absolute left-1/2 top-0 h-full w-0.5 -translate-x-1/2 bg-border;
+}
+
+.timeline-item {
+  @apply relative mb-8 flex w-full items-center;
+}
+
+.timeline-item:nth-child(odd) {
+  @apply flex-row-reverse;
+}
+
+.timeline-icon-container {
+  @apply absolute left-1/2 top-1/2 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-primary/50 bg-background;
+}
+
+.timeline-content {
+  @apply w-[calc(50%-3rem)] rounded-lg;
+}
+
+/* On mobile, stack everything in a single column */
+@media (max-width: 768px) {
+  .timeline-line {
+    @apply left-6; /* Move line to the left */
+  }
+  .timeline-item, .timeline-item:nth-child(odd) {
+    @apply flex-row; /* All items flow the same way */
+  }
+  .timeline-icon-container {
+    @apply left-6; /* Align icons with the line */
+  }
+  .timeline-content {
+    @apply w-full pl-20; /* Full width with padding to the right of the line */
+  }
+}
+
+
 .glowing-btn {
   @apply relative;
   /* A multi-layered shadow for a long, smooth, faded black shadow effect */
@@ -76,12 +115,12 @@
 /* Special class for the landing page's unique background */
 .landing-page-gradient {
   background-color: #fbfdff; /* A very light, cool off-white for light mode */
-  background-image: radial-gradient(ellipse 50% 70% at 25% 50%, hsl(215 100% 55% / 0.15), transparent);
+  background-image: radial-gradient(ellipse 50% 70% at 25% 50%, hsl(var(--primary) / 0.15), transparent);
 }
 
 .dark .landing-page-gradient {
-  background-color: #010313;
-  background-image: radial-gradient(ellipse 50% 70% at 25% 50%, rgba(120, 119, 198, 0.25), transparent);
+  background-color: hsl(var(--background));
+  background-image: radial-gradient(ellipse 50% 70% at 25% 50%, hsl(var(--primary) / 0.15), transparent);
 }
 
 @keyframes rotate-sparkle {
@@ -121,7 +160,7 @@
   animation: rotate-sparkle 15s linear infinite;
 
   /* The key change: Add a drop-shadow and a slight blur to create the spreading glow */
-  filter: drop-shadow(0 0 8px hsl(var(--primary))) blur(1px);
+  filter: blur(1px);
 }
 
 .sparkle-border-container::after {
@@ -139,4 +178,32 @@
 .sparkle-border-container > * {
   position: relative;
   z-index: 1; /* Ensure the image is on top of the ::after mask */
+}
+
+@layer components {
+  .shiny-button {
+    @apply bg-primary relative overflow-hidden;
+    background-image: linear-gradient(145deg, hsl(var(--primary) / 0.9), hsl(var(--primary) / 1));
+    border: 1px solid hsl(var(--primary) / 0.5);
+    box-shadow: 0 4px 15px hsl(var(--primary) / 0.2), 0 1px 2px hsl(var(--primary) / 0.1) inset;
+    color: hsl(var(--foreground));
+  }
+  .dark .shiny-button {
+     @apply text-white;
+  }
+  .shiny-button::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -50%;
+    width: 40%;
+    height: 100%;
+    background: linear-gradient(to right, transparent, hsl(var(--primary-foreground) / 0.2), transparent);
+    transform: skewX(-25deg);
+    transition: left 0.6s ease;
+  }
+  .shiny-button:hover {
+     @apply bg-primary/95;
+     box-shadow: 0 6px 20px hsl(var(--primary) / 0.3), 0 1px 2px hsl(var(--primary) / 0.1) inset;
+  }
 }

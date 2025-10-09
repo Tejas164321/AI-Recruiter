@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 // Icons
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 // Hooks and Contexts
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
@@ -33,6 +33,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   // Effect to redirect already logged-in users to the dashboard
   useEffect(() => {
@@ -89,16 +90,16 @@ export default function LoginPage() {
   };
   
   // Show a full-page loader while the authentication state is being checked
-  if (isLoadingAuth) {
+  if (isLoadingAuth || currentUser) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center flex-1">
         <Loader2 className="w-16 h-16 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background p-4">
+    <div className="flex flex-1 items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold font-headline">Welcome Back!</CardTitle>
@@ -112,9 +113,13 @@ export default function LoginPage() {
               <Input id="email" type="email" placeholder="you@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading}/>
             </div>
             {/* Password Input */}
-            <div className="space-y-2">
+            <div className="space-y-2 relative">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" placeholder="••••••••" required value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading}/>
+              <Input id="password" type={showPassword ? "text" : "password"} placeholder="••••••••" required value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading} className="pr-10"/>
+               <Button type="button" variant="ghost" size="icon" className="absolute bottom-1 right-1 h-7 w-7" onClick={() => setShowPassword(!showPassword)} disabled={isLoading}>
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span className="sr-only">{showPassword ? 'Hide password' : 'Show password'}</span>
+              </Button>
             </div>
             {/* Submit Button */}
             <Button type="submit" className="w-full" disabled={isLoading || !firebaseAuthModule}>

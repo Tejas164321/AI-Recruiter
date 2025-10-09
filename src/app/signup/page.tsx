@@ -10,13 +10,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 // Icons
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 // Hooks and Contexts
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { useLoading } from "@/contexts/loading-context";
 // Firebase Authentication
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth as firebaseAuthModule } from "@/lib/firebase/config";
 
 /**
@@ -31,9 +31,14 @@ export default function SignupPage() {
 
   // State for form fields and loading status
   const [isLoading, setIsLoading] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
 
   // Effect to redirect already logged-in users to the dashboard
   useEffect(() => {
@@ -70,7 +75,15 @@ export default function SignupPage() {
 
     try {
       // Attempt to create a new user with Firebase
-      await createUserWithEmailAndPassword(firebaseAuthModule, email, password);
+      const userCredential = await createUserWithEmailAndPassword(firebaseAuthModule, email, password);
+
+      // After user is created, update their profile with the display name
+      if (userCredential.user) {
+        await updateProfile(userCredential.user, {
+            displayName: `${firstName} ${lastName}`.trim()
+        });
+      }
+
       toast({ title: "Sign Up Successful", description: "Your account has been created. Welcome!" });
       // Show page loader while redirecting to dashboard
       setIsPageLoading(true);
@@ -91,8 +104,8 @@ export default function SignupPage() {
     }
   };
   
-  // Show a full-page loader while checking authentication state
-  if (isLoadingAuth) {
+  // Show a full-page loader while checking authentication state or if a user is already logged in
+  if (isLoadingAuth || currentUser) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="w-16 h-16 animate-spin text-primary" />
@@ -101,28 +114,47 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background p-4">
+    <div className="flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold font-headline">Create an Account</CardTitle>
-          <CardDescription>Enter your details to get started with ResumeRank AI.</CardDescription>
+          <CardDescription>Enter your details to get started with AI Recruiter.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+             {/* Name Inputs */}
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="first-name">First Name</Label>
+                    <Input id="first-name" placeholder="John" required value={firstName} onChange={(e) => setFirstName(e.target.value)} disabled={isLoading} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="last-name">Last Name</Label>
+                    <Input id="last-name" placeholder="Doe" required value={lastName} onChange={(e) => setLastName(e.target.value)} disabled={isLoading} />
+                </div>
+            </div>
             {/* Email Input */}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input id="email" type="email" placeholder="you@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading}/>
             </div>
             {/* Password Input */}
-            <div className="space-y-2">
+            <div className="space-y-2 relative">
               <Label htmlFor="password">Password (min. 6 characters)</Label>
-              <Input id="password" type="password" placeholder="••••••••" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading}/>
+              <Input id="password" type={showPassword ? "text" : "password"} placeholder="••••••••" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading} className="pr-10"/>
+              <Button type="button" variant="ghost" size="icon" className="absolute bottom-1 right-1 h-7 w-7" onClick={() => setShowPassword(!showPassword)} disabled={isLoading}>
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span className="sr-only">{showPassword ? 'Hide password' : 'Show password'}</span>
+              </Button>
             </div>
             {/* Confirm Password Input */}
-            <div className="space-y-2">
+            <div className="space-y-2 relative">
               <Label htmlFor="confirm-password">Confirm Password</Label>
-              <Input id="confirm-password" type="password" placeholder="••••••••" required minLength={6} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading}/>
+              <Input id="confirm-password" type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" required minLength={6} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} className="pr-10"/>
+               <Button type="button" variant="ghost" size="icon" className="absolute bottom-1 right-1 h-7 w-7" onClick={() => setShowConfirmPassword(!showConfirmPassword)} disabled={isLoading}>
+                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span className="sr-only">{showConfirmPassword ? 'Hide password' : 'Show password'}</span>
+              </Button>
             </div>
             {/* Submit Button */}
             <Button type="submit" className="w-full" disabled={isLoading || !firebaseAuthModule}>
