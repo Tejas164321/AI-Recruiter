@@ -8,15 +8,12 @@ const BATCH_SIZE = 10;
 /**
  * This API route handles the bulk resume screening process.
  * It receives a job description and a list of resumes, then streams back the
- * AI-powered ranking results in real-time, filtering for unique candidates by email.
+ * AI-powered ranking results in real-time as each batch is processed.
  */
 export async function POST(req: NextRequest) {
   try {
     const body: PerformBulkScreeningInput = await req.json();
     const { jobDescription, resumes } = body;
-
-    // A Map to track unique candidates by email, storing only the highest-scoring one.
-    const uniqueCandidates = new Map<string, RankedCandidate>();
 
     const stream = new ReadableStream({
       async start(controller) {
@@ -27,37 +24,26 @@ export async function POST(req: NextRequest) {
 
         const encoder = new TextEncoder();
 
+        // Process each batch sequentially and stream results immediately.
         for (const batch of resumeBatches) {
           try {
+            // Get the ranked candidates for the current batch.
             const rankedCandidates = await performBulkScreening({ jobDescription, resumes: batch });
             
-            for (const candidate of rankedCandidates) {
-              // If the email is valid, check for duplicates.
-              if (candidate.email) {
-                const existingCandidate = uniqueCandidates.get(candidate.email);
-                // If the new candidate has a higher score, or if this is the first time seeing this email, store it.
-                if (!existingCandidate || candidate.score > existingCandidate.score) {
-                  uniqueCandidates.set(candidate.email, candidate);
-                }
-              } else {
-                 // If no email, treat it as unique to avoid losing data, using its ID as a key.
-                 uniqueCandidates.set(candidate.id, candidate);
-              }
+            // Immediately enqueue the results for this batch.
+            // The frontend will handle combining and de-duplicating results.
+            if (rankedCandidates.length > 0) {
+              controller.enqueue(encoder.encode(JSON.stringify(rankedCandidates) + '\n'));
             }
-
-            // After processing a batch, enqueue the current state of unique candidates.
-            // This allows the UI to de-duplicate in near real-time.
-            const candidatesToSend = Array.from(uniqueCandidates.values());
-            controller.enqueue(encoder.encode(JSON.stringify(candidatesToSend) + '\n'));
 
           } catch (error) {
             console.error("[API Route] Error processing a batch:", error);
-            // Optionally, you could enqueue an error message for the client here.
             const errorMessage = error instanceof Error ? error.message : "A batch failed to process.";
             controller.enqueue(encoder.encode(JSON.stringify({ error: "Batch Processing Error", details: errorMessage }) + '\n'));
           }
         }
         
+        // Once all batches are processed, close the stream.
         controller.close();
       },
     });

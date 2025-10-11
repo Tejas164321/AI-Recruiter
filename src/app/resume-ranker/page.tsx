@@ -160,7 +160,8 @@ export default function ResumeRankerPage() {
       createdAt: Timestamp.now(),
     });
     
-    let finalCandidates: RankedCandidate[] = [];
+    // Use a Map for efficient de-duplication on the client-side
+    const uniqueCandidates = new Map<string, RankedCandidate>();
 
     try {
       const response = await fetch('/api/rank-resumes', {
@@ -193,17 +194,29 @@ export default function ResumeRankerPage() {
         for (const line of lines) {
           if (line.trim() === '') continue;
           try {
-            const candidatesChunk = JSON.parse(line);
-            if(Array.isArray(candidatesChunk)) {
-              finalCandidates = [...candidatesChunk].sort((a,b) => b.score - a.score);
-              setCurrentScreeningResult(prev => prev ? { ...prev, candidates: finalCandidates } : null);
-            }
+            const candidatesChunk: RankedCandidate[] = JSON.parse(line);
+            
+            // Process the chunk and update the unique candidates map
+            candidatesChunk.forEach(candidate => {
+              const key = candidate.email || candidate.id; // Use email as key, fallback to ID
+              const existingCandidate = uniqueCandidates.get(key);
+              if (!existingCandidate || candidate.score > existingCandidate.score) {
+                uniqueCandidates.set(key, candidate);
+              }
+            });
+
+            // Update the UI with the current state of unique candidates
+            const candidatesToShow = Array.from(uniqueCandidates.values()).sort((a,b) => b.score - a.score);
+            setCurrentScreeningResult(prev => prev ? { ...prev, candidates: candidatesToShow } : null);
+
           } catch (e) {
              console.error("Failed to parse chunk:", line, e);
           }
         }
       }
 
+      // Final save operation
+      const finalCandidates = Array.from(uniqueCandidates.values());
       if (currentUser?.uid && roleToScreen && finalCandidates.length > 0 && isFirestoreAvailable) {
         const resultToSave: Omit<JobScreeningResult, 'id' | 'userId' | 'createdAt'> = {
             jobDescriptionId: roleToScreen.id,
