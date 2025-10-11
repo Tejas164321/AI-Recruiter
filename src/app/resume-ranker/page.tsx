@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
@@ -241,21 +239,31 @@ export default function ResumeRankerPage() {
     }
   }, [toast]); 
 
-  const handleJobRoleChange = (roleId: string | null) => { 
-      setSelectedJobRoleId(roleId); 
-      setFilters(initialFilters);
-      // When a new role is selected for screening, clear the results.
-      // Do not clear the roles or resumes themselves.
-      if (currentScreeningResult?.jobDescriptionId !== roleId) {
-        setCurrentScreeningResult(null);
-      }
+  const handleJobRoleChange = (roleId: string | null) => {
+    if (isStreaming) {
+        toast({ title: "Screening in Progress", description: "Please wait for the current screening to finish before changing roles.", variant: "destructive" });
+        return;
+    }
+    setSelectedJobRoleId(roleId);
+    setFilters(initialFilters);
+    // When a new role is selected for screening, clear the results.
+    // Do not clear the roles or resumes themselves.
+    if (currentScreeningResult?.jobDescriptionId !== roleId) {
+      setCurrentScreeningResult(null);
+    }
   };
 
   const handleLoadHistorySession = (result: JobScreeningResult) => {
+    // When loading history, we should clear the current session's uploads
     setExtractedJobRoles([]);
     setUploadedResumeFiles([]);
+    
+    // Set the historical result as the current one to display
     setCurrentScreeningResult(result);
-    setSelectedJobRoleId(null); // Deselect any active session role
+    
+    // There is no active session role, so deselect it
+    setSelectedJobRoleId(null);
+    
     setIsHistorySheetOpen(false);
     setFilters(initialFilters);
     toast({ title: "History Loaded", description: `Showing results for "${result.jobDescriptionName}" from ${result.createdAt.toDate().toLocaleDateString()}.`})
@@ -365,7 +373,7 @@ export default function ResumeRankerPage() {
             <Card className="shadow-lg"><CardHeader><CardTitle className="flex items-center text-xl font-headline"><Users className="w-6 h-6 mr-3 text-primary" />Upload Resumes</CardTitle><CardDescription>Upload resumes to screen for the selected role.</CardDescription></CardHeader><CardContent><FileUploadArea onFilesUpload={handleResumesUpload} acceptedFileTypes={{ "application/pdf": [".pdf"], "text/plain": [".txt"],"application/msword": [".doc"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"]}} multiple label="PDF, TXT, DOC, DOCX files up to 5MB" id="resume-upload" maxSizeInBytes={MAX_FILE_SIZE_BYTES}/></CardContent></Card>
           </div>
           
-          <div className="flex justify-center pt-4"><Button ref={processButtonRef} onClick={handleScreening} disabled={isProcessing || !selectedJobRoleId || uploadedResumeFiles.length === 0} size="lg" className="shiny-button">{(isStreaming) ? <Snail className="w-5 h-5 mr-2 animate-spin" /> : <ScanSearch className="w-5 h-5 mr-2" />}Screen Resumes & Save</Button></div>
+          <div className="flex justify-center pt-4"><Button ref={processButtonRef} onClick={handleScreening} disabled={isProcessing || !selectedJobRoleId || uploadedResumeFiles.length === 0} size="lg" className="shiny-button">{(isStreaming) ? <Snail className="w-5 h-5 mr-2 animate-spin" /> : <ScanSearch className="w-5 h-5 mr-2" />}Screen Resumes &amp; Save</Button></div>
           
           <div ref={resultsSectionRef} className="space-y-8">
             {isProcessing && !currentScreeningResult && (<Card className="shadow-lg"><CardContent className="pt-6"><LoadingIndicator stage={getLoadingStage()} /></CardContent></Card>)}

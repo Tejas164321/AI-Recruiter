@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useCallback, useRef } from 'react';
@@ -50,6 +49,7 @@ export function useStream<T>({ onDone, onError }: UseStreamProps<T> = {}) {
   ) => {
     const currentStreamId = ++streamControllerRef.current;
     
+    // Reset state for the new stream
     setIsStreaming(true);
     setStream([]);
     setError(null);
@@ -57,7 +57,7 @@ export function useStream<T>({ onDone, onError }: UseStreamProps<T> = {}) {
     const finalStreamedData: T[] = [];
     
     try {
-      // **THE FIX**: Initialize the generator *before* the loop.
+      // Initialize the generator *before* the loop.
       const streamGenerator = action(input);
       
       // Iterate over the initialized generator.
