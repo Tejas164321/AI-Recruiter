@@ -23,8 +23,8 @@ const ResumeInputSchema = z.object({
   dataUri: z.string().describe("A candidate resume as a data URI."),
 });
 
-// Zod schema for the input required by the server action.
-export const PerformBulkScreeningInputSchema = z.object({
+// Zod schema for the input required by the server action. This is NOT exported.
+const PerformBulkScreeningInputSchema = z.object({
   jobDescription: z.object({
     id: z.string(),
     name: z.string(),
@@ -129,7 +129,7 @@ export async function* performBulkScreeningStream(input: PerformBulkScreeningInp
                         const rankedCandidate: RankedCandidate = {
                             id: originalResume.id,
                             name: aiCandidateOutput.name || originalResume.name.replace(/\.[^/.]+$/, "") || "Unnamed Candidate",
-                            email: aiCandidateOutput.email || "", // This line had the typo
+                            email: aiCandidateOutput.email || "",
                             score: aiCandidateOutput.score,
                             atsScore: aiCandidateOutput.atsScore,
                             keySkills: aiCandidateOutput.keySkills,
