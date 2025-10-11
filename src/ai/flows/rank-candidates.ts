@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -32,7 +33,7 @@ const PerformBulkScreeningInputSchema = z.object({
   }),
   resumes: z.array(ResumeInputSchema),
 });
-export type PerformBulkScreeningInput = z.infer<typeof PerformBulkScreeningInputSchema>;
+type PerformBulkScreeningInput = z.infer<typeof PerformBulkScreeningInputSchema>;
 
 // Zod schema for the AI's direct output when ranking one resume.
 const AICandidateOutputSchema = z.object({
@@ -101,6 +102,7 @@ Ensure your output is a valid JSON array, with one object for each resume provid
  * @yields {RankedCandidate} A ranked candidate object as it is processed.
  */
 export async function* performBulkScreeningStream(input: PerformBulkScreeningInput): AsyncGenerator<RankedCandidate> {
+    console.log("[SERVER DEBUG] performBulkScreeningStream called with", input.resumes.length, "resumes.");
     const { jobDescription, resumes } = input;
 
     // Create batches of resumes to process sequentially.
@@ -108,18 +110,21 @@ export async function* performBulkScreeningStream(input: PerformBulkScreeningInp
     for (let i = 0; i < resumes.length; i += BATCH_SIZE) {
         batches.push(resumes.slice(i, i + BATCH_SIZE));
     }
+    console.log(`[SERVER DEBUG] Created ${batches.length} batches of size ${BATCH_SIZE}.`);
 
+    let batchNumber = 0;
     // Process each batch one by one and stream the results as they become available.
     for (const batch of batches) {
+        batchNumber++;
         const promptInput = {
             jobDescriptionDataUri: jobDescription.contentDataUri,
             resumesData: batch.map(r => ({ id: r.id, dataUri: r.dataUri, originalResumeName: r.name })),
         };
         
         try {
-            console.log(`[performBulkScreeningStream] Processing batch of ${batch.length} resumes...`);
+            console.log(`[SERVER DEBUG] Processing batch #${batchNumber} with ${batch.length} resumes...`);
             const { output } = await rankCandidatesInBatchPrompt(promptInput);
-            console.log(`[performBulkScreeningStream] Successfully processed batch. AI returned ${output?.length || 0} results.`);
+            console.log(`[SERVER DEBUG] Successfully processed batch #${batchNumber}. AI returned ${output?.length || 0} results.`);
 
             if (output && output.length > 0) {
                 // For each result from the AI, construct the full RankedCandidate object and yield it.
@@ -137,12 +142,13 @@ export async function* performBulkScreeningStream(input: PerformBulkScreeningInp
                             originalResumeName: originalResume.name,
                             resumeDataUri: originalResume.dataUri,
                         };
+                        console.log(`[SERVER DEBUG] Yielding candidate: ${rankedCandidate.name}`);
                         yield rankedCandidate;
                     }
                 }
             } else {
                  // If AI returns no output for a batch, yield error objects for those resumes.
-                 console.warn(`[performBulkScreeningStream] AI returned no output for a batch.`);
+                 console.warn(`[SERVER DEBUG] AI returned no output for batch #${batchNumber}.`);
                  for (const resume of batch) {
                     yield {
                         id: resume.id, name: resume.name.replace(/\.[^/.]+$/, "") || "Candidate (Processing Error)", email: "",
@@ -154,7 +160,7 @@ export async function* performBulkScreeningStream(input: PerformBulkScreeningInp
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error(`[performBulkScreeningStream] CRITICAL ERROR processing batch. Error: ${errorMessage}`, error);
+            console.error(`[SERVER DEBUG] CRITICAL ERROR processing batch #${batchNumber}. Error: ${errorMessage}`, error);
 
             // If an error occurs, yield error objects for each resume in the failing batch.
             for (const resume of batch) {
@@ -167,4 +173,5 @@ export async function* performBulkScreeningStream(input: PerformBulkScreeningInp
             }
         }
     }
+    console.log("[SERVER DEBUG] Finished processing all batches.");
 }

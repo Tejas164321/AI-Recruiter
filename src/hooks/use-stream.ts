@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useCallback, useRef } from 'react';
@@ -48,6 +49,7 @@ export function useStream<T>({ onDone, onError }: UseStreamProps<T> = {}) {
     input: I
   ) => {
     const currentStreamId = ++streamControllerRef.current;
+    console.log(`[useStream DEBUG] Starting stream with ID: ${currentStreamId}`);
     
     // Reset state for the new stream
     setIsStreaming(true);
@@ -59,29 +61,34 @@ export function useStream<T>({ onDone, onError }: UseStreamProps<T> = {}) {
     try {
       // Initialize the generator *before* the loop.
       const streamGenerator = action(input);
+      console.log("[useStream DEBUG] Stream generator created.");
       
       // Iterate over the initialized generator.
       for await (const chunk of streamGenerator) {
         if (streamControllerRef.current !== currentStreamId) {
-            console.log("Aborting stale stream.");
+            console.log(`[useStream DEBUG] Aborting stale stream ID: ${currentStreamId}`);
             return;
         }
+        console.log("[useStream DEBUG] Received chunk:", chunk);
         finalStreamedData.push(chunk);
         setStream([...finalStreamedData]);
       }
-
+      
+      console.log(`[useStream DEBUG] Stream ID ${currentStreamId} finished successfully.`);
       if (streamControllerRef.current === currentStreamId) {
         onDone?.(finalStreamedData);
       }
     } catch (e) {
-      console.error("Error during stream consumption:", e);
+      console.error("[useStream DEBUG] Error during stream consumption:", e);
       if (streamControllerRef.current === currentStreamId) {
         setError(e);
         onError?.(e);
       }
     } finally {
+      console.log(`[useStream DEBUG] Stream ID ${currentStreamId} entering finally block.`);
       if (streamControllerRef.current === currentStreamId) {
         setIsStreaming(false);
+        console.log(`[useStream DEBUG] isStreaming set to false for stream ID: ${currentStreamId}`);
       }
     }
   }, [onDone, onError]);

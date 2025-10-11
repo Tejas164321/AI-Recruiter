@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
@@ -199,8 +200,10 @@ export default function ResumeRankerPage() {
   }, [currentUser?.uid, toast]);
 
   const handleScreening = useCallback(async () => {
+    console.log("[DEBUG] handleScreening called");
     const roleToScreen = extractedJobRoles.find(jr => jr.id === selectedJobRoleId);
     if (!currentUser?.uid || !roleToScreen || uploadedResumeFiles.length === 0) {
+      console.log("[DEBUG] handleScreening aborted. Conditions not met.", { hasUser: !!currentUser?.uid, hasRole: !!roleToScreen, hasResumes: uploadedResumeFiles.length > 0 });
       toast({ title: "Cannot Start Screening", description: "Please ensure a job role is selected and resumes are uploaded.", variant: "destructive" });
       return;
     }
@@ -218,7 +221,8 @@ export default function ResumeRankerPage() {
         },
         resumes: uploadedResumeFiles.map(r => ({ id: r.id, name: r.name, dataUri: r.dataUri }))
     };
-
+    
+    console.log("[DEBUG] Starting stream with input:", input);
     startStream(performBulkScreeningStream, input);
 
   }, [currentUser?.uid, extractedJobRoles, uploadedResumeFiles, selectedJobRoleId, toast, startStream, resetStream]);
@@ -246,9 +250,10 @@ export default function ResumeRankerPage() {
     }
     setSelectedJobRoleId(roleId);
     setFilters(initialFilters);
-    // When a new role is selected for screening, clear the results.
-    // Do not clear the roles or resumes themselves.
-    if (currentScreeningResult?.jobDescriptionId !== roleId) {
+    
+    const isSwitchingActiveSession = extractedJobRoles.some(jr => jr.id === roleId);
+
+    if (!isSwitchingActiveSession || currentScreeningResult?.jobDescriptionId !== roleId) {
       setCurrentScreeningResult(null);
     }
   };
