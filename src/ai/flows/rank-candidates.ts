@@ -3,7 +3,7 @@
 
 /**
  * @fileOverview Performs bulk screening by ranking candidate resumes against a job role.
- * This flow processes resumes in batches to handle large volumes efficiently and streams
+ * This flow processes resumes in stable batches to handle large volumes efficiently and streams
  * results back to the client in real-time.
  *
  * - performBulkScreeningStream - The main async generator function to handle the screening process.
@@ -95,8 +95,8 @@ Ensure your output is a valid JSON array, with one object for each resume provid
 
 /**
  * The main server action for performing bulk screening. It's an async generator
- * that streams ranked candidates back to the client. This version uses a reliable
- * sequential batching approach to ensure stability.
+ * that streams ranked candidates back to the client using a stable, sequential
+ * batching approach.
  *
  * @param {PerformBulkScreeningInput} input - The job role and all resumes to be processed.
  * @yields {RankedCandidate} A ranked candidate object as it is processed.

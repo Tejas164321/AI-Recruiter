@@ -50,27 +50,26 @@ export function useStream<T>({ onDone, onError }: UseStreamProps<T> = {}) {
   ) => {
     const currentStreamId = ++streamControllerRef.current;
     
-    // Set loading state immediately.
     setIsStreaming(true);
     setStream([]);
     setError(null);
     
     const finalStreamedData: T[] = [];
+    
     try {
-      // Loop through the async generator
-      for await (const chunk of action(input)) {
-        // If a new stream has been started, abort this one.
+      // **THE FIX**: Initialize the generator *before* the loop.
+      const streamGenerator = action(input);
+      
+      // Iterate over the initialized generator.
+      for await (const chunk of streamGenerator) {
         if (streamControllerRef.current !== currentStreamId) {
             console.log("Aborting stale stream.");
             return;
         }
-        
-        // Append the new chunk to our local array and update the state
         finalStreamedData.push(chunk);
-        setStream([...finalStreamedData]); // Update state with a new array to trigger re-render
+        setStream([...finalStreamedData]);
       }
 
-      // If the stream completed without being aborted, call onDone.
       if (streamControllerRef.current === currentStreamId) {
         onDone?.(finalStreamedData);
       }
@@ -81,7 +80,6 @@ export function useStream<T>({ onDone, onError }: UseStreamProps<T> = {}) {
         onError?.(e);
       }
     } finally {
-      // Only stop streaming if this is the currently active stream.
       if (streamControllerRef.current === currentStreamId) {
         setIsStreaming(false);
       }
