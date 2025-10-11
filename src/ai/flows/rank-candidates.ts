@@ -12,7 +12,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import type { RankedCandidate, ExtractedJobRole, ResumeFile } from '@/lib/types';
+import type { RankedCandidate } from '@/lib/types';
 
 const BATCH_SIZE = 10;
 
@@ -102,17 +102,21 @@ Ensure your output is a JSON array, with one object for each resume provided in 
 
 /**
  * Public-facing server action to perform bulk screening as a stream.
+ * This is an async generator that yields ranked candidates as they are processed.
  * @param {BulkScreeningInput} input - The job role and all resumes to be processed.
  * @yields {RankedCandidate} A promise that resolves to the ranked results for each candidate.
  */
 export async function* performBulkScreeningStream(input: BulkScreeningInput): AsyncGenerator<RankedCandidate> {
     try {
-        yield* rankCandidatesFlow(input);
+        // Correctly iterate over the async generator returned by the Genkit flow
+        // and yield each result back to the client.
+        for await (const candidate of rankCandidatesFlow(input)) {
+            yield candidate;
+        }
     } catch (flowError) {
         const message = flowError instanceof Error ? flowError.message : String(flowError);
         console.error('Error in performBulkScreeningStream (server action entry):', message, flowError instanceof Error ? flowError.stack : undefined);
-        // In case of a total flow failure, we can't yield specific errors, so we throw.
-        // The client-side useStream hook should catch this.
+        // In case of a total flow failure, we throw, which will be caught by the useStream hook's error handler.
         throw new Error(`Bulk screening process failed catastrophically: ${message}`);
     }
 }
@@ -191,3 +195,5 @@ const rankCandidatesFlow = ai.defineFlow(
     }
   }
 );
+
+    
