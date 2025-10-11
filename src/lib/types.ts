@@ -79,8 +79,13 @@ export interface JobScreeningResult {
  * Represents the input for the bulk screening AI flow.
  */
 export interface PerformBulkScreeningInput {
-  jobDescription: Omit<ExtractedJobRole, 'id' | 'userId' | 'createdAt'>;
-  resumes: Array<Omit<ResumeFile, 'file'>>;
+  jobDescription: {
+    id: string;
+    name: string;
+    contentDataUri: string;
+    originalDocumentName: string;
+  };
+  resumes: Array<{ id: string, dataUri: string, name: string }>;
 }
 
 

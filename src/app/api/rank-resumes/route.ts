@@ -1,8 +1,10 @@
 
-import { performSingleResumeScreening } from '@/ai/flows/rank-candidates';
-import type { RankedCandidate } from '@/lib/types';
+import { performBulkScreening } from '@/ai/flows/rank-candidates';
+import type { RankedCandidate, PerformBulkScreeningInput } from '@/lib/types';
 import { type NextRequest } from 'next/server';
-import type { PerformBulkScreeningInput } from '@/lib/types';
+
+// The number of resumes to process in a single AI call.
+const BATCH_SIZE = 15;
 
 /**
  * A helper function to decode a data URI to plain text.
@@ -21,8 +23,8 @@ const decodeDataUri = (dataUri: string): string => {
 
 /**
  * This API route handles the bulk resume screening process.
- * It receives a job description and a list of resumes, then streams back the
- * AI-powered ranking results in real-time as each resume is processed in parallel.
+ * It batches resumes, processes them sequentially, and streams back the
+ * AI-powered ranking results in real-time as each batch is completed.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -45,62 +47,56 @@ export async function POST(req: NextRequest) {
     if (!jobDescriptionContent) {
         throw new Error("Could not decode job description content.");
     }
+    
+    // Create batches of resumes.
+    const resumeBatches = [];
+    for (let i = 0; i < resumes.length; i += BATCH_SIZE) {
+        resumeBatches.push(resumes.slice(i, i + BATCH_SIZE));
+    }
 
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
 
-        // Map each resume to a processing promise. These will run in parallel.
-        const processingPromises = resumes.map(resume => {
-          const resumeContent = decodeDataUri(resume.dataUri);
-          if (!resumeContent) {
-              // If a resume can't be decoded, send an error object for it.
-              const errorCandidate: RankedCandidate = {
-                id: resume.id,
-                name: resume.name || "Error Processing",
-                score: 0,
-                atsScore: 0,
-                keySkills: "Decoding Error",
-                feedback: `Failed to decode this resume. Please ensure it is a valid text-based file.`,
-                originalResumeName: resume.name,
-              };
-              controller.enqueue(encoder.encode(JSON.stringify(errorCandidate) + '\n'));
-              return Promise.resolve(); // Resolve the promise to not block others
+        // Process batches sequentially.
+        for (const batch of resumeBatches) {
+          try {
+            const resumesData = batch.map(resume => ({
+              id: resume.id,
+              name: resume.name,
+              content: decodeDataUri(resume.dataUri)
+            })).filter(r => r.content); // Filter out resumes that failed to decode
+
+            if (resumesData.length === 0) continue;
+
+            const rankedCandidates = await performBulkScreening({
+              jobDescriptionContent,
+              resumesData,
+            });
+
+            // Stream each candidate from the completed batch.
+            for (const candidate of rankedCandidates) {
+              controller.enqueue(encoder.encode(JSON.stringify(candidate) + '\n'));
+            }
+
+          } catch (batchError) {
+             console.error(`[API Route] Error processing a batch:`, batchError);
+             const errorMessage = batchError instanceof Error ? batchError.message : "A batch failed to process.";
+             // Send an error object for each resume in the failed batch.
+             for (const resume of batch) {
+                const errorCandidate: RankedCandidate = {
+                    id: resume.id,
+                    name: resume.name || "Error Processing",
+                    score: 0,
+                    atsScore: 0,
+                    keySkills: "Batch Processing Error",
+                    feedback: `A critical error occurred during batch processing: ${errorMessage}`,
+                    originalResumeName: resume.name,
+                };
+                controller.enqueue(encoder.encode(JSON.stringify(errorCandidate) + '\n'));
+             }
           }
-
-          // We pass the decoded plain text content to the AI flow.
-          return performSingleResumeScreening({ 
-              jobDescriptionContent, 
-              resume: { 
-                  id: resume.id, 
-                  content: resumeContent, 
-                  name: resume.name 
-              } 
-            })
-            .then(rankedCandidate => {
-              // As soon as a candidate is ranked, send it to the client.
-              controller.enqueue(encoder.encode(JSON.stringify(rankedCandidate) + '\n'));
-            })
-            .catch(error => {
-              // This catch block might not be strictly necessary if performSingleResumeScreening always returns an error object,
-              // but it's good for catching unexpected failures during the promise handling itself.
-              console.error(`[API Route] Unhandled error for resume ${resume.name}:`, error);
-              const errorMessage = error instanceof Error ? error.message : "A resume failed to process unexpectedly.";
-              const errorCandidate: RankedCandidate = {
-                id: resume.id,
-                name: resume.name || "Error Processing",
-                score: 0,
-                atsScore: 0,
-                keySkills: "Unhandled Error",
-                feedback: `A critical unhandled error occurred: ${errorMessage}`,
-                originalResumeName: resume.name,
-              };
-               controller.enqueue(encoder.encode(JSON.stringify(errorCandidate) + '\n'));
-            })
-        });
-
-        // Wait for all parallel processes to complete before closing the stream.
-        await Promise.all(processingPromises);
+        }
         
         controller.close();
       },
