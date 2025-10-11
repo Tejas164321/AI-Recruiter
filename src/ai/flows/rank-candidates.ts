@@ -78,11 +78,15 @@ export async function performSingleResumeScreening(input: {
     };
     
     try {
+        // This is the call to the AI model.
         const { output } = await rankCandidatePrompt(promptInput);
+        
+        // If the AI call succeeds but returns no data (highly unlikely but possible).
         if (!output) {
              throw new Error(`AI did not return an output for resume ${resume.name}.`);
         }
 
+        // Return the successfully ranked candidate data.
         return {
             id: resume.id,
             name: output.name || resume.name.replace(/\.[^/.]+$/, "") || "Unnamed Candidate",
@@ -95,16 +99,25 @@ export async function performSingleResumeScreening(input: {
         } as RankedCandidate;
 
     } catch (error) {
-        console.error(`CRITICAL ERROR processing resume ${resume.name}. Error: ${error instanceof Error ? error.message : String(error)}`);
-        // Return a clear error object for this resume so the frontend can display it.
+        // If any error occurs during the AI call (e.g., invalid API key, network issue).
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`CRITICAL ERROR processing resume ${resume.name}. Error: ${errorMessage}`);
+        
+        // Return a structured error object. This ensures the frontend always receives a valid
+        // RankedCandidate shape, preventing crashes and allowing the error to be displayed.
         return {
             id: resume.id,
             name: resume.name.replace(/\.[^/.]+$/, "") || "Candidate (Processing Error)",
             email: "",
             score: 0,
             atsScore: 0,
-            keySkills: 'Critical processing error',
-            feedback: `A critical error occurred while processing this resume: ${String(error).substring(0, 200)}`,
+            keySkills: 'AI Processing Error',
+            // The crucial change: Put the actual error message in the feedback field.
+            feedback: `A critical error occurred while processing this resume. The AI model failed to respond.
+            \n---
+            \nTechnical Details: ${errorMessage.substring(0, 500)}
+            \n---
+            \nThis is often caused by an invalid or missing GOOGLE_API_KEY. Please verify your environment variables.`,
             originalResumeName: resume.name,
         };
     }
