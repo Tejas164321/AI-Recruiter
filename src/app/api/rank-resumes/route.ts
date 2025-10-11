@@ -2,8 +2,6 @@
 import { performBulkScreening, type PerformBulkScreeningInput } from '@/ai/flows/rank-candidates';
 import { type NextRequest } from 'next/server';
 
-export const runtime = 'edge';
-
 const BATCH_SIZE = 10;
 
 export async function POST(req: NextRequest) {

@@ -26,6 +26,7 @@ import type { ResumeFile, RankedCandidate, Filters, JobScreeningResult, Extracte
 // Firebase Services
 import { saveJobScreeningResult, getAllJobScreeningResultsForUser, deleteJobScreeningResult, deleteAllJobScreeningResults } from "@/services/firestoreService";
 import { db as firestoreDb } from "@/lib/firebase/config";
+import { Timestamp } from "firebase/firestore";
 
 
 // Max file size for uploads
@@ -156,7 +157,7 @@ export default function ResumeRankerPage() {
       jobDescriptionDataUri: roleToScreen.contentDataUri,
       candidates: [],
       userId: currentUser.uid,
-      createdAt: new Date() as any,
+      createdAt: Timestamp.now(),
     });
 
     try {
@@ -169,6 +170,9 @@ export default function ResumeRankerPage() {
         }),
       });
 
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}`);
+      }
       if (!response.body) {
         throw new Error("The response body is empty.");
       }
