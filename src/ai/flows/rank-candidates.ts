@@ -32,7 +32,7 @@ const ExtractedJobRoleSchema = z.object({
 });
 
 // Zod schema for the entire bulk screening input for the stream.
-const BulkScreeningInputSchema = z.object({
+export const BulkScreeningInputSchema = z.object({
   jobDescription: ExtractedJobRoleSchema,
   resumes: z.array(ResumeInputSchema),
 });
@@ -133,67 +133,75 @@ const rankCandidatesFlow = ai.defineFlow(
   async function* (input) {
     const { jobDescription, resumes } = input;
     
-    // Process resumes in batches
+    // Create an array to hold all the batches of resumes.
+    const batches = [];
     for (let i = 0; i < resumes.length; i += BATCH_SIZE) {
-      const batch = resumes.slice(i, i + BATCH_SIZE);
-      
-      const promptInput = {
-        jobDescriptionDataUri: jobDescription.contentDataUri,
-        resumesData: batch.map(r => ({
-          id: r.id,
-          dataUri: r.dataUri,
-          originalResumeName: r.name,
-        })),
-      };
+        batches.push(resumes.slice(i, i + BATCH_SIZE));
+    }
 
-      try {
-        // Call the AI with the current batch
-        const { output: batchOutput } = await rankCandidatesInBatchPrompt(promptInput);
+    // Create an array of promises, where each promise is an AI call for one batch.
+    const batchProcessingPromises = batches.map(async (batch) => {
+        const promptInput = {
+            jobDescriptionDataUri: jobDescription.contentDataUri,
+            resumesData: batch.map(r => ({
+                id: r.id,
+                dataUri: r.dataUri,
+                originalResumeName: r.name,
+            })),
+        };
 
-        if (batchOutput && batchOutput.length > 0) {
-          // Process and yield each result from the successful batch
-          for (const aiCandidateOutput of batchOutput) {
-            const originalResume = resumes.find(r => r.id === aiCandidateOutput.resumeId);
-            if (originalResume) {
-              const rankedCandidate: RankedCandidate = {
-                ...aiCandidateOutput,
-                id: originalResume.id, // Use the resume's own ID as the candidate ID for this session
-                name: aiCandidateOutput.name || originalResume.name.replace(/\.[^/.]+$/, "") || "Unnamed Candidate",
-                email: aiCandidateOutput.email || "",
-                originalResumeName: originalResume.name,
-                resumeDataUri: originalResume.dataUri,
-              };
-              yield rankedCandidate;
+        try {
+            // Await the AI call for this specific batch.
+            const { output: batchOutput } = await rankCandidatesInBatchPrompt(promptInput);
+
+            if (batchOutput && batchOutput.length > 0) {
+                // Return the successful results for this batch.
+                return { success: true, results: batchOutput, batch };
+            } else {
+                // Handle cases where the AI returns an empty or invalid output for a batch.
+                console.warn(`[rankCandidatesFlow] AI returned no output for a batch starting with resume ${batch[0].name}.`);
+                return { success: false, error: 'AI returned no output for this batch.', batch };
             }
-          }
+        } catch (error) {
+            // Handle critical errors during the AI call for this batch.
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error(`[rankCandidatesFlow] CRITICAL ERROR processing batch starting with resume ${batch[0].name}. Error: ${errorMessage}`, error instanceof Error ? error.stack : undefined);
+            return { success: false, error: errorMessage, batch };
+        }
+    });
+
+    // Process all promises in parallel.
+    const allBatchResults = await Promise.all(batchProcessingPromises);
+
+    // Now, iterate through the results of all batches and yield them.
+    for (const batchResult of allBatchResults) {
+        if (batchResult.success) {
+            // If the batch was successful, yield each ranked candidate.
+            for (const aiCandidateOutput of batchResult.results) {
+                const originalResume = resumes.find(r => r.id === aiCandidateOutput.resumeId);
+                if (originalResume) {
+                    const rankedCandidate: RankedCandidate = {
+                        ...aiCandidateOutput,
+                        id: originalResume.id,
+                        name: aiCandidateOutput.name || originalResume.name.replace(/\.[^/.]+$/, "") || "Unnamed Candidate",
+                        email: aiCandidateOutput.email || "",
+                        originalResumeName: originalResume.name,
+                        resumeDataUri: originalResume.dataUri,
+                    };
+                    yield rankedCandidate;
+                }
+            }
         } else {
-          // AI returned empty output for the batch, create error entries for this batch
-          console.warn(`[rankCandidatesFlow] AI returned no output for a batch starting with resume ${batch[0].name}.`);
-          for (const resume of batch) {
-            yield {
-              id: resume.id, name: resume.name.replace(/\.[^/.]+$/, "") || "Candidate (Processing Error)", email: "",
-              score: 0, atsScore: 0, keySkills: 'AI processing error',
-              feedback: `The AI failed to process the batch containing this resume.`,
-              originalResumeName: resume.name, resumeDataUri: resume.dataUri,
-            };
-          }
+            // If the batch failed, yield error objects for each resume in that batch.
+            for (const resume of batchResult.batch) {
+                yield {
+                    id: resume.id, name: resume.name.replace(/\.[^/.]+$/, "") || "Candidate (Processing Error)", email: "",
+                    score: 0, atsScore: 0, keySkills: 'Critical processing error',
+                    feedback: `A critical error occurred while processing the batch for this resume: ${String(batchResult.error).substring(0, 150)}`,
+                    originalResumeName: resume.name, resumeDataUri: resume.dataUri,
+                };
+            }
         }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error(`[rankCandidatesFlow] CRITICAL ERROR processing batch starting with resume ${batch[0].name}. Error: ${errorMessage}`, error instanceof Error ? error.stack : undefined);
-        
-        // On batch failure, create and yield error entries for each resume in the failed batch
-        for (const resume of batch) {
-          yield {
-            id: resume.id, name: resume.name.replace(/\.[^/.]+$/, "") || "Candidate (Processing Error)", email: "",
-            score: 0, atsScore: 0, keySkills: 'Critical processing error',
-            feedback: `A critical error occurred while processing the batch for this resume: ${errorMessage.substring(0,100)}`,
-            originalResumeName: resume.name, resumeDataUri: resume.dataUri,
-          };
-        }
-      }
     }
   }
 );
-
-    
