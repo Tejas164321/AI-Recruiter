@@ -78,7 +78,7 @@ export default function ResumeRankerPage() {
   } = useStream<RankedCandidate>({
     onDone: async (finalStreamedData) => {
         // This block runs when the entire stream is complete
-        const roleToScreen = extractedJobRoles.find(jr => jr.id === selectedJobRoleId) || allScreeningResults.find(r => r.jobDescriptionId === selectedJobRoleId);
+        const roleToScreen = extractedJobRoles.find(jr => jr.id === selectedJobRoleId);
         if (currentUser?.uid && roleToScreen && finalStreamedData.length > 0 && isFirestoreAvailable) {
             try {
                 // Prepare the result object with the complete data
@@ -109,12 +109,12 @@ export default function ResumeRankerPage() {
 
   useEffect(() => {
     // This effect handles real-time updates as data comes in from the stream
-    if (isStreaming && screeningStream.length > 0) {
+    if (isStreaming) {
       const roleToScreen = extractedJobRoles.find(jr => jr.id === selectedJobRoleId);
       if (roleToScreen) {
         // Create a temporary screening result object to hold the streaming data
         const tempScreeningResult: JobScreeningResult = {
-          id: roleToScreen.id, 
+          id: `temp-${roleToScreen.id}`, 
           jobDescriptionId: roleToScreen.id,
           jobDescriptionName: roleToScreen.name,
           jobDescriptionDataUri: roleToScreen.contentDataUri,
@@ -385,13 +385,19 @@ export default function ResumeRankerPage() {
               </>
             )}
 
-            {!isStreaming && currentScreeningResult && (
+            {currentScreeningResult && (
               <Card className="shadow-lg mb-8">
                 <CardHeader>
                   <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                       <div>
-                        <CardTitle className="text-2xl font-headline text-primary">Results for: {currentScreeningResult.jobDescriptionName}</CardTitle>
-                        <CardDescription>Session from {currentScreeningResult.createdAt.toDate().toLocaleString()}. Processed: {currentScreeningResult.candidates.length}. Showing: {displayedCandidates.length}.</CardDescription>
+                        <CardTitle className="text-2xl font-headline text-primary">
+                          {isStreaming ? "Screening in Progress..." : "Results for:"} {currentScreeningResult.jobDescriptionName}
+                        </CardTitle>
+                        <CardDescription>
+                          {isStreaming ? `Processing... ` : `Session from ${currentScreeningResult.createdAt.toDate().toLocaleString()}.`} 
+                          Processed: {currentScreeningResult.candidates.length}. 
+                          Showing: {displayedCandidates.length}.
+                        </CardDescription>
                       </div>
                       <Button variant="outline" size="sm" onClick={handleEmailFilteredCandidates} disabled={isProcessing || emailableCandidateCount === 0}>
                           <Mail className="w-4 h-4 mr-2" />
@@ -409,24 +415,6 @@ export default function ResumeRankerPage() {
               </Card>
             )}
             
-            {isStreaming && currentScreeningResult && (
-                 <Card className="shadow-lg mb-8">
-                    <CardHeader>
-                      <CardTitle className="text-2xl font-headline text-primary">Screening in Progress...</CardTitle>
-                      <CardDescription>
-                        Results for "{currentScreeningResult.jobDescriptionName}" will appear below as they are processed.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <CandidateTableWithActions 
-                            candidates={displayedCandidates} 
-                            onViewFeedback={handleViewFeedback}
-                            onEmailCandidate={handleEmailSingleCandidate}
-                        />
-                    </CardContent>
-                </Card>
-            )}
-
 
             {!isProcessing && !currentScreeningResult && (
                 <div className="text-center text-muted-foreground py-8">

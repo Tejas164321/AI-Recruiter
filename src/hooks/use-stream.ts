@@ -44,19 +44,21 @@ export function useStream<T>({ onDone, onError }: UseStreamProps<T> = {}) {
     action: (input: I) => AsyncGenerator<T, void, unknown>,
     input: I
   ) => {
-    resetStream();
+    // This is the correct place to set the streaming state
     setIsStreaming(true);
+    setStream([]);
+    setError(null);
     
+    const finalStreamedData: T[] = [];
     try {
-      const newStreamData: T[] = [];
       // Loop through the async generator
       for await (const chunk of action(input)) {
         // Append the new chunk to our local array and update the state
-        newStreamData.push(chunk);
-        setStream([...newStreamData]);
+        finalStreamedData.push(chunk);
+        setStream([...finalStreamedData]); // Update state with a new array to trigger re-render
       }
       // If there's an onDone callback, call it with the complete data.
-      onDone?.(newStreamData);
+      onDone?.(finalStreamedData);
     } catch (e) {
       console.error("Error during stream consumption:", e);
       setError(e);
@@ -65,7 +67,7 @@ export function useStream<T>({ onDone, onError }: UseStreamProps<T> = {}) {
       // Once the loop is finished or an error occurs, set streaming to false.
       setIsStreaming(false);
     }
-  }, [onDone, onError, resetStream]);
+  }, [onDone, onError]);
 
   return { stream, isStreaming, error, startStream, resetStream };
 }

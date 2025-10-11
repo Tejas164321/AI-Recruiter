@@ -1,4 +1,5 @@
 
+
 'use server';
 
 /**
@@ -7,7 +8,6 @@
  * and having an AI rank each resume against each job with controlled parallelism.
  *
  * - performBulkScreeningStream - The main function to handle the bulk screening process.
- * - BulkScreeningInput - Input type: a single job role and a list of resumes.
  */
 
 import {ai} from '@/ai/genkit';
@@ -16,7 +16,6 @@ import type { RankedCandidate } from '@/lib/types';
 
 // Constants for controlling the batching and parallelism
 const BATCH_SIZE = 10; // Number of resumes per single AI call
-const CONCURRENT_LIMIT = 5; // Number of AI calls to make in parallel at any given time
 
 // Internal Zod schema for a resume file.
 const ResumeInputSchema = z.object({
@@ -160,54 +159,11 @@ const rankCandidatesFlow = ai.defineFlow(
             return { success: false, error: errorMessage, batch };
         }
     };
-
-    // This function manages the controlled parallel execution.
-    const runWithConcurrency = async (limit: number) => {
-      let activePromises = 0;
-      const executing = new Set<Promise<any>>();
-      
-      for (const batch of batches) {
-        // Wait if we've hit the concurrency limit
-        while (activePromises >= limit) {
-          await Promise.race(executing);
-        }
-
-        activePromises++;
-        const promise = processBatch(batch).then((result) => {
-          activePromises--;
-          executing.delete(promise);
-          return result;
-        });
-
-        executing.add(promise);
-      }
-      
-      // Wait for all promises to finish
-      await Promise.allSettled(executing);
-    };
-
-    // Execute all batches with the defined concurrency limit.
-    // This function itself doesn't return the results, it just manages execution.
-    // The results will be handled by yielding them as they complete.
-    const allBatchPromises = batches.map(batch => processBatch(batch));
     
-    // Process batches with concurrency control
-    const executing = new Set<Promise<any>>();
-    for (const batchPromise of allBatchPromises) {
-        executing.add(batchPromise);
+    // Execute all batches in parallel
+    const allBatchPromises = batches.map(processBatch);
 
-        batchPromise.then((batchResult) => {
-            // Remove the completed promise from the set
-            executing.delete(batchPromise);
-        });
-
-        // If we've hit the concurrency limit, wait for one promise to resolve
-        if (executing.size >= CONCURRENT_LIMIT) {
-            await Promise.race(executing);
-        }
-    }
-
-    // Wait for all the promises to complete
+    // Await all promises to settle
     const allBatchResults = await Promise.all(allBatchPromises);
 
 
@@ -222,7 +178,7 @@ const rankCandidatesFlow = ai.defineFlow(
                         ...aiCandidateOutput,
                         id: originalResume.id,
                         name: aiCandidateOutput.name || originalResume.name.replace(/\.[^/.]+$/, "") || "Unnamed Candidate",
-                        email: aiCandidateOutput.email || "",
+                        email: aiCode.tsxutput.email || "",
                         originalResumeName: originalResume.name,
                         resumeDataUri: originalResume.dataUri,
                     };
