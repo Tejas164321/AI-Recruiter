@@ -46,7 +46,6 @@ export async function POST(req: NextRequest) {
               const errorCandidate: RankedCandidate = {
                 id: resume.id,
                 name: resume.name || "Error Processing",
-                email: "",
                 score: 0,
                 atsScore: 0,
                 keySkills: "Decoding Error",
@@ -57,6 +56,7 @@ export async function POST(req: NextRequest) {
               return Promise.resolve(); // Resolve the promise to not block others
           }
 
+          // We pass the decoded plain text content to the AI flow.
           return performSingleResumeScreening({ jobDescriptionContent, resume: { ...resume, content: resumeContent } })
             .then(rankedCandidate => {
               // As soon as a candidate is ranked, send it to the client.
@@ -69,7 +69,6 @@ export async function POST(req: NextRequest) {
               const errorCandidate: RankedCandidate = {
                 id: resume.id,
                 name: resume.name || "Error Processing",
-                email: "",
                 score: 0,
                 atsScore: 0,
                 keySkills: "Processing Error",
