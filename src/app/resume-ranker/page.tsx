@@ -190,7 +190,6 @@ export default function ResumeRankerPage() {
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
         
-        // Keep the last partial line in the buffer
         buffer = lines.pop() || '';
 
         for (const line of lines) {
@@ -198,7 +197,6 @@ export default function ResumeRankerPage() {
           try {
             const candidate: RankedCandidate = JSON.parse(line);
             allCandidates.push(candidate);
-            // Update state with the new candidate, keeping the list sorted
             setCurrentScreeningResult(prev => prev ? { ...prev, candidates: [...allCandidates].sort((a,b) => b.score - a.score) } : null);
           } catch (e) {
             console.error("Failed to parse chunk:", line);
@@ -206,7 +204,6 @@ export default function ResumeRankerPage() {
         }
       }
 
-      // Final save to Firestore
       if (currentUser?.uid && roleToScreen && allCandidates.length > 0 && isFirestoreAvailable) {
         const resultToSave: Omit<JobScreeningResult, 'id' | 'userId' | 'createdAt'> = {
             jobDescriptionId: roleToScreen.id,
@@ -261,16 +258,10 @@ export default function ResumeRankerPage() {
   };
 
   const handleLoadHistorySession = (result: JobScreeningResult) => {
-    // When loading history, we should clear the current session's uploads
     setExtractedJobRoles([]);
     setUploadedResumeFiles([]);
-    
-    // Set the historical result as the current one to display
     setCurrentScreeningResult(result);
-    
-    // There is no active session role, so deselect it
     setSelectedJobRoleId(null);
-    
     setIsHistorySheetOpen(false);
     setFilters(initialFilters);
     toast({ title: "History Loaded", description: `Showing results for "${result.jobDescriptionName}" from ${result.createdAt.toDate().toLocaleDateString()}.`})

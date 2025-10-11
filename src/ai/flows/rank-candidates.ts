@@ -40,7 +40,7 @@ const AICandidateOutputSchema = z.object({
   score: z.number().describe('The match score (0-100) of the resume to the job description.'),
   atsScore: z.number().describe('The ATS (Applicant Tracking System) compatibility score (0-100).'),
   keySkills: z.string().describe('A comma-separated list of the most important skills from the resume that match the job description.'),
-  feedback: z.string().describe('Human-friendly but concise feedback on strengths and weaknesses against THIS SPECIFIC job description.'),
+  feedback: z.string().describe('Human-friendly but concise feedback (2-3 sentences) on strengths and weaknesses against THIS SPECIFIC job description.'),
 });
 
 // Defines the Genkit prompt for ranking a BATCH of resumes.
