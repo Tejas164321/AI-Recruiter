@@ -1,5 +1,4 @@
 
-
 'use server';
 
 /**
@@ -109,19 +108,15 @@ Ensure your output is a JSON array, with one object for each resume provided in 
  */
 export async function* performBulkScreeningStream(input: BulkScreeningInput): AsyncGenerator<RankedCandidate> {
     try {
-        // Correctly iterate over the async generator returned by the Genkit flow
-        // and yield each result back to the client.
         for await (const candidate of rankCandidatesFlow(input)) {
             yield candidate;
         }
     } catch (flowError) {
         const message = flowError instanceof Error ? flowError.message : String(flowError);
         console.error('Error in performBulkScreeningStream (server action entry):', message, flowError instanceof Error ? flowError.stack : undefined);
-        // In case of a total flow failure, we throw, which will be caught by the useStream hook's error handler.
         throw new Error(`Bulk screening process failed catastrophically: ${message}`);
     }
 }
-
 
 // Defines the main Genkit flow for bulk screening.
 const rankCandidatesFlow = ai.defineFlow(
@@ -134,13 +129,11 @@ const rankCandidatesFlow = ai.defineFlow(
   async function* (input) {
     const { jobDescription, resumes } = input;
     
-    // Create an array to hold all the batches of resumes.
     const batches = [];
     for (let i = 0; i < resumes.length; i += BATCH_SIZE) {
         batches.push(resumes.slice(i, i + BATCH_SIZE));
     }
 
-    // This function processes a single batch and returns its results.
     const processBatch = async (batch: typeof resumes) => {
         const promptInput = {
             jobDescriptionDataUri: jobDescription.contentDataUri,
@@ -151,7 +144,6 @@ const rankCandidatesFlow = ai.defineFlow(
             const { output } = await rankCandidatesInBatchPrompt(promptInput);
             console.log(`[rankCandidatesFlow] Successfully processed batch. AI returned ${output?.length || 0} results.`);
             if (output) return { success: true, results: output, batch };
-            // Handle case where AI returns empty/null output for a valid request
             return { success: false, error: 'AI returned no output for this batch.', batch };
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -160,41 +152,48 @@ const rankCandidatesFlow = ai.defineFlow(
         }
     };
     
-    // Execute all batches in parallel
-    const allBatchPromises = batches.map(processBatch);
+    try {
+        const allBatchPromises = batches.map(processBatch);
+        const allBatchResults = await Promise.all(allBatchPromises);
 
-    // Await all promises to settle
-    const allBatchResults = await Promise.all(allBatchPromises);
-
-
-    // Now, iterate through the results of all batches and yield them.
-    for (const batchResult of allBatchResults) {
-        if (batchResult.success) {
-            // If the batch was successful, yield each ranked candidate.
-            for (const aiCandidateOutput of batchResult.results) {
-                const originalResume = resumes.find(r => r.id === aiCandidateOutput.resumeId);
-                if (originalResume) {
-                    const rankedCandidate: RankedCandidate = {
-                        ...aiCandidateOutput,
-                        id: originalResume.id,
-                        name: aiCandidateOutput.name || originalResume.name.replace(/\.[^/.]+$/, "") || "Unnamed Candidate",
-                        email: aiCandidateOutput.email || "",
-                        originalResumeName: originalResume.name,
-                        resumeDataUri: originalResume.dataUri,
+        for (const batchResult of allBatchResults) {
+            if (batchResult.success) {
+                for (const aiCandidateOutput of batchResult.results) {
+                    const originalResume = resumes.find(r => r.id === aiCandidateOutput.resumeId);
+                    if (originalResume) {
+                        const rankedCandidate: RankedCandidate = {
+                            ...aiCandidateOutput,
+                            id: originalResume.id,
+                            name: aiCandidateOutput.name || originalResume.name.replace(/\.[^/.]+$/, "") || "Unnamed Candidate",
+                            email: aiCandidateOutput.email || "",
+                            originalResumeName: originalResume.name,
+                            resumeDataUri: originalResume.dataUri,
+                        };
+                        yield rankedCandidate;
+                    }
+                }
+            } else {
+                for (const resume of batchResult.batch) {
+                    yield {
+                        id: resume.id, name: resume.name.replace(/\.[^/.]+$/, "") || "Candidate (Processing Error)", email: "",
+                        score: 0, atsScore: 0, keySkills: 'Critical processing error',
+                        feedback: `A critical error occurred while processing the batch for this resume: ${String(batchResult.error).substring(0, 150)}`,
+                        originalResumeName: resume.name, resumeDataUri: resume.dataUri,
                     };
-                    yield rankedCandidate;
                 }
             }
-        } else {
-            // If the batch failed, yield error objects for each resume in that batch.
-            for (const resume of batchResult.batch) {
-                yield {
-                    id: resume.id, name: resume.name.replace(/\.[^/.]+$/, "") || "Candidate (Processing Error)", email: "",
-                    score: 0, atsScore: 0, keySkills: 'Critical processing error',
-                    feedback: `A critical error occurred while processing the batch for this resume: ${String(batchResult.error).substring(0, 150)}`,
-                    originalResumeName: resume.name, resumeDataUri: resume.dataUri,
-                };
-            }
+        }
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "An unknown error occurred during batch processing.";
+        console.error(`[rankCandidatesFlow] Catastrophic failure in Promise.all: ${message}`, error);
+        // If the entire parallel execution fails, we yield error objects for all resumes.
+        for (const resume of resumes) {
+            yield {
+                id: resume.id, name: resume.name.replace(/\.[^/.]+$/, "") || "Candidate (System Error)", email: "",
+                score: 0, atsScore: 0, keySkills: 'System error',
+                feedback: `A system-level error occurred: ${message.substring(0, 150)}`,
+                originalResumeName: resume.name, resumeDataUri: resume.dataUri,
+            };
         }
     }
   }
