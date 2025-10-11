@@ -11,7 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import type { RankedCandidate, ExtractedJobRole } from '@/lib/types';
+import type { RankedCandidate } from '@/lib/types';
 
 // The number of resumes to process in a single AI call.
 const BATCH_SIZE = 10; 
@@ -95,7 +95,8 @@ Ensure your output is a valid JSON array, with one object for each resume provid
 
 /**
  * The main server action for performing bulk screening. It's an async generator
- * that streams ranked candidates back to the client.
+ * that streams ranked candidates back to the client. This version uses a reliable
+ * sequential batching approach to ensure stability.
  *
  * @param {PerformBulkScreeningInput} input - The job role and all resumes to be processed.
  * @yields {RankedCandidate} A ranked candidate object as it is processed.
@@ -103,13 +104,13 @@ Ensure your output is a valid JSON array, with one object for each resume provid
 export async function* performBulkScreeningStream(input: PerformBulkScreeningInput): AsyncGenerator<RankedCandidate> {
     const { jobDescription, resumes } = input;
 
-    // Create batches of resumes
+    // Create batches of resumes to process sequentially.
     const batches = [];
     for (let i = 0; i < resumes.length; i += BATCH_SIZE) {
         batches.push(resumes.slice(i, i + BATCH_SIZE));
     }
 
-    // Process each batch sequentially and stream the results
+    // Process each batch one by one and stream the results as they become available.
     for (const batch of batches) {
         const promptInput = {
             jobDescriptionDataUri: jobDescription.contentDataUri,
@@ -121,7 +122,7 @@ export async function* performBulkScreeningStream(input: PerformBulkScreeningInp
             const { output } = await rankCandidatesInBatchPrompt(promptInput);
             console.log(`[performBulkScreeningStream] Successfully processed batch. AI returned ${output?.length || 0} results.`);
 
-            if (output) {
+            if (output && output.length > 0) {
                 // For each result from the AI, construct the full RankedCandidate object and yield it.
                 for (const aiCandidateOutput of output) {
                     const originalResume = resumes.find(r => r.id === aiCandidateOutput.resumeId);
@@ -142,6 +143,7 @@ export async function* performBulkScreeningStream(input: PerformBulkScreeningInp
                 }
             } else {
                  // If AI returns no output for a batch, yield error objects for those resumes.
+                 console.warn(`[performBulkScreeningStream] AI returned no output for a batch.`);
                  for (const resume of batch) {
                     yield {
                         id: resume.id, name: resume.name.replace(/\.[^/.]+$/, "") || "Candidate (Processing Error)", email: "",

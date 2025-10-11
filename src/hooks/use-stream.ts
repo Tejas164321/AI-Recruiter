@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 /**
  * Defines the properties for the useStream hook.
@@ -25,6 +25,9 @@ export function useStream<T>({ onDone, onError }: UseStreamProps<T> = {}) {
   const [isStreaming, setIsStreaming] = useState(false); // True while the stream is active.
   const [error, setError] = useState<any>(null); // Holds any error that occurs.
 
+  // Use a ref to keep track of the stream controller to prevent race conditions
+  const streamControllerRef = useRef(0);
+
   /**
    * Clears the stream state, resetting it to its initial values.
    */
@@ -32,6 +35,7 @@ export function useStream<T>({ onDone, onError }: UseStreamProps<T> = {}) {
     setStream([]);
     setIsStreaming(false);
     setError(null);
+    streamControllerRef.current += 1; // Invalidate previous streams
   }, []);
 
   /**
@@ -44,7 +48,9 @@ export function useStream<T>({ onDone, onError }: UseStreamProps<T> = {}) {
     action: (input: I) => AsyncGenerator<T, void, unknown>,
     input: I
   ) => {
-    // This is the correct place to set the streaming state
+    const currentStreamId = ++streamControllerRef.current;
+    
+    // Set loading state immediately.
     setIsStreaming(true);
     setStream([]);
     setError(null);
@@ -53,19 +59,32 @@ export function useStream<T>({ onDone, onError }: UseStreamProps<T> = {}) {
     try {
       // Loop through the async generator
       for await (const chunk of action(input)) {
+        // If a new stream has been started, abort this one.
+        if (streamControllerRef.current !== currentStreamId) {
+            console.log("Aborting stale stream.");
+            return;
+        }
+        
         // Append the new chunk to our local array and update the state
         finalStreamedData.push(chunk);
         setStream([...finalStreamedData]); // Update state with a new array to trigger re-render
       }
-      // If there's an onDone callback, call it with the complete data.
-      onDone?.(finalStreamedData);
+
+      // If the stream completed without being aborted, call onDone.
+      if (streamControllerRef.current === currentStreamId) {
+        onDone?.(finalStreamedData);
+      }
     } catch (e) {
       console.error("Error during stream consumption:", e);
-      setError(e);
-      onError?.(e);
+      if (streamControllerRef.current === currentStreamId) {
+        setError(e);
+        onError?.(e);
+      }
     } finally {
-      // Once the loop is finished or an error occurs, set streaming to false.
-      setIsStreaming(false);
+      // Only stop streaming if this is the currently active stream.
+      if (streamControllerRef.current === currentStreamId) {
+        setIsStreaming(false);
+      }
     }
   }, [onDone, onError]);
 
