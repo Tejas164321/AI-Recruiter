@@ -2,6 +2,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 /**
  * Props for the LoadingIndicator component.
@@ -9,14 +10,25 @@ import { Loader2 } from "lucide-react";
 interface LoadingIndicatorProps {
   // The stage of processing to display a relevant message.
   stage: "roles" | "screening" | "general";
+  // The current progress percentage (0-100).
+  progress?: number;
+  // The number of items processed so far.
+  processedItems?: number;
+  // The total number of items to process.
+  totalItems?: number;
 }
 
 /**
  * A component to display a themed loading animation and message for long-running AI processes.
- * It shows different messages based on the `stage` prop.
+ * It shows different messages based on the `stage` prop and can display a progress bar.
  * @param {LoadingIndicatorProps} props - The component props.
  */
-export function LoadingIndicator({ stage }: LoadingIndicatorProps) {
+export function LoadingIndicator({
+  stage,
+  progress,
+  processedItems,
+  totalItems,
+}: LoadingIndicatorProps) {
   let message = "Processing...";
   if (stage === "roles") {
     message = "AI is extracting job roles...";
@@ -24,19 +36,36 @@ export function LoadingIndicator({ stage }: LoadingIndicatorProps) {
     message = "AI is analyzing resumes and roles...";
   }
 
+  // Check if we have enough information to show the progress details.
+  const showProgressDetails = typeof processedItems === 'number' && typeof totalItems === 'number' && totalItems > 0;
+
   return (
     <div className="flex flex-col items-center justify-center space-y-6 py-10 text-center">
       {/* The animated icon */}
       <Loader2 className="w-12 h-12 text-primary animate-spin" />
 
-      {/* The loading messages */}
-      <div>
+      {/* The loading messages and progress bar */}
+      <div className="w-full max-w-md">
         <p className="text-xl font-semibold text-primary">
           {message}
         </p>
-        <p className="text-sm text-muted-foreground mt-2">
-          This may take a few moments. Please be patient.
-        </p>
+        {/* Display progress details if available */}
+        {showProgressDetails ? (
+            <p className="text-sm text-muted-foreground mt-2">
+                Processed {processedItems} of {totalItems} resumes...
+            </p>
+        ) : (
+            <p className="text-sm text-muted-foreground mt-2">
+                This may take a few moments. Please be patient.
+            </p>
+        )}
+        
+        {/* Display the progress bar if progress is provided */}
+        {typeof progress === "number" && (
+          <div className="mt-4">
+            <Progress value={progress} className="w-full" />
+          </div>
+        )}
       </div>
     </div>
   );

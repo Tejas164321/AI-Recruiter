@@ -172,13 +172,9 @@ export default function ResumeRankerPage() {
         }),
       });
 
-      if (!response.ok) {
+      if (!response.ok || !response.body) {
         const errorData = await response.json().catch(() => ({ error: 'Request failed', details: `Server responded with ${response.status}` }));
         throw new Error(errorData.details || 'An unknown server error occurred.');
-      }
-      
-      if (!response.body) {
-        throw new Error("The response body is empty.");
       }
 
       const reader = response.body.getReader();
@@ -199,7 +195,6 @@ export default function ResumeRankerPage() {
           try {
             const candidatesChunk = JSON.parse(line);
             if(Array.isArray(candidatesChunk)) {
-              // The server now sends the de-duplicated list in each chunk. So we can just replace.
               finalCandidates = [...candidatesChunk].sort((a,b) => b.score - a.score);
               setCurrentScreeningResult(prev => prev ? { ...prev, candidates: finalCandidates } : null);
             }
@@ -348,10 +343,7 @@ export default function ResumeRankerPage() {
         toast({ title: "Email Not Found", description: `Could not find an email address for ${candidate.name}.`, variant: "destructive"});
         return;
       }
-      // Combine original resume data with ranked data for the modal
-       const resumeFile = uploadedResumeFiles.find(f => f.id === candidate.id);
-       const candidateForModal = { ...candidate, resumeDataUri: resumeFile?.dataUri };
-       setSelectedCandidateForFeedback(candidateForModal);
+       setSelectedCandidateForFeedback(candidate);
       setEmailRecipients([{ name: candidate.name, email: candidate.email }]); 
       setIsEmailModalOpen(true);
   };
@@ -384,6 +376,10 @@ export default function ResumeRankerPage() {
     );
   }
 
+  const processedCount = currentScreeningResult?.candidates?.length || 0;
+  const totalToProcess = uploadedResumeFiles.length;
+  const progressPercentage = totalToProcess > 0 ? (processedCount / totalToProcess) * 100 : 0;
+
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-8 pt-24">
       <Card className="mb-8 shadow-md"><CardHeader><CardTitle className="text-2xl font-headline text-primary flex items-center"><Snail className="w-7 h-7 mr-3" /> AI-Powered Resume Ranker</CardTitle><CardDescription>Upload job descriptions to create roles, then upload resumes to screen candidates. Your screening sessions are saved automatically.</CardDescription></CardHeader></Card>
@@ -400,9 +396,20 @@ export default function ResumeRankerPage() {
           <div className="flex justify-center pt-4"><Button ref={processButtonRef} onClick={handleScreening} disabled={isProcessing || !selectedJobRoleId || uploadedResumeFiles.length === 0} size="lg" className="shiny-button">{(isStreaming) ? <Snail className="w-5 h-5 mr-2 animate-spin" /> : <ScanSearch className="w-5 h-5 mr-2" />}Screen Resumes &amp; Save</Button></div>
           
           <div ref={resultsSectionRef} className="space-y-8">
-            {isProcessing && !currentScreeningResult && (<Card className="shadow-lg"><CardContent className="pt-6"><LoadingIndicator stage={getLoadingStage()} /></CardContent></Card>)}
+            {isStreaming && (
+              <Card className="shadow-lg">
+                <CardContent className="pt-6">
+                  <LoadingIndicator
+                    stage={getLoadingStage()}
+                    progress={progressPercentage}
+                    processedItems={processedCount}
+                    totalItems={totalToProcess}
+                  />
+                </CardContent>
+              </Card>
+            )}
             
-            {(extractedJobRoles.length > 0 || allScreeningResults.length > 0 || isProcessing) && (
+            {(extractedJobRoles.length > 0 || allScreeningResults.length > 0 || isLoadingJDExtraction) && !isStreaming && (
               <>
                 <Separator className="my-8" />
                 <FilterControls
@@ -419,16 +426,16 @@ export default function ResumeRankerPage() {
               </>
             )}
 
-            {currentScreeningResult && (
+            {currentScreeningResult && !isStreaming && (
               <Card className="shadow-lg mb-8">
                 <CardHeader>
                   <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                       <div>
                         <CardTitle className="text-2xl font-headline text-primary">
-                          {isStreaming ? "Screening in Progress..." : "Results for:"} {currentScreeningResult.jobDescriptionName}
+                          Results for: {currentScreeningResult.jobDescriptionName}
                         </CardTitle>
                         <CardDescription>
-                           {isStreaming ? `Processing... ` : `Session from ${currentScreeningResult.createdAt.toDate().toLocaleString()}. `}
+                           Session from {currentScreeningResult.createdAt.toDate().toLocaleString()}.
                           Processed: {currentScreeningResult.candidates.length} unique candidate(s). 
                           Showing: {displayedCandidates.length}.
                         </CardDescription>
