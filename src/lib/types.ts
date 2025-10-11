@@ -79,8 +79,8 @@ export interface JobScreeningResult {
  * Represents the input for the bulk screening AI flow.
  */
 export interface PerformBulkScreeningInput {
-  jobRolesToScreen: Array<Omit<ExtractedJobRole, 'userId' | 'createdAt'>>; // The job roles to screen against.
-  resumesToRank: ResumeFile[]; // The resumes to be ranked.
+  jobDescription: Omit<ExtractedJobRole, 'userId' | 'createdAt'>;
+  resumes: Array<Omit<ResumeFile, 'file'>>;
 }
 
 /**
