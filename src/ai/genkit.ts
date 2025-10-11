@@ -21,7 +21,7 @@ export const ai = genkit({
     }),
   ],
   // Specifies the default AI model to be used for generation tasks if not overridden
-  // in a specific prompt or generate call. 'gemini-1.5-flash-latest' is chosen here for its
-  // excellent balance of speed, capability, and cost-effectiveness.
-  model: 'googleai/gemini-1.5-flash-latest',
+  // in a specific prompt or generate call. 'gemini-2.0-flash' is chosen here for its
+  // balance of speed, capability, and cost-effectiveness.
+  model: 'googleai/gemini-2.0-flash',
 });
