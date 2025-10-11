@@ -36,11 +36,19 @@ export const saveJobScreeningResult = async (resultData: Omit<JobScreeningResult
   const userId = auth.currentUser.uid;
   const HISTORY_LIMIT = 20;
 
+  // Sanitize data before saving to prevent Firestore errors.
+  // The most common issue is `undefined` values, which are not allowed.
+  const sanitizedCandidates = resultData.candidates.map(candidate => ({
+    ...candidate,
+    email: candidate.email || "", // Ensure email is a string, not undefined.
+  }));
+  const sanitizedResultData = { ...resultData, candidates: sanitizedCandidates };
+
   // 1. Query for existing history for this specific job role, ordered oldest to newest.
   const historyQuery = query(
     collection(db, "jobScreeningResults"),
     where("userId", "==", userId),
-    where("jobDescriptionId", "==", resultData.jobDescriptionId),
+    where("jobDescriptionId", "==", sanitizedResultData.jobDescriptionId),
     orderBy("createdAt", "asc")
   );
   const querySnapshot = await getDocs(historyQuery);
@@ -54,15 +62,15 @@ export const saveJobScreeningResult = async (resultData: Omit<JobScreeningResult
     await batch.commit();
   }
   
-  // 3. Add the new screening result document.
+  // 3. Add the new, sanitized screening result document.
   const docRef = await addDoc(collection(db, "jobScreeningResults"), {
-    ...resultData,
+    ...sanitizedResultData,
     userId,
     createdAt: serverTimestamp(), // Use server timestamp for consistency.
   });
 
   // 4. Return the new result object for immediate use in the UI.
-  return { ...resultData, id: docRef.id, userId, createdAt: Timestamp.now() } as JobScreeningResult;
+  return { ...sanitizedResultData, id: docRef.id, userId, createdAt: Timestamp.now() } as JobScreeningResult;
 };
 
 /**
