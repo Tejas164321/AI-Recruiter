@@ -3,10 +3,7 @@
 
 /**
  * @fileOverview Performs bulk screening by ranking candidate resumes against a job role.
- * This flow processes resumes in stable batches to handle large volumes efficiently and streams
- * results back to the client in real-time.
- *
- * - performBulkScreeningStream - The main async generator function to handle the screening process.
+ * This flow is designed to be called from a dedicated API route that handles streaming.
  */
 
 import {ai} from '@/ai/genkit';
@@ -23,7 +20,7 @@ const ResumeInputSchema = z.object({
   dataUri: z.string().describe("A candidate resume as a data URI."),
 });
 
-// Zod schema for the input required by the server action. This is NOT exported.
+// Zod schema for the input required by this server action.
 const PerformBulkScreeningInputSchema = z.object({
   jobDescription: z.object({
     id: z.string(),
@@ -33,7 +30,7 @@ const PerformBulkScreeningInputSchema = z.object({
   }),
   resumes: z.array(ResumeInputSchema),
 });
-type PerformBulkScreeningInput = z.infer<typeof PerformBulkScreeningInputSchema>;
+export type PerformBulkScreeningInput = z.infer<typeof PerformBulkScreeningInputSchema>;
 
 // Zod schema for the AI's direct output when ranking one resume.
 const AICandidateOutputSchema = z.object({
@@ -94,84 +91,65 @@ Ensure your output is a valid JSON array, with one object for each resume provid
 
 
 /**
- * The main server action for performing bulk screening. It's an async generator
- * that streams ranked candidates back to the client using a stable, sequential
- * batching approach.
+ * A standard async function to perform bulk screening. It processes resumes in parallel batches
+ * and returns a promise that resolves with the full list of ranked candidates.
+ * This function is called by the API route.
  *
  * @param {PerformBulkScreeningInput} input - The job role and all resumes to be processed.
- * @yields {RankedCandidate} A ranked candidate object as it is processed.
+ * @returns {Promise<RankedCandidate[]>} A promise that resolves to an array of ranked candidates.
  */
-export async function* performBulkScreeningStream(input: PerformBulkScreeningInput): AsyncGenerator<RankedCandidate> {
-    console.log("[SERVER DEBUG] performBulkScreeningStream called with", input.resumes.length, "resumes.");
+export async function performBulkScreening(input: PerformBulkScreeningInput): Promise<RankedCandidate[]> {
     const { jobDescription, resumes } = input;
+    const allRankedCandidates: RankedCandidate[] = [];
 
-    // Create batches of resumes to process sequentially.
     const batches = [];
     for (let i = 0; i < resumes.length; i += BATCH_SIZE) {
         batches.push(resumes.slice(i, i + BATCH_SIZE));
     }
-    console.log(`[SERVER DEBUG] Created ${batches.length} batches of size ${BATCH_SIZE}.`);
 
-    let batchNumber = 0;
-    // Process each batch one by one and stream the results as they become available.
-    for (const batch of batches) {
-        batchNumber++;
+    const batchPromises = batches.map(async (batch) => {
         const promptInput = {
             jobDescriptionDataUri: jobDescription.contentDataUri,
             resumesData: batch.map(r => ({ id: r.id, dataUri: r.dataUri, originalResumeName: r.name })),
         };
         
         try {
-            console.log(`[SERVER DEBUG] Processing batch #${batchNumber} with ${batch.length} resumes...`);
             const { output } = await rankCandidatesInBatchPrompt(promptInput);
-            console.log(`[SERVER DEBUG] Successfully processed batch #${batchNumber}. AI returned ${output?.length || 0} results.`);
+            if (!output) return [];
 
-            if (output && output.length > 0) {
-                // For each result from the AI, construct the full RankedCandidate object and yield it.
-                for (const aiCandidateOutput of output) {
-                    const originalResume = resumes.find(r => r.id === aiCandidateOutput.resumeId);
-                    if (originalResume) {
-                        const rankedCandidate: RankedCandidate = {
-                            id: originalResume.id,
-                            name: aiCandidateOutput.name || originalResume.name.replace(/\.[^/.]+$/, "") || "Unnamed Candidate",
-                            email: aiCandidateOutput.email || "",
-                            score: aiCandidateOutput.score,
-                            atsScore: aiCandidateOutput.atsScore,
-                            keySkills: aiCandidateOutput.keySkills,
-                            feedback: aiCandidateOutput.feedback,
-                            originalResumeName: originalResume.name,
-                            resumeDataUri: originalResume.dataUri,
-                        };
-                        console.log(`[SERVER DEBUG] Yielding candidate: ${rankedCandidate.name}`);
-                        yield rankedCandidate;
-                    }
-                }
-            } else {
-                 // If AI returns no output for a batch, yield error objects for those resumes.
-                 console.warn(`[SERVER DEBUG] AI returned no output for batch #${batchNumber}.`);
-                 for (const resume of batch) {
-                    yield {
-                        id: resume.id, name: resume.name.replace(/\.[^/.]+$/, "") || "Candidate (Processing Error)", email: "",
-                        score: 0, atsScore: 0, keySkills: 'AI returned no output',
-                        feedback: 'The AI model did not return any output for this resume in its batch.',
-                        originalResumeName: resume.name, resumeDataUri: resume.dataUri,
-                    };
-                }
-            }
+            return output.map(aiCandidateOutput => {
+                const originalResume = resumes.find(r => r.id === aiCandidateOutput.resumeId);
+                if (!originalResume) return null;
+
+                return {
+                    id: originalResume.id,
+                    name: aiCandidateOutput.name || originalResume.name.replace(/\.[^/.]+$/, "") || "Unnamed Candidate",
+                    email: aiCandidateOutput.email || "",
+                    score: aiCandidateOutput.score,
+                    atsScore: aiCandidateOutput.atsScore,
+                    keySkills: aiCandidateOutput.keySkills,
+                    feedback: aiCandidateOutput.feedback,
+                    originalResumeName: originalResume.name,
+                    resumeDataUri: originalResume.dataUri,
+                } as RankedCandidate;
+            }).filter((c): c is RankedCandidate => c !== null);
+
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error(`[SERVER DEBUG] CRITICAL ERROR processing batch #${batchNumber}. Error: ${errorMessage}`, error);
-
-            // If an error occurs, yield error objects for each resume in the failing batch.
-            for (const resume of batch) {
-                yield {
-                    id: resume.id, name: resume.name.replace(/\.[^/.]+$/, "") || "Candidate (Processing Error)", email: "",
-                    score: 0, atsScore: 0, keySkills: 'Critical processing error',
-                    feedback: `A critical error occurred while processing the batch for this resume: ${String(errorMessage).substring(0, 200)}`,
-                    originalResumeName: resume.name, resumeDataUri: resume.dataUri,
-                };
-            }
+            console.error(`CRITICAL ERROR processing a batch. Error: ${error instanceof Error ? error.message : String(error)}`);
+            // Return error objects for this batch
+            return batch.map(resume => ({
+                id: resume.id, name: resume.name.replace(/\.[^/.]+$/, "") || "Candidate (Processing Error)", email: "",
+                score: 0, atsScore: 0, keySkills: 'Critical processing error',
+                feedback: `A critical error occurred while processing the batch: ${String(error).substring(0, 200)}`,
+                originalResumeName: resume.name, resumeDataUri: resume.dataUri,
+            }));
         }
-    }
-    console.log("[SERVER DEBUG] Finished processing all batches.");
+    });
+
+    const resultsFromAllBatches = await Promise.all(batchPromises);
+    resultsFromAllBatches.forEach(batchResult => {
+        allRankedCandidates.push(...batchResult);
+    });
+
+    return allRankedCandidates;
 }

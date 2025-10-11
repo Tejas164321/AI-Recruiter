@@ -20,9 +20,7 @@ import { Users, ScanSearch, Briefcase, Snail, ServerOff, Mail } from "lucide-rea
 // Hooks and Contexts
 import { useLoading } from "@/contexts/loading-context";
 import { useAuth } from "@/contexts/auth-context";
-import { useStream } from "@/hooks/use-stream";
 // AI Flows and Types
-import { performBulkScreeningStream } from "@/ai/flows/rank-candidates";
 import { extractJobRoles as extractJobRolesAI, type ExtractJobRolesInput as ExtractJobRolesAIInput, type ExtractJobRolesOutput as ExtractJobRolesAIOutput } from "@/ai/flows/extract-job-roles";
 import type { ResumeFile, RankedCandidate, Filters, JobScreeningResult, ExtractedJobRole } from "@/lib/types";
 // Firebase Services
@@ -54,6 +52,7 @@ export default function ResumeRankerPage() {
   
   const [isLoadingJDExtraction, setIsLoadingJDExtraction] = useState<boolean>(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(true);
+  const [isStreaming, setIsStreaming] = useState<boolean>(false);
   
   const [selectedCandidateForFeedback, setSelectedCandidateForFeedback] = useState<RankedCandidate | null>(null);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState<boolean>(false);
@@ -68,63 +67,6 @@ export default function ResumeRankerPage() {
   const resultsSectionRef = useRef<HTMLDivElement | null>(null);
   const processButtonRef = useRef<HTMLButtonElement | null>(null);
   const isFirestoreAvailable = !!firestoreDb;
-
-  const {
-    stream: screeningStream,
-    startStream,
-    isStreaming,
-    resetStream
-  } = useStream<RankedCandidate>({
-    onDone: async (finalStreamedData) => {
-        // This block runs when the entire stream is complete
-        const roleToScreen = extractedJobRoles.find(jr => jr.id === selectedJobRoleId);
-        if (currentUser?.uid && roleToScreen && finalStreamedData.length > 0 && isFirestoreAvailable) {
-            try {
-                // Prepare the result object with the complete data
-                const resultToSave: Omit<JobScreeningResult, 'id' | 'userId' | 'createdAt'> = {
-                    jobDescriptionId: roleToScreen.id,
-                    jobDescriptionName: roleToScreen.name,
-                    jobDescriptionDataUri: roleToScreen.contentDataUri,
-                    candidates: finalStreamedData,
-                };
-                // Save the final result to Firestore
-                const savedResult = await saveJobScreeningResult(resultToSave);
-                
-                // Replace the temporary screening result with the final saved one from DB
-                setCurrentScreeningResult(savedResult);
-                
-                // Add or update the history list
-                setAllScreeningResults(prev => [savedResult, ...prev.filter(r => r.id !== savedResult.id)]);
-                
-                toast({ title: "Screening Complete", description: "Results have been saved to your history." });
-            } catch (error) {
-                console.error("Failed to save final screening result:", error);
-                const message = error instanceof Error ? error.message : "Unknown database error.";
-                toast({ title: "Failed to Save Results", description: message.substring(0, 100), variant: "destructive"});
-            }
-        }
-    },
-  });
-
-  useEffect(() => {
-    // This effect handles real-time updates as data comes in from the stream
-    if (isStreaming) {
-      const roleToScreen = extractedJobRoles.find(jr => jr.id === selectedJobRoleId);
-      if (roleToScreen) {
-        // Create a temporary screening result object to hold the streaming data
-        const tempScreeningResult: JobScreeningResult = {
-          id: `temp-${roleToScreen.id}`, 
-          jobDescriptionId: roleToScreen.id,
-          jobDescriptionName: roleToScreen.name,
-          jobDescriptionDataUri: roleToScreen.contentDataUri,
-          candidates: screeningStream.sort((a,b) => b.score - a.score), // Keep the list sorted as it grows
-          userId: currentUser!.uid,
-          createdAt: new Date() as any, // Temporary timestamp
-        };
-        setCurrentScreeningResult(tempScreeningResult);
-      }
-    }
-  }, [screeningStream, isStreaming, selectedJobRoleId, extractedJobRoles, currentUser]);
 
 
   useEffect(() => {
@@ -200,32 +142,81 @@ export default function ResumeRankerPage() {
   }, [currentUser?.uid, toast]);
 
   const handleScreening = useCallback(async () => {
-    console.log("[CLIENT DEBUG] handleScreening called");
     const roleToScreen = extractedJobRoles.find(jr => jr.id === selectedJobRoleId);
     if (!currentUser?.uid || !roleToScreen || uploadedResumeFiles.length === 0) {
-      console.log("[CLIENT DEBUG] handleScreening aborted. Conditions not met.", { hasUser: !!currentUser?.uid, hasRole: !!roleToScreen, hasResumes: uploadedResumeFiles.length > 0 });
       toast({ title: "Cannot Start Screening", description: "Please ensure a job role is selected and resumes are uploaded.", variant: "destructive" });
       return;
     }
     
-    // Reset previous stream data and clear current results
-    resetStream();
-    setCurrentScreeningResult(null);
+    setIsStreaming(true);
+    setCurrentScreeningResult({
+      id: `temp-${roleToScreen.id}`,
+      jobDescriptionId: roleToScreen.id,
+      jobDescriptionName: roleToScreen.name,
+      jobDescriptionDataUri: roleToScreen.contentDataUri,
+      candidates: [],
+      userId: currentUser.uid,
+      createdAt: new Date() as any,
+    });
 
-    const input = {
-        jobDescription: {
-            id: roleToScreen.id,
-            name: roleToScreen.name,
-            contentDataUri: roleToScreen.contentDataUri,
-            originalDocumentName: roleToScreen.originalDocumentName
-        },
-        resumes: uploadedResumeFiles.map(r => ({ id: r.id, name: r.name, dataUri: r.dataUri }))
-    };
-    
-    console.log("[CLIENT DEBUG] Starting stream with input:", { resumeCount: input.resumes.length, role: input.jobDescription.name });
-    startStream(performBulkScreeningStream, input);
+    try {
+      const response = await fetch('/api/rank-resumes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobDescription: roleToScreen,
+          resumes: uploadedResumeFiles,
+        }),
+      });
 
-  }, [currentUser?.uid, extractedJobRoles, uploadedResumeFiles, selectedJobRoleId, toast, startStream, resetStream]);
+      if (!response.body) {
+        throw new Error("The response body is empty.");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let allCandidates: RankedCandidate[] = [];
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n').filter(line => line.trim() !== '');
+        
+        for (const line of lines) {
+          try {
+            const candidate: RankedCandidate = JSON.parse(line);
+            allCandidates.push(candidate);
+            setCurrentScreeningResult(prev => prev ? { ...prev, candidates: [...allCandidates].sort((a,b) => b.score - a.score) } : null);
+          } catch (e) {
+            console.error("Failed to parse chunk:", line);
+          }
+        }
+      }
+
+      // Final save to Firestore
+      if (currentUser?.uid && roleToScreen && allCandidates.length > 0 && isFirestoreAvailable) {
+        const resultToSave: Omit<JobScreeningResult, 'id' | 'userId' | 'createdAt'> = {
+            jobDescriptionId: roleToScreen.id,
+            jobDescriptionName: roleToScreen.name,
+            jobDescriptionDataUri: roleToScreen.contentDataUri,
+            candidates: allCandidates,
+        };
+        const savedResult = await saveJobScreeningResult(resultToSave);
+        setCurrentScreeningResult(savedResult);
+        setAllScreeningResults(prev => [savedResult, ...prev.filter(r => r.id !== savedResult.id)]);
+        toast({ title: "Screening Complete", description: "Results have been saved to your history." });
+      }
+
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "An unknown error occurred during streaming.";
+      console.error("Streaming error:", error);
+      toast({ title: "Screening Failed", description: message, variant: "destructive" });
+    } finally {
+      setIsStreaming(false);
+    }
+  }, [currentUser?.uid, extractedJobRoles, uploadedResumeFiles, selectedJobRoleId, toast, isFirestoreAvailable]);
   
   const handleResumesUpload = useCallback(async (files: File[]) => {
     const newResumeFilesPromises = files.map(async (file) => {
