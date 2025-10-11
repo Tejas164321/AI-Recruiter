@@ -83,8 +83,8 @@ export interface PerformBulkScreeningInput {
   resumes: Array<Omit<ResumeFile, 'file'>>;
 }
 
-/**
 
+/**
  * Represents the output from the bulk screening AI flow. This is then transformed
  * into a JobScreeningResult for storage in Firestore.
  */
@@ -121,5 +121,3 @@ export interface InterviewQuestionsSet {
     userId: string; // The ID of the user who owns this set.
     createdAt: Timestamp; // The timestamp of when the questions were generated.
 }
-
-    

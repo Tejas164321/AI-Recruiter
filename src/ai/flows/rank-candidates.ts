@@ -3,33 +3,18 @@
 
 /**
  * @fileOverview Performs bulk screening by ranking candidate resumes against a job role.
- * This flow is designed to be called by an API route that handles streaming.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import type { RankedCandidate } from '@/lib/types';
+import type { RankedCandidate, PerformBulkScreeningInput } from '@/lib/types';
 
-// The number of resumes to process in a single AI call.
-export const BATCH_SIZE = 10; 
 
 // Internal Zod schema for a single resume file.
 const ResumeInputSchema = z.object({
   id: z.string(),
   name: z.string().describe("The file name or identifier of the resume."),
   dataUri: z.string().describe("A candidate resume as a data URI."),
-});
-
-// Zod schema for the input required by this server action.
-export type PerformBulkScreeningInput = z.infer<typeof PerformBulkScreeningInputSchema>;
-const PerformBulkScreeningInputSchema = z.object({
-  jobDescription: z.object({
-    id: z.string(),
-    name: z.string(),
-    contentDataUri: z.string(),
-    originalDocumentName: z.string(),
-  }),
-  resumes: z.array(ResumeInputSchema),
 });
 
 
@@ -116,8 +101,7 @@ export async function performBulkScreening(input: PerformBulkScreeningInput): Pr
             const originalResume = resumes.find(r => r.id === aiCandidateOutput.resumeId);
             if (!originalResume) return null;
 
-            // IMPORTANT: Do not include resumeDataUri in the returned object to avoid exceeding Firestore document size limits.
-            // The frontend already has this data if needed.
+            // IMPORTANT: Do not include resumeDataUri in the returned object.
             return {
                 id: originalResume.id,
                 name: aiCandidateOutput.name || originalResume.name.replace(/\.[^/.]+$/, "") || "Unnamed Candidate",

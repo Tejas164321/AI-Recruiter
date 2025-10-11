@@ -1,6 +1,6 @@
 
-import { performBulkScreening, type PerformBulkScreeningInput } from '@/ai/flows/rank-candidates';
-import type { RankedCandidate, ResumeFile } from '@/lib/types';
+import { performBulkScreening } from '@/ai/flows/rank-candidates';
+import type { RankedCandidate, ResumeFile, PerformBulkScreeningInput } from '@/lib/types';
 import { type NextRequest } from 'next/server';
 
 const BATCH_SIZE = 10;
