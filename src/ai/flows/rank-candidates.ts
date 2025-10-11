@@ -148,8 +148,11 @@ const rankCandidatesFlow = ai.defineFlow(
             resumesData: batch.map(r => ({ id: r.id, dataUri: r.dataUri, originalResumeName: r.name })),
         };
         try {
+            console.log(`[rankCandidatesFlow] Processing batch of ${batch.length} resumes...`);
             const { output } = await rankCandidatesInBatchPrompt(promptInput);
+            console.log(`[rankCandidatesFlow] Successfully processed batch. AI returned ${output?.length || 0} results.`);
             if (output) return { success: true, results: output, batch };
+            // Handle case where AI returns empty/null output for a valid request
             return { success: false, error: 'AI returned no output for this batch.', batch };
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -160,25 +163,53 @@ const rankCandidatesFlow = ai.defineFlow(
 
     // This function manages the controlled parallel execution.
     const runWithConcurrency = async (limit: number) => {
-        const results: Awaited<ReturnType<typeof processBatch>>[] = [];
-        const executing = new Set<Promise<any>>();
-        for (const batch of batches) {
-            const promise = processBatch(batch);
-            executing.add(promise);
-            promise.then(result => {
-                results.push(result);
-                executing.delete(promise);
-            });
-            if (executing.size >= limit) {
-                await Promise.race(executing);
-            }
+      let activePromises = 0;
+      const executing = new Set<Promise<any>>();
+      
+      for (const batch of batches) {
+        // Wait if we've hit the concurrency limit
+        while (activePromises >= limit) {
+          await Promise.race(executing);
         }
-        await Promise.all(executing);
-        return results;
+
+        activePromises++;
+        const promise = processBatch(batch).then((result) => {
+          activePromises--;
+          executing.delete(promise);
+          return result;
+        });
+
+        executing.add(promise);
+      }
+      
+      // Wait for all promises to finish
+      await Promise.allSettled(executing);
     };
 
     // Execute all batches with the defined concurrency limit.
-    const allBatchResults = await runWithConcurrency(CONCURRENT_LIMIT);
+    // This function itself doesn't return the results, it just manages execution.
+    // The results will be handled by yielding them as they complete.
+    const allBatchPromises = batches.map(batch => processBatch(batch));
+    
+    // Process batches with concurrency control
+    const executing = new Set<Promise<any>>();
+    for (const batchPromise of allBatchPromises) {
+        executing.add(batchPromise);
+
+        batchPromise.then((batchResult) => {
+            // Remove the completed promise from the set
+            executing.delete(batchPromise);
+        });
+
+        // If we've hit the concurrency limit, wait for one promise to resolve
+        if (executing.size >= CONCURRENT_LIMIT) {
+            await Promise.race(executing);
+        }
+    }
+
+    // Wait for all the promises to complete
+    const allBatchResults = await Promise.all(allBatchPromises);
+
 
     // Now, iterate through the results of all batches and yield them.
     for (const batchResult of allBatchResults) {
