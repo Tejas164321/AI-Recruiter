@@ -21,8 +21,8 @@ import { Users, ScanSearch, Briefcase, Snail, ServerOff, Mail } from "lucide-rea
 import { useLoading } from "@/contexts/loading-context";
 import { useAuth } from "@/contexts/auth-context";
 // AI Flows and Types
-import { extractJobRoles as extractJobRolesAI, type ExtractJobRolesInput as ExtractJobRolesAIInput, type ExtractJobRolesOutput as ExtractJobRolesAIOutput } from "@/ai/flows/extract-job-roles";
-import type { ResumeFile, RankedCandidate, Filters, JobScreeningResult, ExtractedJobRole } from "@/lib/types";
+import { extractJobRoles as extractJobRolesAI, type ExtractJobRolesOutput as ExtractJobRolesAIOutput } from "@/ai/flows/extract-job-roles";
+import type { ResumeFile, RankedCandidate, Filters, JobScreeningResult, ExtractedJobRole, PerformBulkScreeningInput } from "@/lib/types";
 // Firebase Services
 import { saveJobScreeningResult, getAllJobScreeningResultsForUser, deleteJobScreeningResult, deleteAllJobScreeningResults } from "@/services/firestoreService";
 import { db as firestoreDb } from "@/lib/firebase/config";
@@ -125,7 +125,7 @@ export default function ResumeRankerPage() {
       });
       const jdUploads = await Promise.all(jdUploadsPromises);
       
-      const aiInput: ExtractJobRolesAIInput = { jobDescriptionDocuments: jdUploads };
+      const aiInput = { jobDescriptionDocuments: jdUploads };
       const aiOutput: ExtractJobRolesAIOutput = await extractJobRolesAI(aiInput);
       
       if (aiOutput.length > 0) {
@@ -150,6 +150,7 @@ export default function ResumeRankerPage() {
     }
     
     setIsStreaming(true);
+    const screeningStartTime = Timestamp.now();
     setCurrentScreeningResult({
       id: `temp-${roleToScreen.id}`,
       jobDescriptionId: roleToScreen.id,
@@ -157,20 +158,26 @@ export default function ResumeRankerPage() {
       jobDescriptionDataUri: roleToScreen.contentDataUri,
       candidates: [],
       userId: currentUser.uid,
-      createdAt: Timestamp.now(),
+      createdAt: screeningStartTime,
     });
     
-    // Use a Map for efficient de-duplication on the client-side
     const uniqueCandidates = new Map<string, RankedCandidate>();
 
     try {
+      const requestBody: PerformBulkScreeningInput = {
+        jobDescription: {
+          id: roleToScreen.id,
+          name: roleToScreen.name,
+          contentDataUri: roleToScreen.contentDataUri,
+          originalDocumentName: roleToScreen.originalDocumentName,
+        },
+        resumes: uploadedResumeFiles.map(r => ({ id: r.id, dataUri: r.dataUri, name: r.name })),
+      };
+
       const response = await fetch('/api/rank-resumes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jobDescription: roleToScreen,
-          resumes: uploadedResumeFiles,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok || !response.body) {
@@ -194,31 +201,26 @@ export default function ResumeRankerPage() {
         for (const line of lines) {
           if (line.trim() === '') continue;
           try {
-            const candidatesChunk: RankedCandidate[] = JSON.parse(line);
+            const candidate: RankedCandidate = JSON.parse(line);
             
-            // Process the chunk and update the unique candidates map
-            candidatesChunk.forEach(candidate => {
-              const key = candidate.email || candidate.id; // Use email as key, fallback to ID
-              const existingCandidate = uniqueCandidates.get(key);
-              if (!existingCandidate || candidate.score > existingCandidate.score) {
-                uniqueCandidates.set(key, candidate);
-              }
-            });
+            const key = candidate.email || candidate.id;
+            const existingCandidate = uniqueCandidates.get(key);
 
-            // Update the UI with the current state of unique candidates
+            if (!existingCandidate || candidate.score > existingCandidate.score) {
+              uniqueCandidates.set(key, candidate);
+            }
+
             const candidatesToShow = Array.from(uniqueCandidates.values()).sort((a,b) => b.score - a.score);
             setCurrentScreeningResult(prev => prev ? { ...prev, candidates: candidatesToShow } : null);
-
           } catch (e) {
              console.error("Failed to parse chunk:", line, e);
           }
         }
       }
 
-      // Final save operation
       const finalCandidates = Array.from(uniqueCandidates.values());
       if (currentUser?.uid && roleToScreen && finalCandidates.length > 0 && isFirestoreAvailable) {
-        const resultToSave: Omit<JobScreeningResult, 'id' | 'userId' | 'createdAt'> = {
+        const resultToSave = {
             jobDescriptionId: roleToScreen.id,
             jobDescriptionName: roleToScreen.name,
             jobDescriptionDataUri: roleToScreen.contentDataUri,

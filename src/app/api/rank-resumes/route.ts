@@ -1,14 +1,13 @@
 
-import { performBulkScreening } from '@/ai/flows/rank-candidates';
-import type { PerformBulkScreeningInput, RankedCandidate, ResumeFile } from '@/lib/types';
+import { performSingleResumeScreening } from '@/ai/flows/rank-candidates';
+import type { PerformBulkScreeningInput, RankedCandidate } from '@/lib/types';
 import { type NextRequest } from 'next/server';
 
-const BATCH_SIZE = 10;
 
 /**
  * This API route handles the bulk resume screening process.
  * It receives a job description and a list of resumes, then streams back the
- * AI-powered ranking results in real-time as each batch is processed.
+ * AI-powered ranking results in real-time as each resume is processed in parallel.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -17,34 +16,36 @@ export async function POST(req: NextRequest) {
 
     const stream = new ReadableStream({
       async start(controller) {
-        const resumeBatches: Array<ResumeFile[]> = [];
-        for (let i = 0; i < resumes.length; i += BATCH_SIZE) {
-          resumeBatches.push(resumes.slice(i, i + BATCH_SIZE));
-        }
-
         const encoder = new TextEncoder();
 
-        // Process all batches in parallel
-        const processingPromises = resumeBatches.map(async (batch) => {
-          try {
-            const rankedCandidates = await performBulkScreening({ jobDescription, resumes: batch });
-            if (rankedCandidates.length > 0) {
-              controller.enqueue(encoder.encode(JSON.stringify(rankedCandidates) + '\n'));
-            }
-          } catch (error) {
-            console.error("[API Route] Error processing a batch in parallel:", error);
-            // In case of an error in one batch, we can choose to send an error message
-            // or simply log it and continue. Here, we'll log it and let other batches proceed.
-            const errorMessage = error instanceof Error ? error.message : "A batch failed to process.";
-            // Optionally enqueue a specific error object for the frontend to handle
-            controller.enqueue(encoder.encode(JSON.stringify({ error: "Batch Processing Error", details: errorMessage }) + '\n'));
-          }
-        });
+        // Map each resume to a processing promise.
+        const processingPromises = resumes.map(resume => 
+          performSingleResumeScreening({ jobDescription, resume })
+            .then(rankedCandidate => {
+              // As soon as a candidate is ranked, send it to the client.
+              controller.enqueue(encoder.encode(JSON.stringify(rankedCandidate) + '\n'));
+            })
+            .catch(error => {
+              // If an individual screening fails, log it and potentially send an error state for that specific resume.
+              console.error(`[API Route] Error processing resume ${resume.name} in parallel:`, error);
+              const errorMessage = error instanceof Error ? error.message : "A resume failed to process.";
+              const errorCandidate: RankedCandidate = {
+                id: resume.id,
+                name: resume.name || "Error Processing",
+                email: "",
+                score: 0,
+                atsScore: 0,
+                keySkills: "Processing Error",
+                feedback: `Failed to process this resume: ${errorMessage}`,
+                originalResumeName: resume.name,
+              };
+               controller.enqueue(encoder.encode(JSON.stringify(errorCandidate) + '\n'));
+            })
+        );
 
-        // Wait for all parallel processes to complete.
+        // Wait for all parallel processes to complete before closing the stream.
         await Promise.all(processingPromises);
         
-        // Once all batches are processed and their results streamed, close the stream.
         controller.close();
       },
     });

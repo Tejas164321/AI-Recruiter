@@ -1,4 +1,5 @@
 
+
 // This file contains TypeScript interfaces for the main data structures used throughout the application.
 // Using well-defined types helps ensure data consistency and provides excellent developer experience with autocompletion.
 
@@ -50,7 +51,6 @@ export interface RankedCandidate {
   keySkills: string; // A comma-separated string of key skills that matched.
   feedback: string; // Detailed AI-generated feedback.
   originalResumeName: string; // The original filename of the resume.
-  resumeDataUri?: string; // The data URI of the resume content, now optional and not stored in Firestore.
 }
 
 /**
@@ -79,7 +79,7 @@ export interface JobScreeningResult {
  * Represents the input for the bulk screening AI flow.
  */
 export interface PerformBulkScreeningInput {
-  jobDescription: Omit<ExtractedJobRole, 'userId' | 'createdAt'>;
+  jobDescription: Omit<ExtractedJobRole, 'id' | 'userId' | 'createdAt'>;
   resumes: Array<Omit<ResumeFile, 'file'>>;
 }
 
