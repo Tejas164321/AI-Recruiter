@@ -173,8 +173,10 @@ export default function ResumeRankerPage() {
       });
 
       if (!response.ok) {
-        throw new Error(`Server responded with ${response.status}`);
+        const errorData = await response.json().catch(() => ({ error: 'Request failed', details: `Server responded with ${response.status}` }));
+        throw new Error(errorData.details || 'An unknown server error occurred.');
       }
+      
       if (!response.body) {
         throw new Error("The response body is empty.");
       }
@@ -195,11 +197,14 @@ export default function ResumeRankerPage() {
         for (const line of lines) {
           if (line.trim() === '') continue;
           try {
-            const candidate: RankedCandidate = JSON.parse(line);
-            allCandidates.push(candidate);
-            setCurrentScreeningResult(prev => prev ? { ...prev, candidates: [...allCandidates].sort((a,b) => b.score - a.score) } : null);
+            // The server now sends the entire de-duplicated list in each chunk
+            allCandidates = JSON.parse(line);
+            if(Array.isArray(allCandidates)) {
+                setCurrentScreeningResult(prev => prev ? { ...prev, candidates: [...allCandidates].sort((a,b) => b.score - a.score) } : null);
+            }
           } catch (e) {
             console.error("Failed to parse chunk:", line);
+            // This might not be a user-facing error, but logs it for debugging.
           }
         }
       }
@@ -227,20 +232,37 @@ export default function ResumeRankerPage() {
   }, [currentUser?.uid, extractedJobRoles, uploadedResumeFiles, selectedJobRoleId, toast, isFirestoreAvailable]);
   
   const handleResumesUpload = useCallback(async (files: File[]) => {
-    const newResumeFilesPromises = files.map(async (file) => {
-      const dataUri = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader(); reader.onload = () => resolve(reader.result as string); reader.onerror = reject; reader.readAsDataURL(file);
-      });
-      return { id: crypto.randomUUID(), file, dataUri, name: file.name };
-    });
+    const newFiles: ResumeFile[] = [];
+    const existingFileNames = new Set(uploadedResumeFiles.map(f => f.name));
+    let skippedCount = 0;
 
-    try {
-        const newResumeFiles = await Promise.all(newResumeFilesPromises);
-        setUploadedResumeFiles(newResumeFiles);
-    } catch(error) {
-        toast({ title: "Error processing resumes", description: "Could not read one or more resume files.", variant: "destructive" });
+    for (const file of files) {
+        if (existingFileNames.has(file.name)) {
+            skippedCount++;
+            continue;
+        }
+        const dataUri = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = (error) => reject(error);
+            reader.readAsDataURL(file);
+        });
+        newFiles.push({ id: crypto.randomUUID(), file, dataUri, name: file.name });
+        existingFileNames.add(file.name);
     }
-  }, [toast]); 
+
+    if (skippedCount > 0) {
+        toast({
+            title: "Duplicate Files Skipped",
+            description: `${skippedCount} file(s) with the same name were not added.`,
+        });
+    }
+    
+    if (newFiles.length > 0) {
+        setUploadedResumeFiles(prev => [...prev, ...newFiles]);
+    }
+
+  }, [uploadedResumeFiles, toast]); 
 
   const handleJobRoleChange = (roleId: string | null) => {
     if (isStreaming) {
@@ -403,7 +425,7 @@ export default function ResumeRankerPage() {
                         </CardTitle>
                         <CardDescription>
                           {isStreaming ? `Processing... ` : `Session from ${currentScreeningResult.createdAt.toDate().toLocaleString()}.`} 
-                          Processed: {currentScreeningResult.candidates.length}. 
+                          Processed: {currentScreeningResult.candidates.length} unique candidate(s). 
                           Showing: {displayedCandidates.length}.
                         </CardDescription>
                       </div>
