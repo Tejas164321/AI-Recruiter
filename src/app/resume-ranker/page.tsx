@@ -200,10 +200,10 @@ export default function ResumeRankerPage() {
   }, [currentUser?.uid, toast]);
 
   const handleScreening = useCallback(async () => {
-    console.log("[DEBUG] handleScreening called");
+    console.log("[CLIENT DEBUG] handleScreening called");
     const roleToScreen = extractedJobRoles.find(jr => jr.id === selectedJobRoleId);
     if (!currentUser?.uid || !roleToScreen || uploadedResumeFiles.length === 0) {
-      console.log("[DEBUG] handleScreening aborted. Conditions not met.", { hasUser: !!currentUser?.uid, hasRole: !!roleToScreen, hasResumes: uploadedResumeFiles.length > 0 });
+      console.log("[CLIENT DEBUG] handleScreening aborted. Conditions not met.", { hasUser: !!currentUser?.uid, hasRole: !!roleToScreen, hasResumes: uploadedResumeFiles.length > 0 });
       toast({ title: "Cannot Start Screening", description: "Please ensure a job role is selected and resumes are uploaded.", variant: "destructive" });
       return;
     }
@@ -222,7 +222,7 @@ export default function ResumeRankerPage() {
         resumes: uploadedResumeFiles.map(r => ({ id: r.id, name: r.name, dataUri: r.dataUri }))
     };
     
-    console.log("[DEBUG] Starting stream with input:", input);
+    console.log("[CLIENT DEBUG] Starting stream with input:", { resumeCount: input.resumes.length, role: input.jobDescription.name });
     startStream(performBulkScreeningStream, input);
 
   }, [currentUser?.uid, extractedJobRoles, uploadedResumeFiles, selectedJobRoleId, toast, startStream, resetStream]);
