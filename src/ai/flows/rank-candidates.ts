@@ -178,7 +178,7 @@ const rankCandidatesFlow = ai.defineFlow(
                         ...aiCandidateOutput,
                         id: originalResume.id,
                         name: aiCandidateOutput.name || originalResume.name.replace(/\.[^/.]+$/, "") || "Unnamed Candidate",
-                        email: aiCode.tsxutput.email || "",
+                        email: aiCandidateOutput.email || "",
                         originalResumeName: originalResume.name,
                         resumeDataUri: originalResume.dataUri,
                     };
