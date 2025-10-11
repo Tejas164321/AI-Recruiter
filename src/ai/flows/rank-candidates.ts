@@ -4,7 +4,7 @@
 /**
  * @fileOverview Performs bulk screening: ranks candidate resumes against a job role in a streaming fashion.
  * This file orchestrates the process of taking a list of jobs and a list of resumes,
- * and having an AI rank each resume against each job.
+ * and having an AI rank each resume against each job with controlled parallelism.
  *
  * - performBulkScreeningStream - The main function to handle the bulk screening process.
  * - BulkScreeningInput - Input type: a single job role and a list of resumes.
@@ -14,7 +14,9 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import type { RankedCandidate } from '@/lib/types';
 
-const BATCH_SIZE = 10;
+// Constants for controlling the batching and parallelism
+const BATCH_SIZE = 10; // Number of resumes per single AI call
+const CONCURRENT_LIMIT = 5; // Number of AI calls to make in parallel at any given time
 
 // Internal Zod schema for a resume file.
 const ResumeInputSchema = z.object({
@@ -32,7 +34,7 @@ const ExtractedJobRoleSchema = z.object({
 });
 
 // Zod schema for the entire bulk screening input for the stream.
-export const BulkScreeningInputSchema = z.object({
+const BulkScreeningInputSchema = z.object({
   jobDescription: ExtractedJobRoleSchema,
   resumes: z.array(ResumeInputSchema),
 });
@@ -139,39 +141,44 @@ const rankCandidatesFlow = ai.defineFlow(
         batches.push(resumes.slice(i, i + BATCH_SIZE));
     }
 
-    // Create an array of promises, where each promise is an AI call for one batch.
-    const batchProcessingPromises = batches.map(async (batch) => {
+    // This function processes a single batch and returns its results.
+    const processBatch = async (batch: typeof resumes) => {
         const promptInput = {
             jobDescriptionDataUri: jobDescription.contentDataUri,
-            resumesData: batch.map(r => ({
-                id: r.id,
-                dataUri: r.dataUri,
-                originalResumeName: r.name,
-            })),
+            resumesData: batch.map(r => ({ id: r.id, dataUri: r.dataUri, originalResumeName: r.name })),
         };
-
         try {
-            // Await the AI call for this specific batch.
-            const { output: batchOutput } = await rankCandidatesInBatchPrompt(promptInput);
-
-            if (batchOutput && batchOutput.length > 0) {
-                // Return the successful results for this batch.
-                return { success: true, results: batchOutput, batch };
-            } else {
-                // Handle cases where the AI returns an empty or invalid output for a batch.
-                console.warn(`[rankCandidatesFlow] AI returned no output for a batch starting with resume ${batch[0].name}.`);
-                return { success: false, error: 'AI returned no output for this batch.', batch };
-            }
+            const { output } = await rankCandidatesInBatchPrompt(promptInput);
+            if (output) return { success: true, results: output, batch };
+            return { success: false, error: 'AI returned no output for this batch.', batch };
         } catch (error) {
-            // Handle critical errors during the AI call for this batch.
             const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error(`[rankCandidatesFlow] CRITICAL ERROR processing batch starting with resume ${batch[0].name}. Error: ${errorMessage}`, error instanceof Error ? error.stack : undefined);
+            console.error(`[rankCandidatesFlow] CRITICAL ERROR processing batch. Error: ${errorMessage}`, error instanceof Error ? error.stack : undefined);
             return { success: false, error: errorMessage, batch };
         }
-    });
+    };
 
-    // Process all promises in parallel.
-    const allBatchResults = await Promise.all(batchProcessingPromises);
+    // This function manages the controlled parallel execution.
+    const runWithConcurrency = async (limit: number) => {
+        const results: Awaited<ReturnType<typeof processBatch>>[] = [];
+        const executing = new Set<Promise<any>>();
+        for (const batch of batches) {
+            const promise = processBatch(batch);
+            executing.add(promise);
+            promise.then(result => {
+                results.push(result);
+                executing.delete(promise);
+            });
+            if (executing.size >= limit) {
+                await Promise.race(executing);
+            }
+        }
+        await Promise.all(executing);
+        return results;
+    };
+
+    // Execute all batches with the defined concurrency limit.
+    const allBatchResults = await runWithConcurrency(CONCURRENT_LIMIT);
 
     // Now, iterate through the results of all batches and yield them.
     for (const batchResult of allBatchResults) {
