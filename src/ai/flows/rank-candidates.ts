@@ -62,10 +62,10 @@ const rankCandidatesInBatchPrompt = ai.definePrompt({
   prompt: `You are an expert HR assistant tasked with ranking a batch of candidate resumes against a specific job description.
 Your scoring should be consistent and deterministic.
 
-Job Description:
+Job Description to match against:
 {{media url=jobDescriptionDataUri}}
 
-For each resume in the provided batch, analyze it against the job description and provide the following details in a JSON object:
+Now, for each resume in the provided batch below, analyze its content against the job description above and provide the following details in a JSON object:
 - resumeId: The original ID of the resume this result corresponds to.
 - name: Candidate's full name. If not found, use the original resume filename.
 - email: Candidate's email address. If not found, omit this field.
@@ -74,11 +74,12 @@ For each resume in the provided batch, analyze it against the job description an
 - keySkills: Key skills from the resume that match THIS SPECIFIC job description (comma-separated).
 - feedback: Human-friendly feedback on strengths, weaknesses, and improvement suggestions against THIS SPECIFIC job description.
 
-Input Resumes:
+Input Resumes to process:
 {{#each resumesData}}
 ---
 Resume ID: {{{this.id}}}
-Resume Filename: {{{this.originalResumeName}}}
+Original Filename: {{{this.originalResumeName}}}
+Content for Analysis:
 {{media url=this.dataUri}}
 ---
 {{/each}}
