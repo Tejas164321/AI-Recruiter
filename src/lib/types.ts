@@ -50,7 +50,7 @@ export interface RankedCandidate {
   keySkills: string; // A comma-separated string of key skills that matched.
   feedback: string; // Detailed AI-generated feedback.
   originalResumeName: string; // The original filename of the resume.
-  resumeDataUri: string; // The data URI of the resume content.
+  resumeDataUri?: string; // The data URI of the resume content, now optional and not stored in Firestore.
 }
 
 /**

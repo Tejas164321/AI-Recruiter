@@ -90,7 +90,7 @@ export function FeedbackModal({ isOpen, onClose, candidate }: FeedbackModalProps
             {/* AI Feedback Section */}
             <div>
               <h4 className="font-semibold text-foreground mb-2">AI Generated Feedback</h4>
-              <div className="p-4 bg-muted/50 rounded-md">
+              <div className="p-4 bg-muted/50 rounded-md border border-border">
                 {/* whitespace-pre-wrap preserves line breaks from the AI's response */}
                 <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
                   {candidate.feedback}

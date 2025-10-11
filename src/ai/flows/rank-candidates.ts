@@ -11,7 +11,7 @@ import {z} from 'genkit';
 import type { RankedCandidate } from '@/lib/types';
 
 // The number of resumes to process in a single AI call.
-const BATCH_SIZE = 10; 
+export const BATCH_SIZE = 10; 
 
 // Internal Zod schema for a single resume file.
 const ResumeInputSchema = z.object({
@@ -21,6 +21,7 @@ const ResumeInputSchema = z.object({
 });
 
 // Zod schema for the input required by this server action.
+export type PerformBulkScreeningInput = z.infer<typeof PerformBulkScreeningInputSchema>;
 const PerformBulkScreeningInputSchema = z.object({
   jobDescription: z.object({
     id: z.string(),
@@ -30,7 +31,7 @@ const PerformBulkScreeningInputSchema = z.object({
   }),
   resumes: z.array(ResumeInputSchema),
 });
-export type PerformBulkScreeningInput = z.infer<typeof PerformBulkScreeningInputSchema>;
+
 
 // Zod schema for the AI's direct output when ranking one resume.
 const AICandidateOutputSchema = z.object({
@@ -115,6 +116,8 @@ export async function performBulkScreening(input: PerformBulkScreeningInput): Pr
             const originalResume = resumes.find(r => r.id === aiCandidateOutput.resumeId);
             if (!originalResume) return null;
 
+            // IMPORTANT: Do not include resumeDataUri in the returned object to avoid exceeding Firestore document size limits.
+            // The frontend already has this data if needed.
             return {
                 id: originalResume.id,
                 name: aiCandidateOutput.name || originalResume.name.replace(/\.[^/.]+$/, "") || "Unnamed Candidate",
@@ -124,7 +127,6 @@ export async function performBulkScreening(input: PerformBulkScreeningInput): Pr
                 keySkills: aiCandidateOutput.keySkills,
                 feedback: aiCandidateOutput.feedback,
                 originalResumeName: originalResume.name,
-                resumeDataUri: originalResume.dataUri,
             } as RankedCandidate;
         }).filter((c): c is RankedCandidate => c !== null);
 
@@ -135,7 +137,7 @@ export async function performBulkScreening(input: PerformBulkScreeningInput): Pr
             id: resume.id, name: resume.name.replace(/\.[^/.]+$/, "") || "Candidate (Processing Error)", email: "",
             score: 0, atsScore: 0, keySkills: 'Critical processing error',
             feedback: `A critical error occurred while processing this resume: ${String(error).substring(0, 200)}`,
-            originalResumeName: resume.name, resumeDataUri: resume.dataUri,
+            originalResumeName: resume.name,
         }));
     }
 }

@@ -142,7 +142,7 @@ export default function ResumeRankerPage() {
     }
   }, [currentUser?.uid, toast]);
 
-  const handleScreening = useCallback(async () => {
+ const handleScreening = useCallback(async () => {
     const roleToScreen = extractedJobRoles.find(jr => jr.id === selectedJobRoleId);
     if (!currentUser?.uid || !roleToScreen || uploadedResumeFiles.length === 0) {
       toast({ title: "Cannot Start Screening", description: "Please ensure a job role is selected and resumes are uploaded.", variant: "destructive" });
@@ -160,7 +160,7 @@ export default function ResumeRankerPage() {
       createdAt: Timestamp.now(),
     });
     
-    let allCandidates: RankedCandidate[] = [];
+    let finalCandidates: RankedCandidate[] = [];
 
     try {
       const response = await fetch('/api/rank-resumes', {
@@ -197,24 +197,24 @@ export default function ResumeRankerPage() {
         for (const line of lines) {
           if (line.trim() === '') continue;
           try {
-            // The server now sends the entire de-duplicated list in each chunk
-            allCandidates = JSON.parse(line);
-            if(Array.isArray(allCandidates)) {
-                setCurrentScreeningResult(prev => prev ? { ...prev, candidates: [...allCandidates].sort((a,b) => b.score - a.score) } : null);
+            const candidatesChunk = JSON.parse(line);
+            if(Array.isArray(candidatesChunk)) {
+              // The server now sends the de-duplicated list in each chunk. So we can just replace.
+              finalCandidates = [...candidatesChunk].sort((a,b) => b.score - a.score);
+              setCurrentScreeningResult(prev => prev ? { ...prev, candidates: finalCandidates } : null);
             }
           } catch (e) {
-            console.error("Failed to parse chunk:", line);
-            // This might not be a user-facing error, but logs it for debugging.
+             console.error("Failed to parse chunk:", line, e);
           }
         }
       }
 
-      if (currentUser?.uid && roleToScreen && allCandidates.length > 0 && isFirestoreAvailable) {
+      if (currentUser?.uid && roleToScreen && finalCandidates.length > 0 && isFirestoreAvailable) {
         const resultToSave: Omit<JobScreeningResult, 'id' | 'userId' | 'createdAt'> = {
             jobDescriptionId: roleToScreen.id,
             jobDescriptionName: roleToScreen.name,
             jobDescriptionDataUri: roleToScreen.contentDataUri,
-            candidates: allCandidates,
+            candidates: finalCandidates,
         };
         const savedResult = await saveJobScreeningResult(resultToSave);
         setCurrentScreeningResult(savedResult);
@@ -348,6 +348,10 @@ export default function ResumeRankerPage() {
         toast({ title: "Email Not Found", description: `Could not find an email address for ${candidate.name}.`, variant: "destructive"});
         return;
       }
+      // Combine original resume data with ranked data for the modal
+       const resumeFile = uploadedResumeFiles.find(f => f.id === candidate.id);
+       const candidateForModal = { ...candidate, resumeDataUri: resumeFile?.dataUri };
+       setSelectedCandidateForFeedback(candidateForModal);
       setEmailRecipients([{ name: candidate.name, email: candidate.email }]); 
       setIsEmailModalOpen(true);
   };
@@ -424,7 +428,7 @@ export default function ResumeRankerPage() {
                           {isStreaming ? "Screening in Progress..." : "Results for:"} {currentScreeningResult.jobDescriptionName}
                         </CardTitle>
                         <CardDescription>
-                          {isStreaming ? `Processing... ` : `Session from ${currentScreeningResult.createdAt.toDate().toLocaleString()}.`} 
+                           {isStreaming ? `Processing... ` : `Session from ${currentScreeningResult.createdAt.toDate().toLocaleString()}. `}
                           Processed: {currentScreeningResult.candidates.length} unique candidate(s). 
                           Showing: {displayedCandidates.length}.
                         </CardDescription>
