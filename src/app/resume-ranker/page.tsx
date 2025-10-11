@@ -159,6 +159,8 @@ export default function ResumeRankerPage() {
       userId: currentUser.uid,
       createdAt: Timestamp.now(),
     });
+    
+    let allCandidates: RankedCandidate[] = [];
 
     try {
       const response = await fetch('/api/rank-resumes', {
@@ -179,19 +181,24 @@ export default function ResumeRankerPage() {
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let allCandidates: RankedCandidate[] = [];
+      let buffer = '';
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n').filter(line => line.trim() !== '');
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
         
+        // Keep the last partial line in the buffer
+        buffer = lines.pop() || '';
+
         for (const line of lines) {
+          if (line.trim() === '') continue;
           try {
             const candidate: RankedCandidate = JSON.parse(line);
             allCandidates.push(candidate);
+            // Update state with the new candidate, keeping the list sorted
             setCurrentScreeningResult(prev => prev ? { ...prev, candidates: [...allCandidates].sort((a,b) => b.score - a.score) } : null);
           } catch (e) {
             console.error("Failed to parse chunk:", line);

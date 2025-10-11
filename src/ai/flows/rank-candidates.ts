@@ -3,7 +3,7 @@
 
 /**
  * @fileOverview Performs bulk screening by ranking candidate resumes against a job role.
- * This flow is designed to be called from a dedicated API route that handles streaming.
+ * This flow is designed to be called by an API route that handles streaming.
  */
 
 import {ai} from '@/ai/genkit';
@@ -39,8 +39,8 @@ const AICandidateOutputSchema = z.object({
   email: z.string().optional().describe("The candidate's email address. If not found, return an empty string."),
   score: z.number().describe('The match score (0-100) of the resume to the job description.'),
   atsScore: z.number().describe('The ATS (Applicant Tracking System) compatibility score (0-100).'),
-  keySkills: z.string().describe('Key skills from the resume matching the job description.'),
-  feedback: z.string().describe('AI-driven feedback for the candidate, including strengths, weaknesses, and improvement suggestions.'),
+  keySkills: z.string().describe('A comma-separated list of the most important skills from the resume that match the job description.'),
+  feedback: z.string().describe('Human-friendly but concise feedback on strengths and weaknesses against THIS SPECIFIC job description.'),
 });
 
 // Defines the Genkit prompt for ranking a BATCH of resumes.
@@ -71,8 +71,8 @@ Now, for each resume in the provided batch below, analyze its content against th
 - email: Candidate's email address. If not found, omit this field.
 - score: A match score (0-100) for relevance to THIS SPECIFIC job description.
 - atsScore: An ATS compatibility score (0-100).
-- keySkills: Key skills from the resume that match THIS SPECIFIC job description (comma-separated).
-- feedback: Human-friendly feedback on strengths, weaknesses, and improvement suggestions against THIS SPECIFIC job description.
+- keySkills: A comma-separated list of the most important skills from the resume that match THIS SPECIFIC job description.
+- feedback: Human-friendly but concise feedback (2-3 sentences) on strengths and weaknesses against THIS SPECIFIC job description.
 
 Input Resumes to process:
 {{#each resumesData}}
@@ -92,65 +92,50 @@ Ensure your output is a valid JSON array, with one object for each resume provid
 
 
 /**
- * A standard async function to perform bulk screening. It processes resumes in parallel batches
- * and returns a promise that resolves with the full list of ranked candidates.
- * This function is called by the API route.
+ * A standard async function to perform bulk screening on a single batch.
  *
- * @param {PerformBulkScreeningInput} input - The job role and all resumes to be processed.
- * @returns {Promise<RankedCandidate[]>} A promise that resolves to an array of ranked candidates.
+ * @param {PerformBulkScreeningInput} input - The job role and a batch of resumes.
+ * @returns {Promise<RankedCandidate[]>} A promise that resolves to an array of ranked candidates for the batch.
  */
 export async function performBulkScreening(input: PerformBulkScreeningInput): Promise<RankedCandidate[]> {
     const { jobDescription, resumes } = input;
-    const allRankedCandidates: RankedCandidate[] = [];
 
-    const batches = [];
-    for (let i = 0; i < resumes.length; i += BATCH_SIZE) {
-        batches.push(resumes.slice(i, i + BATCH_SIZE));
-    }
-
-    const batchPromises = batches.map(async (batch) => {
-        const promptInput = {
-            jobDescriptionDataUri: jobDescription.contentDataUri,
-            resumesData: batch.map(r => ({ id: r.id, dataUri: r.dataUri, originalResumeName: r.name })),
-        };
-        
-        try {
-            const { output } = await rankCandidatesInBatchPrompt(promptInput);
-            if (!output) return [];
-
-            return output.map(aiCandidateOutput => {
-                const originalResume = resumes.find(r => r.id === aiCandidateOutput.resumeId);
-                if (!originalResume) return null;
-
-                return {
-                    id: originalResume.id,
-                    name: aiCandidateOutput.name || originalResume.name.replace(/\.[^/.]+$/, "") || "Unnamed Candidate",
-                    email: aiCandidateOutput.email || "",
-                    score: aiCandidateOutput.score,
-                    atsScore: aiCandidateOutput.atsScore,
-                    keySkills: aiCandidateOutput.keySkills,
-                    feedback: aiCandidateOutput.feedback,
-                    originalResumeName: originalResume.name,
-                    resumeDataUri: originalResume.dataUri,
-                } as RankedCandidate;
-            }).filter((c): c is RankedCandidate => c !== null);
-
-        } catch (error) {
-            console.error(`CRITICAL ERROR processing a batch. Error: ${error instanceof Error ? error.message : String(error)}`);
-            // Return error objects for this batch
-            return batch.map(resume => ({
-                id: resume.id, name: resume.name.replace(/\.[^/.]+$/, "") || "Candidate (Processing Error)", email: "",
-                score: 0, atsScore: 0, keySkills: 'Critical processing error',
-                feedback: `A critical error occurred while processing the batch: ${String(error).substring(0, 200)}`,
-                originalResumeName: resume.name, resumeDataUri: resume.dataUri,
-            }));
+    const promptInput = {
+        jobDescriptionDataUri: jobDescription.contentDataUri,
+        resumesData: resumes.map(r => ({ id: r.id, dataUri: r.dataUri, originalResumeName: r.name })),
+    };
+    
+    try {
+        const { output } = await rankCandidatesInBatchPrompt(promptInput);
+        if (!output) {
+             throw new Error("AI did not return an output for this batch.");
         }
-    });
 
-    const resultsFromAllBatches = await Promise.all(batchPromises);
-    resultsFromAllBatches.forEach(batchResult => {
-        allRankedCandidates.push(...batchResult);
-    });
+        return output.map(aiCandidateOutput => {
+            const originalResume = resumes.find(r => r.id === aiCandidateOutput.resumeId);
+            if (!originalResume) return null;
 
-    return allRankedCandidates;
+            return {
+                id: originalResume.id,
+                name: aiCandidateOutput.name || originalResume.name.replace(/\.[^/.]+$/, "") || "Unnamed Candidate",
+                email: aiCandidateOutput.email || "",
+                score: aiCandidateOutput.score,
+                atsScore: aiCandidateOutput.atsScore,
+                keySkills: aiCandidateOutput.keySkills,
+                feedback: aiCandidateOutput.feedback,
+                originalResumeName: originalResume.name,
+                resumeDataUri: originalResume.dataUri,
+            } as RankedCandidate;
+        }).filter((c): c is RankedCandidate => c !== null);
+
+    } catch (error) {
+        console.error(`CRITICAL ERROR processing batch for role ${jobDescription.name}. Error: ${error instanceof Error ? error.message : String(error)}`);
+        // Return error objects for this batch so the frontend can display them.
+        return resumes.map(resume => ({
+            id: resume.id, name: resume.name.replace(/\.[^/.]+$/, "") || "Candidate (Processing Error)", email: "",
+            score: 0, atsScore: 0, keySkills: 'Critical processing error',
+            feedback: `A critical error occurred while processing this resume: ${String(error).substring(0, 200)}`,
+            originalResumeName: resume.name, resumeDataUri: resume.dataUri,
+        }));
+    }
 }
