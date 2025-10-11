@@ -22,12 +22,13 @@ const AICandidateOutputSchema = z.object({
 });
 
 // Defines the Genkit prompt for ranking a SINGLE resume.
+// It now expects plain text content instead of a data URI.
 const rankCandidatePrompt = ai.definePrompt({
   name: 'rankSingleCandidatePrompt',
   input: {
     schema: z.object({
-      jobDescriptionDataUri: z.string().describe("The target job description as a data URI."),
-      resumeDataUri: z.string().describe("A single candidate resume as a data URI."),
+      jobDescriptionContent: z.string().describe("The plain text of the target job description."),
+      resumeContent: z.string().describe("The plain text content of a single candidate resume."),
       originalResumeName: z.string().describe("The original file name of the resume, for context only.")
     }),
   },
@@ -38,9 +39,9 @@ const rankCandidatePrompt = ai.definePrompt({
 Your scoring should be consistent and deterministic.
 
 Job Description to match against:
-{{media url=jobDescriptionDataUri}}
+{{{jobDescriptionContent}}}
 
-Now, analyze the resume content provided below (original filename: {{{originalResumeName}}}) and provide the following details in a JSON object:
+Now, analyze the resume content provided below (from original file: {{{originalResumeName}}}) and provide the following details in a JSON object:
 - name: Candidate's full name. If not found, use the original resume filename.
 - email: Candidate's email address. If not found, omit this field.
 - score: A match score (0-100) for relevance to THIS SPECIFIC job description.
@@ -49,7 +50,7 @@ Now, analyze the resume content provided below (original filename: {{{originalRe
 - feedback: Human-friendly but concise feedback (2-3 sentences) on strengths and weaknesses against THIS SPECIFIC job description.
 
 Resume for Analysis:
-{{media url=resumeDataUri}}
+{{{resumeContent}}}
 
 Ensure your output is a single, valid JSON object with the requested fields.`,
   config: {
@@ -61,18 +62,18 @@ Ensure your output is a single, valid JSON object with the requested fields.`,
 /**
  * A standard async function to perform screening on a single resume.
  *
- * @param {object} input - The job role and a single resume.
+ * @param {object} input - The job role and a single resume with plain text content.
  * @returns {Promise<RankedCandidate>} A promise that resolves to a ranked candidate.
  */
 export async function performSingleResumeScreening(input: {
-    jobDescription: { contentDataUri: string, name: string };
-    resume: { id: string, dataUri: string, name: string };
+    jobDescriptionContent: string;
+    resume: { id: string, content: string, name: string };
 }): Promise<RankedCandidate> {
-    const { jobDescription, resume } = input;
+    const { jobDescriptionContent, resume } = input;
 
     const promptInput = {
-        jobDescriptionDataUri: jobDescription.contentDataUri,
-        resumeDataUri: resume.dataUri,
+        jobDescriptionContent: jobDescriptionContent,
+        resumeContent: resume.content,
         originalResumeName: resume.name,
     };
     
@@ -94,7 +95,7 @@ export async function performSingleResumeScreening(input: {
         } as RankedCandidate;
 
     } catch (error) {
-        console.error(`CRITICAL ERROR processing resume ${resume.name} for role ${jobDescription.name}. Error: ${error instanceof Error ? error.message : String(error)}`);
+        console.error(`CRITICAL ERROR processing resume ${resume.name}. Error: ${error instanceof Error ? error.message : String(error)}`);
         // Return a clear error object for this resume so the frontend can display it.
         return {
             id: resume.id,
