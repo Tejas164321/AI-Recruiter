@@ -1,6 +1,6 @@
 
 import { performBulkScreening } from '@/ai/flows/rank-candidates';
-import type { RankedCandidate, ResumeFile, PerformBulkScreeningInput } from '@/lib/types';
+import type { PerformBulkScreeningInput, RankedCandidate, ResumeFile } from '@/lib/types';
 import { type NextRequest } from 'next/server';
 
 const BATCH_SIZE = 10;
@@ -24,26 +24,27 @@ export async function POST(req: NextRequest) {
 
         const encoder = new TextEncoder();
 
-        // Process each batch sequentially and stream results immediately.
-        for (const batch of resumeBatches) {
+        // Process all batches in parallel
+        const processingPromises = resumeBatches.map(async (batch) => {
           try {
-            // Get the ranked candidates for the current batch.
             const rankedCandidates = await performBulkScreening({ jobDescription, resumes: batch });
-            
-            // Immediately enqueue the results for this batch.
-            // The frontend will handle combining and de-duplicating results.
             if (rankedCandidates.length > 0) {
               controller.enqueue(encoder.encode(JSON.stringify(rankedCandidates) + '\n'));
             }
-
           } catch (error) {
-            console.error("[API Route] Error processing a batch:", error);
+            console.error("[API Route] Error processing a batch in parallel:", error);
+            // In case of an error in one batch, we can choose to send an error message
+            // or simply log it and continue. Here, we'll log it and let other batches proceed.
             const errorMessage = error instanceof Error ? error.message : "A batch failed to process.";
+            // Optionally enqueue a specific error object for the frontend to handle
             controller.enqueue(encoder.encode(JSON.stringify({ error: "Batch Processing Error", details: errorMessage }) + '\n'));
           }
-        }
+        });
+
+        // Wait for all parallel processes to complete.
+        await Promise.all(processingPromises);
         
-        // Once all batches are processed, close the stream.
+        // Once all batches are processed and their results streamed, close the stream.
         controller.close();
       },
     });
