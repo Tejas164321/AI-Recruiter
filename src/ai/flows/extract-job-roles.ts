@@ -9,9 +9,37 @@
  * - ExtractJobRolesOutput - The return type for the extractJobroles function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 import { randomUUID } from 'crypto'; // Used to generate unique IDs for extracted roles.
+
+// Helper function to detect if an error is a rate limit error
+function isRateLimitError(error: unknown): boolean {
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    return message.includes('429') ||
+      message.includes('rate') ||
+      message.includes('quota') ||
+      message.includes('too many requests') ||
+      message.includes('resource exhausted');
+  }
+  return false;
+}
+
+// Helper function to get user-friendly error message
+function getErrorMessage(error: unknown, docName: string): string {
+  if (isRateLimitError(error)) {
+    return `API rate limit exceeded. Please wait 1-2 minutes and try again.`;
+  }
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.includes('API_KEY')) {
+    return `Invalid API key. Please check your GOOGLE_API_KEY in .env.local`;
+  }
+  if (message.includes('timeout')) {
+    return `Request timed out. The file may be too large.`;
+  }
+  return message.substring(0, 100);
+}
 
 // Schema for a single uploaded job description file.
 const JobDescriptionFileInputSchema = z.object({
@@ -59,8 +87,8 @@ const segmentJobDescriptionsPrompt = ai.definePrompt({
   output: {
     // The AI should return an array of objects, each with a title and content.
     schema: z.array(z.object({
-        title: z.string().describe("The concise job title of this individual job description (e.g., 'Senior Software Engineer', 'Marketing Manager'). Ensure the title is specific to the job described. If no clear title is found, this may be empty."),
-        content: z.string().describe("The full text content of that specific job description, including all requirements, responsibilities, and qualifications."),
+      title: z.string().describe("The concise job title of this individual job description (e.g., 'Senior Software Engineer', 'Marketing Manager'). Ensure the title is specific to the job described. If no clear title is found, this may be empty."),
+      content: z.string().describe("The full text content of that specific job description, including all requirements, responsibilities, and qualifications."),
     })).describe("An array of individual job descriptions found in the document. If only one JD is present, it should be an array with a single element. If no distinct JDs are found or the document is not a job description, return an empty array."),
   },
   // The prompt instructing the AI on how to perform the segmentation.
@@ -93,9 +121,12 @@ export async function extractJobRoles(input: ExtractJobRolesInput): Promise<Extr
     return await extractJobRolesFlow(input);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    const userMessage = getErrorMessage(error, 'job description');
     console.error('[extractJobRoles function] DETAILED ERROR:', error);
     console.error('[extractJobRoles function (server action entry)] Error message:', message, error instanceof Error ? error.stack : undefined);
-    throw new Error(`Job role extraction process failed: ${message}`);
+
+    // Throw a user-friendly error message
+    throw new Error(`Job role extraction failed: ${userMessage}`);
   }
 }
 
@@ -112,14 +143,23 @@ const extractJobRolesFlow = ai.defineFlow(
     // Process each document concurrently using Promise.all.
     const segmentationPromises = input.jobDescriptionDocuments.map(async (doc) => {
       try {
+        // Validate data URI before processing
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+        console.log(`🔍 [extractJobRolesFlow] Processing: ${doc.name}`);
+        console.log(`   Data URI Length: ${doc.dataUri.length} chars`);
+        console.log(`   Data URI Format: ${doc.dataUri.substring(0, 50)}...`);
+
         const segmentationInput = {
           documentDataUri: doc.dataUri,
           originalFileName: doc.name,
         };
-        console.log(`[extractJobRolesFlow] Attempting to segment document: ${doc.name}`);
+
+        console.log(`   🤖 Calling AI for segmentation...`);
         // Call the AI prompt to get segmented JDs.
         const { output: segmentedJdsOutput } = await segmentJobDescriptionsPrompt(segmentationInput);
-        console.log(`[extractJobRolesFlow] Successfully segmented document: ${doc.name}. Found ${segmentedJdsOutput?.length || 0} segments.`);
+
+        console.log(`✅ [extractJobRolesFlow] AI Response received for: ${doc.name}`);
+        console.log(`   Segments found: ${segmentedJdsOutput?.length || 0}`);
 
         // If the AI returned valid segments, process them.
         if (segmentedJdsOutput && segmentedJdsOutput.length > 0) {
@@ -129,7 +169,7 @@ const extractJobRolesFlow = ai.defineFlow(
             if (!displayName) {
               displayName = segmentedJdsOutput.length > 1 ? `Job Role ${index + 1}` : "Untitled Job Role";
             }
-            
+
             // Ensure content is not empty and convert it back to a data URI.
             const content = segmentedJd.content || "No content extracted for this job description.";
             const contentDataUri = `data:text/plain;charset=utf-8;base64,${Buffer.from(content).toString('base64')}`;
@@ -146,21 +186,42 @@ const extractJobRolesFlow = ai.defineFlow(
           console.warn(`[extractJobRolesFlow] No segments found for document ${doc.name}. Treating whole doc as one role.`);
           allExtractedRoles.push({
             id: randomUUID(),
-            name: "Untitled Job Role", 
-            contentDataUri: doc.dataUri, 
+            name: "Untitled Job Role",
+            contentDataUri: doc.dataUri,
             originalDocumentName: doc.name,
           });
         }
       } catch (error) {
         // Handle errors for individual document processing.
         const message = error instanceof Error ? error.message : String(error);
-        console.error(`[extractJobRolesFlow] DETAILED ERROR segmenting document ${doc.name}:`, error);
-        console.error(`[extractJobRolesFlow] Error segmenting document ${doc.name} (message only): ${message}`, error instanceof Error ? error.stack : undefined);
-        
+        const stack = error instanceof Error ? error.stack : 'No stack trace available';
+        const isRateLimit = isRateLimitError(error);
+        const userFriendlyMessage = getErrorMessage(error, doc.name);
+
+        // Enhanced error logging with more context
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.error(`❌ [extractJobRolesFlow] EXTRACTION FAILED for: ${doc.name}`);
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.error('Error Type:', error instanceof Error ? error.constructor.name : typeof error);
+        console.error('Is Rate Limit Error:', isRateLimit);
+        console.error('Error Message:', message);
+        console.error('User Message:', userFriendlyMessage);
+        console.error('Stack Trace:', stack);
+        console.error('Document Name:', doc.name);
+        console.error('Data URI Preview:', doc.dataUri.substring(0, 100) + '...');
+        console.error('Data URI Length:', doc.dataUri.length, 'characters');
+        console.error('Data URI MIME Type:', doc.dataUri.split(';')[0]);
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+        // Determine the fallback name based on error type
+        const errorName = isRateLimit
+          ? "Rate Limit Exceeded - Wait 1-2 min"
+          : "Untitled Job Role (Extraction Error)";
+
         // On error, create a fallback role to represent the failed document.
         allExtractedRoles.push({
           id: randomUUID(),
-          name: "Untitled Job Role (Extraction Error)", // Indicate error in the name.
+          name: errorName,
           contentDataUri: doc.dataUri, // Keep original data URI.
           originalDocumentName: doc.name,
         });
@@ -172,15 +233,15 @@ const extractJobRolesFlow = ai.defineFlow(
 
     // If no roles were extracted from any documents, create fallbacks for all of them.
     if (allExtractedRoles.length === 0 && input.jobDescriptionDocuments.length > 0) {
-        console.warn(`[extractJobRolesFlow] No roles extracted after processing all documents. Creating fallbacks.`);
-        input.jobDescriptionDocuments.forEach(doc => {
-            allExtractedRoles.push({
-                id: randomUUID(),
-                name: "Untitled Job Role (No Segments)", // Indicate no segments were found.
-                contentDataUri: doc.dataUri,
-                originalDocumentName: doc.name,
-            });
+      console.warn(`[extractJobRolesFlow] No roles extracted after processing all documents. Creating fallbacks.`);
+      input.jobDescriptionDocuments.forEach(doc => {
+        allExtractedRoles.push({
+          id: randomUUID(),
+          name: "Untitled Job Role (No Segments)", // Indicate no segments were found.
+          contentDataUri: doc.dataUri,
+          originalDocumentName: doc.name,
         });
+      });
     }
     return allExtractedRoles;
   }

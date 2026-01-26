@@ -9,6 +9,17 @@ import {googleAI} from '@genkit-ai/google-genai';
  * This 'ai' object is the central point for defining and running all AI-related operations,
  * such as flows, prompts, and tools.
  */
+
+// Validate API key before initialization
+const apiKey = process.env.GOOGLE_API_KEY;
+if (!apiKey) {
+  console.error('❌ [Genkit Config] GOOGLE_API_KEY is not set in environment variables!');
+  console.error('   Please check your .env.local file and restart the server.');
+} else {
+  console.log('✅ [Genkit Config] Google API Key detected (length:', apiKey.length, 'chars)');
+  console.log('   Using model: gemini-2.0-flash');
+}
+
 export const ai = genkit({
   // An array of plugins to extend Genkit's core functionality.
   plugins: [
@@ -17,7 +28,7 @@ export const ai = genkit({
       // The API key for Google AI services is retrieved from environment variables.
       // It's crucial to keep this key secret and not hardcode it directly in the source code.
       // This ensures that sensitive credentials are not exposed in version control.
-      apiKey: process.env.GOOGLE_API_KEY, 
+      apiKey: apiKey, 
     }),
   ],
   // Specifies the default AI model to be used for generation tasks if not overridden

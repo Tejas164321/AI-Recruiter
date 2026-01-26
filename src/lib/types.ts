@@ -110,16 +110,98 @@ export interface AtsScoreResult {
  * as stored in Firestore.
  */
 export interface InterviewQuestionsSet {
-    id: string; // The Firestore document ID.
-    roleTitle: string; // The job title these questions are for.
-    jobDescriptionDataUri?: string; // Optional link to the specific JD content used.
-    focusAreas?: string; // Optional focus areas provided by the user.
-    technicalQuestions: string[];
-    behavioralQuestions: string[];
-    situationalQuestions: string[];
-    roleSpecificQuestions: string[];
-    userId: string; // The ID of the user who owns this set.
-    createdAt: Timestamp; // The timestamp of when the questions were generated.
+  id: string; // The Firestore document ID.
+  roleTitle: string; // The job title these questions are for.
+  jobDescriptionDataUri?: string; // Optional link to the specific JD content used.
+  focusAreas?: string; // Optional focus areas provided by the user.
+  technicalQuestions: string[];
+  behavioralQuestions: string[];
+  situationalQuestions: string[];
+  roleSpecificQuestions: string[];
+  userId: string; // The ID of the user who owns this set.
+  createdAt: Timestamp; // The timestamp of when the questions were generated.
 }
 
-    
+// ============================================
+// Processing Types for Robust Bulk Operations
+// ============================================
+
+/**
+ * Real-time progress information for bulk screening operations.
+ */
+export interface ProcessingProgress {
+  /** Current item being processed (1-indexed) */
+  current: number;
+  /** Total number of items to process */
+  total: number;
+  /** Number of items successfully processed */
+  succeeded: number;
+  /** Number of items that failed */
+  failed: number;
+  /** Current batch number (if batching is used) */
+  currentBatch?: number;
+  /** Total number of batches */
+  totalBatches?: number;
+  /** Percentage complete (0-100) */
+  percentComplete: number;
+  /** Human-readable status message */
+  status: string;
+  /** Estimated time remaining in seconds */
+  estimatedTimeRemaining?: number;
+}
+
+/**
+ * Detailed error information for failed processing items.
+ */
+export interface ProcessingError {
+  /** Index of the failed item in the original array */
+  index: number;
+  /** ID of the resume that failed */
+  resumeId: string;
+  /** Name of the resume file */
+  resumeName: string;
+  /** Error message */
+  message: string;
+  /** Error type for categorization */
+  type: 'rate_limit' | 'timeout' | 'parse_error' | 'api_error' | 'unknown';
+  /** Whether this error is retryable */
+  retryable: boolean;
+  /** Number of retry attempts made */
+  retryAttempts?: number;
+}
+
+/**
+ * Configuration options for bulk screening processing.
+ */
+export interface BulkScreeningOptions {
+  /** Maximum concurrent API calls (default: 3) */
+  concurrency?: number;
+  /** Maximum retry attempts per resume (default: 3) */
+  maxRetries?: number;
+  /** Enable adaptive rate limiting based on error rates (default: true) */
+  adaptiveRateLimiting?: boolean;
+  /** Progress callback for real-time updates */
+  onProgress?: (progress: ProcessingProgress) => void;
+}
+
+/**
+ * Extended output from bulk screening with partial results and error tracking.
+ */
+export interface BulkScreeningResultWithErrors {
+  /** Results for each job role (same as PerformBulkScreeningOutput) */
+  results: PerformBulkScreeningOutput;
+  /** Detailed errors for any failed resumes */
+  errors: ProcessingError[];
+  /** Processing statistics */
+  stats: {
+    totalResumes: number;
+    successfulResumes: number;
+    failedResumes: number;
+    totalTimeMs: number;
+    averageTimePerResume: number;
+  };
+  /** Whether any items failed (true if errors.length > 0) */
+  hasErrors: boolean;
+  /** Whether partial results are available */
+  partialResults: boolean;
+}
