@@ -9,6 +9,7 @@ import { FileUploadArea } from "@/components/file-upload-area";
 import { AtsScoreTable } from "@/components/ats-score-table";
 import { AtsFeedbackModal } from "@/components/ats-feedback-modal";
 import { LoadingIndicator } from "@/components/loading-indicator";
+import { TableSkeleton } from "@/components/skeletons/table-skeleton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 // Icons
@@ -60,7 +61,7 @@ export default function AtsScoreFinderPage() {
   const [resultToDelete, setResultToDelete] = useState<AtsScoreResult | null>(null);
   // State to control the "delete all" confirmation dialog
   const [isDeleteAllDialogOpen, setIsDeleteAllDialogOpen] = useState<boolean>(false);
-  
+
   // Refs for scrolling to specific sections
   const resultsSectionRef = useRef<HTMLDivElement | null>(null);
   const analyzeButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -77,13 +78,13 @@ export default function AtsScoreFinderPage() {
         .then(results => setAtsResults(results))
         .catch(err => {
           console.error("Error fetching ATS results:", err);
-          toast({ title: "Error Loading ATS Results", description: String(err.message || err).substring(0,100), variant: "destructive" });
+          toast({ title: "Error Loading ATS Results", description: String(err.message || err).substring(0, 100), variant: "destructive" });
         })
         .finally(() => setIsLoadingResultsFromDB(false));
     } else {
-        // If not logged in or DB not available, stop loading and clear results
-        setIsLoadingResultsFromDB(false);
-        setAtsResults([]);
+      // If not logged in or DB not available, stop loading and clear results
+      setIsLoadingResultsFromDB(false);
+      setAtsResults([]);
     }
   }, [currentUser, toast, setIsPageLoading, isFirestoreAvailable]);
 
@@ -107,7 +108,7 @@ export default function AtsScoreFinderPage() {
       return () => clearTimeout(timer);
     }
   }, [isProcessingAts, isLoadingResultsFromDB, atsResults]);
-  
+
   // Memoized sorted results to prevent re-sorting on every render
   const sortedAtsResults = useMemo(() => {
     return [...atsResults].sort((a, b) => {
@@ -130,8 +131,8 @@ export default function AtsScoreFinderPage() {
       return;
     }
     if (files.length > MAX_FILES_ATS) {
-        toast({ title: "Too many files", description: `You can upload a maximum of ${MAX_FILES_ATS} resumes at a time.`, variant: "destructive" });
-        return;
+      toast({ title: "Too many files", description: `You can upload a maximum of ${MAX_FILES_ATS} resumes at a time.`, variant: "destructive" });
+      return;
     }
     // Convert uploaded files to data URIs
     const newResumeFilesPromises = files.map(async (file) => {
@@ -148,7 +149,7 @@ export default function AtsScoreFinderPage() {
       setUploadedResumeFiles(newResumeFiles);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      toast({ title: "Error processing resume files", description: message.substring(0,100), variant: "destructive" });
+      toast({ title: "Error processing resume files", description: message.substring(0, 100), variant: "destructive" });
     }
   }, [toast, currentUser?.uid]);
 
@@ -165,13 +166,13 @@ export default function AtsScoreFinderPage() {
 
     setIsProcessingAts(true);
     const aiResultsToSave: Array<Omit<AtsScoreResult, 'id' | 'userId' | 'createdAt'>> = [];
-    
+
     // Process each uploaded resume file concurrently
     const processingPromises = uploadedResumeFiles.map(async (resumeFile) => {
       try {
         const input: CalculateAtsScoreInput = { resumeDataUri: resumeFile.dataUri, originalResumeName: resumeFile.name };
         const output: CalculateAtsScoreOutput = await calculateAtsScore(input);
-        
+
         // Prepare the result for saving to Firestore
         aiResultsToSave.push({
           resumeId: resumeFile.id,
@@ -184,27 +185,27 @@ export default function AtsScoreFinderPage() {
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Unknown error during ATS analysis.";
         console.error(`Failed to process ${resumeFile.name}: ${errorMessage}`);
-        toast({ title: `Analysis Failed for ${resumeFile.name}`, description: errorMessage.substring(0,100), variant: "destructive" });
+        toast({ title: `Analysis Failed for ${resumeFile.name}`, description: errorMessage.substring(0, 100), variant: "destructive" });
       }
     });
 
     await Promise.all(processingPromises);
-    
+
     // Save the successfully processed results to Firestore
     if (aiResultsToSave.length > 0) {
-        try {
-            const savedDbResults = await saveMultipleAtsScoreResults(aiResultsToSave);
-            // Add new results to the top of the existing list
-            setAtsResults(prevResults => [...savedDbResults, ...prevResults]);
-            toast({ title: "ATS Analysis Complete", description: `${savedDbResults.length} of ${uploadedResumeFiles.length} resumes processed and saved.` });
-        } catch (dbError) {
-            const message = dbError instanceof Error ? dbError.message : String(dbError);
-            toast({ title: "Failed to Save Results", description: `Could not save to database: ${message.substring(0,100)}`, variant: "destructive"});
-        }
+      try {
+        const savedDbResults = await saveMultipleAtsScoreResults(aiResultsToSave);
+        // Add new results to the top of the existing list
+        setAtsResults(prevResults => [...savedDbResults, ...prevResults]);
+        toast({ title: "ATS Analysis Complete", description: `${savedDbResults.length} of ${uploadedResumeFiles.length} resumes processed and saved.` });
+      } catch (dbError) {
+        const message = dbError instanceof Error ? dbError.message : String(dbError);
+        toast({ title: "Failed to Save Results", description: `Could not save to database: ${message.substring(0, 100)}`, variant: "destructive" });
+      }
     } else if (uploadedResumeFiles.length > 0) {
-         toast({ title: "ATS Analysis Failed", description: "No resumes could be processed successfully.", variant: "destructive" });
+      toast({ title: "ATS Analysis Failed", description: "No resumes could be processed successfully.", variant: "destructive" });
     }
-    
+
     // Reset state after processing
     setIsProcessingAts(false);
     setUploadedResumeFiles([]);
@@ -215,7 +216,7 @@ export default function AtsScoreFinderPage() {
     setSelectedResultForModal(result);
     setIsModalOpen(true);
   };
-  
+
   // Handler to open the delete confirmation dialog for a single item
   const handleOpenDeleteDialog = (result: AtsScoreResult) => {
     setResultToDelete(result);
@@ -280,7 +281,7 @@ export default function AtsScoreFinderPage() {
       {/* Conditional Rendering: User Authentication Status */}
       {!currentUser && isFirestoreAvailable && (
         <Card className="shadow-lg">
-            <CardContent className="pt-6 text-center"><p className="text-lg text-muted-foreground">Please <a href="/login" className="text-primary underline">log in</a> to use the ATS Score Analyzer.</p></CardContent>
+          <CardContent className="pt-6 text-center"><p className="text-lg text-muted-foreground">Please <a href="/login" className="text-primary underline">log in</a> to use the ATS Score Analyzer.</p></CardContent>
         </Card>
       )}
 
@@ -294,7 +295,7 @@ export default function AtsScoreFinderPage() {
               <CardDescription>Upload one or more resume files (PDF, DOCX, TXT). Max 5MB each. Up to {MAX_FILES_ATS} files.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <FileUploadArea onFilesUpload={handleResumesUpload} acceptedFileTypes={{"application/pdf": [".pdf"],"application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],"text/plain": [".txt"],"application/msword": [".doc"],}} multiple label={`PDF, DOCX, DOC, TXT files up to 5MB each (max ${MAX_FILES_ATS} files)`} id="ats-resume-upload" maxSizeInBytes={MAX_FILE_SIZE_BYTES}/>
+              <FileUploadArea onFilesUpload={handleResumesUpload} acceptedFileTypes={{ "application/pdf": [".pdf"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"], "text/plain": [".txt"], "application/msword": [".doc"], }} multiple label={`PDF, DOCX, DOC, TXT files up to 5MB each (max ${MAX_FILES_ATS} files)`} id="ats-resume-upload" maxSizeInBytes={MAX_FILE_SIZE_BYTES} />
               <Button ref={analyzeButtonRef} onClick={handleAnalyzeResumes} disabled={isProcessingAts || uploadedResumeFiles.length === 0 || isLoadingResultsFromDB} size="lg" className="w-full md:w-auto shiny-button">
                 {isProcessingAts ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <ScanSearch className="w-5 h-5 mr-2" />}
                 Find ATS Score
@@ -304,55 +305,52 @@ export default function AtsScoreFinderPage() {
 
           {/* Results Section */}
           <div ref={resultsSectionRef}>
-            {isProcessing && (
+            {isLoadingResultsFromDB ? (
+              <TableSkeleton />
+            ) : isProcessingAts ? (
               <Card className="shadow-lg"><CardContent className="pt-6"><LoadingIndicator stage={"screening"} /></CardContent></Card>
-            )}
-
-            {!isProcessing && atsResults.length > 0 && (
+            ) : atsResults.length > 0 ? (
               <Card className="shadow-lg">
                 <CardHeader>
                   <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center">
-                     <div className="flex-1">
+                    <div className="flex-1">
                       <CardTitle className="text-xl font-headline text-primary flex items-center"><BrainCircuit className="w-6 h-6 mr-2" /> Saved ATS Score Results</CardTitle>
                       <CardDescription>Previously analyzed and saved resumes.</CardDescription>
                     </div>
                     {/* Action buttons for results table */}
                     <div className="flex items-center space-x-2">
-                        <Button variant="outline" size="sm" onClick={() => setIsDeleteAllDialogOpen(true)} disabled={atsResults.length === 0 || isProcessing} className="text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/50" aria-label="Delete all results">
-                            <Trash className="w-4 h-4 mr-2" />
-                            Delete All
-                        </Button>
-                        <DropdownMenu>
+                      <Button variant="outline" size="sm" onClick={() => setIsDeleteAllDialogOpen(true)} disabled={atsResults.length === 0 || isProcessing} className="text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/50" aria-label="Delete all results">
+                        <Trash className="w-4 h-4 mr-2" />
+                        Delete All
+                      </Button>
+                      <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="outline" size="sm" disabled={isProcessing}><ListFilter className="w-4 h-4 mr-2" />Sort</Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setSortOption('score-desc')}>Highest Score</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setSortOption('score-asc')}>Lowest Score</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setSortOption('date-desc')}>Most Recent</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setSortOption('score-desc')}>Highest Score</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setSortOption('score-asc')}>Lowest Score</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setSortOption('date-desc')}>Most Recent</DropdownMenuItem>
                         </DropdownMenuContent>
-                        </DropdownMenu>
+                      </DropdownMenu>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent><AtsScoreTable results={sortedAtsResults} onViewInsights={handleViewInsights} onDelete={handleOpenDeleteDialog} /></CardContent>
               </Card>
-            )}
-            
-            {/* Placeholder when no results are available */}
-            {!isProcessing && atsResults.length === 0 && (
-                <Card className="shadow-lg"><CardContent className="pt-6"><p className="text-center text-muted-foreground py-8">{uploadedResumeFiles.length > 0 ? 'Click "Find ATS Score" to begin.' : 'Upload resumes to get started. Your saved results will appear here.'}</p></CardContent></Card>
+            ) : (
+              <Card className="shadow-lg"><CardContent className="pt-6"><p className="text-center text-muted-foreground py-8">{uploadedResumeFiles.length > 0 ? 'Click "Find ATS Score" to begin.' : 'Upload resumes to get started. Your saved results will appear here.'}</p></CardContent></Card>
             )}
           </div>
 
           {/* Modals and Dialogs */}
           <AtsFeedbackModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} result={selectedResultForModal} />
-          
+
           <AlertDialog open={!!resultToDelete} onOpenChange={(open) => !open && setResultToDelete(null)}>
             <AlertDialogContent>
               <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the ATS score result for <span className="font-semibold">{resultToDelete?.resumeName}</span>.</AlertDialogDescription></AlertDialogHeader>
               <AlertDialogFooter><AlertDialogCancel onClick={() => setResultToDelete(null)}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Delete</AlertDialogAction></AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-          
+
           <AlertDialog open={isDeleteAllDialogOpen} onOpenChange={setIsDeleteAllDialogOpen}>
             <AlertDialogContent>
               <AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete all <span className="font-semibold">{atsResults.length}</span> saved ATS score results.</AlertDialogDescription></AlertDialogHeader>

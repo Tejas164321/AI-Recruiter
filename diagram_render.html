@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Recruiter - Professional Architecture Views</title>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'base',
+            securityLevel: 'loose',
+            flowchart: {
+                htmlLabels: true,
+                curve: 'basis'
+            },
+            themeVariables: {
+                primaryColor: '#e3f2fd',
+                edgeLabelBackground: '#ffffff',
+                tertiaryColor: '#fff',
+                fontFamily: 'Inter, sans-serif'
+            }
+        });
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            padding: 40px;
+            background-color: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 60px;
+            color: #1a1a1a;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            color: #111;
+            margin-bottom: 15px;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            color: #555;
+            font-size: 1.2rem;
+        }
+
+        .diagram-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+            padding: 50px;
+            width: 95%;
+            max-width: 1800px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .diagram-title {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: #2c3e50;
+            margin-bottom: 12px;
+            align-self: flex-start;
+            border-left: 6px solid #2563eb;
+            padding-left: 18px;
+        }
+
+        .diagram-desc {
+            align-self: flex-start;
+            color: #64748b;
+            margin-bottom: 40px;
+            max-width: 900px;
+            padding-left: 24px;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+
+        .mermaid {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            overflow-x: auto;
+            padding-bottom: 20px;
+        }
+
+        .btn-download {
+            margin-top: 40px;
+            padding: 14px 28px;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1.05rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        }
+
+        .btn-download:hover {
+            background-color: #1d4ed8;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-download svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .icon-download {
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <h1>AI Recruiter - System Architecture</h1>
+        <p>Professional technical diagrams optimized for presentation slides.</p>
+    </div>
+
+    <!-- Architecture Diagram -->
+    <div class="diagram-card">
+        <div class="diagram-title">System Architecture Landscape (Left-to-Right)</div>
+        <p class="diagram-desc">A detailed, color-coded view of the system boundaries.
+            <strong>Blue</strong> = User Layer,
+            <strong>Green</strong> = App Logic,
+            <strong>Orange</strong> = Cloud Infrastructure.
+        </p>
+
+        <div class="mermaid" id="mermaid-arch">
+            %%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#e3f2fd', 'edgeLabelBackground':'#ffffff',
+            'tertiaryColor': '#fff'}}}%%
+            flowchart LR
+            %% Define Styles
+            classDef clientSection fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0c4a6e,stroke-dasharray: 0
+            classDef appSection fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#14532d,stroke-dasharray: 0
+            classDef cloudSection fill:#fff7ed,stroke:#ea580c,stroke-width:2px,color:#7c2d12,stroke-dasharray: 0
+
+            classDef componentNode fill:#ffffff,stroke:#334155,stroke-width:1px,color:#333333,rx:5,ry:5
+            classDef aiNode fill:#f3e8ff,stroke:#9333ea,stroke-width:2px,color:#581c87
+            classDef dbNode fill:#fee2e2,stroke:#ef4444,stroke-width:2px,color:#991b1b
+
+            %% CLIENT LAYER
+            subgraph Client_Layer ["🖥️ CLIENT LAYER (Browser)"]
+            direction TB
+            Recruiter["👩‍💼 Recruiter"]
+            Browser["🌐 React UI"]
+            State["🔄 State (Context)"]
+            end
+
+            %% APP LAYER
+            subgraph App_Layer ["⚡ APPLICATION SERVER (Next.js)"]
+            direction TB
+            ServerAction["🛡️ Server Action"]
+
+            subgraph Logic ["⚙️ Processing Logic"]
+            RateLimit["⏱️ Rate Limiter"]
+            Retry["🔁 Retry Handler"]
+            end
+
+            subgraph AI_Orchestration ["🧠 AI Orchestration (Genkit)"]
+            Flow["🌊 Extraction Flow"]
+            Prompt["📝 Prompt Eng."]
+            end
+            end
+
+            %% INFRA LAYER
+            subgraph Cloud_Layer ["☁️ CLOUD INFRASTRUCTURE"]
+            direction TB
+            GeminiAPI["✨ Gemini 2.0 Flash API"]
+            Firestore["🔥 Firestore DB"]
+            FirebaseAuth["🛡️ Firebase Auth"]
+            end
+
+            %% Connections
+            Recruiter ==>|1. Upload| Browser
+            Browser -->|2. DataURI| State
+            State -->|3. Invoke| ServerAction
+
+            ServerAction -->|4. Validate| RateLimit
+            RateLimit -->|5. Execute| Flow
+
+            Flow -->|6. Load| Prompt
+            Flow ==>|7. Request| GeminiAPI
+
+            GeminiAPI ==>|8. JSON Response| Flow
+            Flow -->|9. Result| ServerAction
+
+            ServerAction ==>|10. Save| Firestore
+            Firestore -.->|Real-time| Browser
+
+            Browser -.->|Auth Check| FirebaseAuth
+
+            %% Apply Section Styles
+            class Client_Layer clientSection
+            class App_Layer appSection
+            class Cloud_Layer cloudSection
+
+            %% Apply Node Styles
+            class Recruiter,Browser,State,ServerAction,RateLimit,Retry,Flow,Prompt componentNode
+            class GeminiAPI aiNode
+            class Firestore,FirebaseAuth dbNode
+        </div>
+
+        <button class="btn-download" onclick="downloadSVG('mermaid-arch', 'AI_Recruiter_Architecture.png')">
+            <svg class="icon-download" viewBox="0 0 24 24">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Download Architecture PNG
+        </button>
+    </div>
+
+    <!-- Sequence Diagram -->
+    <div class="diagram-card">
+        <div class="diagram-title">Processing Sequence (Rate-Limited)</div>
+        <p class="diagram-desc">Detailed flow showing the sequential handling of resumes to respect API limits.</p>
+
+        <div class="mermaid" id="mermaid-seq">
+            sequenceDiagram
+            autonumber
+
+            box "Client Side" #f0f9ff
+            participant User as 👤 HR User
+            participant UI as 🖥️ React UI
+            end
+
+            box "Server Side" #f0fdf4
+            participant Server as ⚡ Next.js Action
+            participant Logic as ⚙️ Logic
+            end
+
+            box "External Services" #fff7ed
+            participant AI as ✨ Gemini API
+            participant DB as 🔥 Firestore
+            end
+
+            User->>UI: Uploads 10 Resumes
+            UI->>Server: performBulkScreening()
+
+            loop For Each Resume (1 by 1)
+            Server->>Logic: Check Rate Limit
+            Logic->>Logic: ⏱️ Wait 2s
+
+            Logic->>AI: POST /generateContent
+            activate AI
+            AI-->>Logic: JSON Result
+            deactivate AI
+
+            Logic->>DB: Save Result
+            Logic-->>UI: Update Progress
+            end
+
+            UI->>User: Show Results Table
+        </div>
+
+        <button class="btn-download" onclick="downloadSVG('mermaid-seq', 'AI_Flow_Sequence.png')">
+            <svg class="icon-download" viewBox="0 0 24 24">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Download Sequence PNG
+        </button>
+    </div>
+
+    <script>
+        function downloadSVG(containerId, filename) {
+            const container = document.getElementById(containerId);
+            const svgElement = container.querySelector('svg');
+
+            if (!svgElement) {
+                alert('Diagram is still rendering, please wait a moment.');
+                return;
+            }
+
+            const { width, height } = svgElement.getBoundingClientRect();
+
+            // 3x Scale for extremely high quality
+            const scale = 3;
+
+            const clonedSvgElement = svgElement.cloneNode(true);
+            clonedSvgElement.setAttribute('width', width * scale);
+            clonedSvgElement.setAttribute('height', height * scale);
+            clonedSvgElement.style.backgroundColor = 'white';
+
+            // Explicitly set styles on cloned element to ensure fonts carry over
+            clonedSvgElement.style.fontFamily = 'Inter, sans-serif';
+
+            const serializer = new XMLSerializer();
+            let svgString = serializer.serializeToString(clonedSvgElement);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width * scale;
+            canvas.height = height * scale;
+            const ctx = canvas.getContext('2d');
+
+            const img = new Image();
+            const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(svgBlob);
+
+            img.onload = function () {
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, width * scale, height * scale);
+                const pngUrl = canvas.toDataURL('image/png');
+                const downloadLink = document.createElement('a');
+                downloadLink.href = pngUrl;
+                downloadLink.download = filename;
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+                URL.revokeObjectURL(url);
+            };
+            img.src = url;
+        }
+    </script>
+</body>
+
+</html>

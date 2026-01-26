@@ -19,6 +19,8 @@ interface LoadingIndicatorProps {
  * A component to display a themed loading animation and message for long-running AI processes.
  * Enhanced with progress bar support for batch processing.
  */
+import { Skeleton } from "@/components/ui/skeleton";
+
 export function LoadingIndicator({ stage, progress }: LoadingIndicatorProps) {
   let message = "Processing...";
   let subMessage = "This may take a few moments. Please be patient.";
@@ -37,50 +39,51 @@ export function LoadingIndicator({ stage, progress }: LoadingIndicatorProps) {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center space-y-6 py-10 text-center">
-      {/* The animated icon */}
-      <Loader2 className="w-12 h-12 text-primary animate-spin" />
+    <div className="w-full max-w-3xl mx-auto py-8">
+      {/* Active Status Header */}
+      <div className="flex flex-col items-center justify-center space-y-6 mb-12">
+        <div className="relative">
+          <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
+          <div className="relative bg-background p-4 rounded-full shadow-lg border border-border">
+            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+          </div>
+        </div>
 
-      {/* The loading messages */}
-      <div className="space-y-2 w-full max-w-md">
-        <p className="text-xl font-semibold text-primary">{message}</p>
-        <p className="text-sm text-muted-foreground">{subMessage}</p>
+        <div className="space-y-2 text-center max-w-lg">
+          <h3 className="text-xl font-semibold tracking-tight text-foreground">{message}</h3>
+          <p className="text-sm text-muted-foreground">{subMessage}</p>
+        </div>
+
+        {/* Real Progress Bar */}
+        {progress && (
+          <div className="w-full max-w-md space-y-2">
+            <div className="flex justify-between text-xs font-medium text-muted-foreground">
+              <span>{progress.percentComplete}% Complete</span>
+              <span>{progress.succeeded} Success • {progress.failed} Failed</span>
+            </div>
+            <Progress value={progress.percentComplete} className="h-2" />
+          </div>
+        )}
       </div>
 
-      {/* Progress bar for batch processing */}
-      {progress && (
-        <div className="w-full max-w-md space-y-3">
-          <Progress value={progress.percentComplete} className="h-3" />
-
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>{progress.percentComplete}% complete</span>
-            {progress.currentBatch && progress.totalBatches && (
-              <span>Batch {progress.currentBatch}/{progress.totalBatches}</span>
-            )}
-          </div>
-
-          {/* Success/Failure counters */}
-          <div className="flex justify-center gap-6 text-sm">
-            <div className="flex items-center gap-1.5 text-green-600">
-              <CheckCircle className="w-4 h-4" />
-              <span>{progress.succeeded} succeeded</span>
-            </div>
-            {progress.failed > 0 && (
-              <div className="flex items-center gap-1.5 text-destructive">
-                <XCircle className="w-4 h-4" />
-                <span>{progress.failed} failed</span>
-              </div>
-            )}
-          </div>
-
-          {/* Current item being processed */}
-          {progress.current > 0 && progress.current < progress.total && (
-            <p className="text-xs text-muted-foreground animate-pulse">
-              Processing item {progress.current} of {progress.total}...
-            </p>
-          )}
+      {/* Skeleton Mockup of Candidate List (Suspense State) */}
+      <div className="space-y-4 opacity-60">
+        <div className="flex items-center justify-between px-4 py-2 border-b">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-8 w-24" />
         </div>
-      )}
+
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="flex items-center space-x-4 p-4 border rounded-lg bg-card/50">
+            <Skeleton className="h-12 w-12 rounded-full" />
+            <div className="space-y-2 flex-1">
+              <Skeleton className="h-4 w-[40%]" />
+              <Skeleton className="h-3 w-[60%]" />
+            </div>
+            <Skeleton className="h-10 w-20 rounded-md" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

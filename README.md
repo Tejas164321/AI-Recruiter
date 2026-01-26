@@ -226,4 +226,3 @@ The project follows a standard Next.js App Router structure with some key direct
 └── .env.local              # Your secret environment variables (ignored by Git)
 ```
 ---
-
