@@ -20,9 +20,9 @@ import { Users, ScanSearch, Briefcase, Snail, ServerOff, Mail, RefreshCw } from 
 // Hooks and Contexts
 import { useLoading } from "@/contexts/loading-context";
 import { useAuth } from "@/contexts/auth-context";
-// AI Flows and Types
-import { performBulkScreening } from "@/ai/flows/rank-candidates";
-import { extractJobRoles as extractJobRolesAI, type ExtractJobRolesInput as ExtractJobRolesAIInput, type ExtractJobRolesOutput as ExtractJobRolesAIOutput } from "@/ai/flows/extract-job-roles";
+// AI Flows and Types (HYBRID - Local LLM)
+import { performBulkScreening } from "@/ai/flows/rank-candidates-hybrid";
+import { extractJobRoles as extractJobRolesAI, type ExtractJobRolesInput as ExtractJobRolesAIInput, type ExtractJobRolesOutput as ExtractJobRolesAIOutput } from "@/ai/flows/extract-job-roles-hybrid";
 import type { ResumeFile, RankedCandidate, Filters, JobScreeningResult, ExtractedJobRole, ProcessingProgress, PerformBulkScreeningInput, PerformBulkScreeningOutput } from "@/lib/types";
 // Firebase Services
 import { saveJobScreeningResult, getAllJobScreeningResultsForUser, deleteJobScreeningResult, deleteAllJobScreeningResults } from "@/services/firestoreService";

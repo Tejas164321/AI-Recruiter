@@ -18,8 +18,8 @@ import { BarChartBig, Loader2, ScanSearch, BrainCircuit, ServerOff, ListFilter, 
 import { useToast } from "@/hooks/use-toast";
 import { useLoading } from "@/contexts/loading-context";
 import { useAuth } from "@/contexts/auth-context";
-// AI Flows and Types
-import { calculateAtsScore, type CalculateAtsScoreInput, type CalculateAtsScoreOutput } from "@/ai/flows/calculate-ats-score";
+// AI Flows and Types (HYBRID - Local LLM)
+import { calculateAtsScore, type CalculateAtsScoreInput, type CalculateAtsScoreOutput } from "@/ai/flows/calculate-ats-score-hybrid";
 import type { ResumeFile, AtsScoreResult } from "@/lib/types";
 // Firebase Services
 import { saveMultipleAtsScoreResults, getAtsScoreResults, deleteAtsScoreResult, deleteAllAtsScoreResults } from "@/services/firestoreService";

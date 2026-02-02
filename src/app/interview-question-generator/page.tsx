@@ -20,9 +20,9 @@ import { HelpCircle, Loader2, Lightbulb, FileText, ScrollText, Users, Brain, Sea
 import { useToast } from "@/hooks/use-toast";
 import { useLoading } from "@/contexts/loading-context";
 import { useAuth } from "@/contexts/auth-context";
-// AI Flows and Types
-import { generateJDInterviewQuestions, type GenerateJDInterviewQuestionsInput } from "@/ai/flows/generate-jd-interview-questions";
-import { extractJobRoles as extractJobRolesAI, type ExtractJobRolesInput as ExtractJobRolesAIInput, type ExtractJobRolesOutput as ExtractJobRolesAIOutput } from "@/ai/flows/extract-job-roles";
+// AI Flows and Types (HYBRID - Local LLM)
+import { generateJDInterviewQuestions, type GenerateJDInterviewQuestionsInput } from "@/ai/flows/generate-jd-interview-questions-hybrid";
+import { extractJobRoles as extractJobRolesAI, type ExtractJobRolesInput as ExtractJobRolesAIInput, type ExtractJobRolesOutput as ExtractJobRolesAIOutput } from "@/ai/flows/extract-job-roles-hybrid";
 import type { InterviewQuestionsSet } from "@/lib/types";
 // Firebase Services
 import { saveInterviewQuestionSet, getInterviewQuestionSets, deleteInterviewQuestionSet } from "@/services/firestoreService";
@@ -71,17 +71,17 @@ export default function InterviewQuestionGeneratorPage() {
   const { setIsPageLoading } = useLoading();
   const { currentUser } = useAuth();
   const { toast } = useToast();
-  
+
   // State for saved question sets fetched from Firestore
   const [savedSets, setSavedSets] = useState<InterviewQuestionsSet[]>([]);
   // State for the currently active form (either a draft or a selected saved set)
   const [activeForm, setActiveForm] = useState<FormState>(getInitialFormState());
-  
+
   // State for loading indicators
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isLoadingFromDB, setIsLoadingFromDB] = useState<boolean>(true);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
-  
+
   // State for modals and errors
   const [error, setError] = useState<string | null>(null);
   const [setToDelete, setSetToDelete] = useState<InterviewQuestionsSet | null>(null);
@@ -107,9 +107,9 @@ export default function InterviewQuestionGeneratorPage() {
         })
         .finally(() => setIsLoadingFromDB(false));
     } else {
-        setIsLoadingFromDB(false);
-        setSavedSets([]);
-        handleAddNewEntry();
+      setIsLoadingFromDB(false);
+      setSavedSets([]);
+      handleAddNewEntry();
     }
   }, [currentUser, isFirestoreAvailable, setIsPageLoading, toast]);
 
@@ -117,13 +117,13 @@ export default function InterviewQuestionGeneratorPage() {
   // Effect to scroll to the results section when AI processing starts
   useEffect(() => {
     if (isLoading && resultsSectionRef.current) {
-        const timer = setTimeout(() => {
-            resultsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start'});
-        }, 100);
-        return () => clearTimeout(timer);
+      const timer = setTimeout(() => {
+        resultsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [isLoading]);
-  
+
   /**
    * Handler for updating input fields of the active form.
    * @param {keyof Omit<FormState, 'id' | 'questions'>} field - The field to update.
@@ -132,7 +132,7 @@ export default function InterviewQuestionGeneratorPage() {
   const handleInputChange = (field: keyof Omit<FormState, 'id' | 'questions'>, value: string) => {
     setActiveForm(prev => ({ ...prev, [field]: value }));
   };
-  
+
   /**
    * Handler to start a new, blank draft.
    */
@@ -157,8 +157,8 @@ export default function InterviewQuestionGeneratorPage() {
           const base64 = selected.jobDescriptionDataUri.split(',')[1];
           jdContent = Buffer.from(base64, 'base64').toString('utf-8');
         } catch (e) {
-            console.error("Failed to decode JD content from data URI:", e);
-            jdContent = "Could not load job description content.";
+          console.error("Failed to decode JD content from data URI:", e);
+          jdContent = "Could not load job description content.";
         }
       }
       setActiveForm({
@@ -167,15 +167,15 @@ export default function InterviewQuestionGeneratorPage() {
         roleTitle: selected.roleTitle,
         focusAreas: selected.focusAreas || '',
         questions: {
-            technicalQuestions: selected.technicalQuestions,
-            behavioralQuestions: selected.behavioralQuestions,
-            situationalQuestions: selected.situationalQuestions,
-            roleSpecificQuestions: selected.roleSpecificQuestions,
+          technicalQuestions: selected.technicalQuestions,
+          behavioralQuestions: selected.behavioralQuestions,
+          situationalQuestions: selected.situationalQuestions,
+          roleSpecificQuestions: selected.roleSpecificQuestions,
         },
       });
     }
   };
-  
+
   /**
    * Handler to open the delete confirmation dialog.
    */
@@ -215,15 +215,15 @@ export default function InterviewQuestionGeneratorPage() {
    * This populates the fields for a *new draft*.
    */
   const handleJobDescriptionUpload = useCallback(async (files: File[]) => {
-     if (!currentUser?.uid) {
+    if (!currentUser?.uid) {
       toast({ title: "Not Authenticated", description: "Please log in to upload files.", variant: "destructive" });
       return;
     }
     if (files.length === 0) return;
-    
+
     // Start a new draft for the uploaded file
     handleAddNewEntry();
-    
+
     const file = files[0];
     const dataUri = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
@@ -231,14 +231,14 @@ export default function InterviewQuestionGeneratorPage() {
       reader.onerror = (error) => reject(error);
       reader.readAsDataURL(file);
     });
-    
+
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const extractionInput: ExtractJobRolesAIInput = { jobDescriptionDocuments: [{ name: file.name, dataUri }] };
       const extractionOutput: ExtractJobRolesAIOutput = await extractJobRolesAI(extractionInput);
-      
+
       let newJdContent = "";
       let newRoleTitle = "";
 
@@ -247,17 +247,17 @@ export default function InterviewQuestionGeneratorPage() {
         const base64 = firstRole.contentDataUri.split(',')[1];
         if (base64) newJdContent = Buffer.from(base64, 'base64').toString('utf-8');
         if (firstRole.name && firstRole.name !== "Untitled Job Role" && !firstRole.name.startsWith("Job Role")) newRoleTitle = firstRole.name;
-        toast({ title: "Content Extracted", description: `Extracted content for "${newRoleTitle || 'new role'}"`});
+        toast({ title: "Content Extracted", description: `Extracted content for "${newRoleTitle || 'new role'}"` });
       } else {
-         toast({ title: "Extraction Failed", description: "Could not extract content.", variant: "destructive"});
+        toast({ title: "Extraction Failed", description: "Could not extract content.", variant: "destructive" });
       }
-      
+
       setActiveForm({ ...getInitialFormState(), jdContent: newJdContent, roleTitle: newRoleTitle });
 
     } catch (extractError) {
       const message = extractError instanceof Error ? extractError.message : String(extractError);
       console.error("Failed to extract content:", extractError);
-      toast({ title: "File Processing Failed", description: message.substring(0,100), variant: "destructive" });
+      toast({ title: "File Processing Failed", description: message.substring(0, 100), variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -289,19 +289,19 @@ export default function InterviewQuestionGeneratorPage() {
         focusAreas: focusAreas.trim() || undefined,
       };
       const aiOutput = await generateJDInterviewQuestions(input);
-      
+
       const questionSetToSave: Omit<InterviewQuestionsSet, 'id' | 'userId' | 'createdAt'> = {
         roleTitle: roleTitle.trim() || "Untitled Role",
         jobDescriptionDataUri: contentDataUri,
         ...aiOutput,
         ...(focusAreas.trim() && { focusAreas: focusAreas.trim() }),
       };
-      
+
       const savedSet = await saveInterviewQuestionSet(questionSetToSave);
-      
+
       // Update the list of all available sets
       setSavedSets(prev => [savedSet, ...prev]);
-      
+
       // Directly update the active form to reflect the newly created set.
       // This bypasses the stale state issue of trying to find the new set in the old list.
       setActiveForm({
@@ -316,13 +316,13 @@ export default function InterviewQuestionGeneratorPage() {
           roleSpecificQuestions: savedSet.roleSpecificQuestions,
         }
       });
-      
+
       toast({ title: "Questions Generated & Saved", description: "Your new interview question set is ready and saved." });
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
-      setError(`Failed to generate questions: ${errorMessage.substring(0,100)}`);
-      toast({ title: "Generation Failed", description: errorMessage.substring(0,100), variant: "destructive" });
+      setError(`Failed to generate questions: ${errorMessage.substring(0, 100)}`);
+      toast({ title: "Generation Failed", description: errorMessage.substring(0, 100), variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -336,88 +336,88 @@ export default function InterviewQuestionGeneratorPage() {
     setIsDownloading(true);
 
     try {
-        const pdf = new jsPDF('p', 'pt', 'a4');
-        const { questions, roleTitle, focusAreas } = activeForm;
-        const pageMargin = 40;
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = pdf.internal.pageSize.getHeight();
-        const contentWidth = pageWidth - (pageMargin * 2);
-        let yPos = pageMargin;
+      const pdf = new jsPDF('p', 'pt', 'a4');
+      const { questions, roleTitle, focusAreas } = activeForm;
+      const pageMargin = 40;
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const contentWidth = pageWidth - (pageMargin * 2);
+      let yPos = pageMargin;
 
-        const checkPageBreak = (neededHeight: number) => { if (yPos + neededHeight > pageHeight - pageMargin) { pdf.addPage(); yPos = pageMargin; } };
+      const checkPageBreak = (neededHeight: number) => { if (yPos + neededHeight > pageHeight - pageMargin) { pdf.addPage(); yPos = pageMargin; } };
 
-        pdf.setFontSize(22);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(`Interview Questions`, pageWidth / 2, yPos, { align: 'center' });
-        yPos += 30;
+      pdf.setFontSize(22);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`Interview Questions`, pageWidth / 2, yPos, { align: 'center' });
+      yPos += 30;
 
-        pdf.setFontSize(16);
-        pdf.setTextColor('#333333');
-        pdf.text(`Role: ${roleTitle || 'General'}`, pageWidth / 2, yPos, { align: 'center' });
-        yPos += 20;
+      pdf.setFontSize(16);
+      pdf.setTextColor('#333333');
+      pdf.text(`Role: ${roleTitle || 'General'}`, pageWidth / 2, yPos, { align: 'center' });
+      yPos += 20;
 
-        if (focusAreas) {
-            pdf.setFontSize(12);
-            pdf.setFont('helvetica', 'italic');
-            pdf.text(`Focus Areas: ${focusAreas}`, pageWidth / 2, yPos, { align: 'center' });
-            yPos += 25;
+      if (focusAreas) {
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'italic');
+        pdf.text(`Focus Areas: ${focusAreas}`, pageWidth / 2, yPos, { align: 'center' });
+        yPos += 25;
+      }
+
+      pdf.setDrawColor('#cccccc');
+      pdf.line(pageMargin, yPos, pageWidth - pageMargin, yPos);
+      yPos += 20;
+
+      const questionCategoriesToRender: Array<{ key: keyof typeof questions, title: string }> = [
+        { key: "technicalQuestions", title: "Technical Questions" },
+        { key: "behavioralQuestions", title: "Behavioral Questions" },
+        { key: "situationalQuestions", title: "Situational Questions" },
+        { key: "roleSpecificQuestions", title: "Role-Specific Questions" },
+      ];
+
+      questionCategoriesToRender.forEach(({ key, title }) => {
+        const questionList = questions[key];
+        if (questionList && Array.isArray(questionList) && questionList.length > 0) {
+          checkPageBreak(30);
+          pdf.setFontSize(14);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(title, pageMargin, yPos);
+          yPos += 20;
+
+          pdf.setFontSize(11);
+          pdf.setFont('helvetica', 'normal');
+          pdf.setTextColor('#000000');
+
+          questionList.forEach(q => {
+            const splitText = pdf.splitTextToSize(`•  ${q}`, contentWidth - 10);
+            checkPageBreak(splitText.length * 12);
+            pdf.text(splitText, pageMargin + 10, yPos);
+            yPos += splitText.length * 12 + 5;
+          });
+          yPos += 15;
         }
+      });
 
-        pdf.setDrawColor('#cccccc');
-        pdf.line(pageMargin, yPos, pageWidth - pageMargin, yPos);
-        yPos += 20;
-
-        const questionCategoriesToRender: Array<{key: keyof typeof questions, title: string}> = [
-            { key: "technicalQuestions", title: "Technical Questions" },
-            { key: "behavioralQuestions", title: "Behavioral Questions" },
-            { key: "situationalQuestions", title: "Situational Questions" },
-            { key: "roleSpecificQuestions", title: "Role-Specific Questions" },
-        ];
-        
-        questionCategoriesToRender.forEach(({ key, title }) => {
-            const questionList = questions[key];
-            if (questionList && Array.isArray(questionList) && questionList.length > 0) {
-                checkPageBreak(30); 
-                pdf.setFontSize(14);
-                pdf.setFont('helvetica', 'bold');
-                pdf.text(title, pageMargin, yPos);
-                yPos += 20;
-                
-                pdf.setFontSize(11);
-                pdf.setFont('helvetica', 'normal');
-                pdf.setTextColor('#000000');
-
-                questionList.forEach(q => {
-                    const splitText = pdf.splitTextToSize(`•  ${q}`, contentWidth - 10);
-                    checkPageBreak(splitText.length * 12);
-                    pdf.text(splitText, pageMargin + 10, yPos);
-                    yPos += splitText.length * 12 + 5;
-                });
-                yPos += 15;
-            }
-        });
-        
-        const fileName = `Interview_Questions_${(roleTitle || 'General').replace(/\s+/g, '_')}.pdf`;
-        pdf.save(fileName);
+      const fileName = `Interview_Questions_${(roleTitle || 'General').replace(/\s+/g, '_')}.pdf`;
+      pdf.save(fileName);
 
     } catch (err) {
-        console.error("PDF Generation Error:", err);
-        toast({ title: "PDF Generation Failed", description: "An error occurred while creating the PDF.", variant: "destructive" });
+      console.error("PDF Generation Error:", err);
+      toast({ title: "PDF Generation Failed", description: "An error occurred while creating the PDF.", variant: "destructive" });
     } finally {
-        setIsDownloading(false);
+      setIsDownloading(false);
     }
   };
 
   /**
    * Data structure for rendering question categories.
    */
-  const questionCategories: Array<{key: keyof Omit<InterviewQuestionsSet, 'id'|'userId'|'createdAt'|'roleTitle'|'jobDescriptionDataUri'|'focusAreas'>, title: string, icon: React.ElementType}> = [
+  const questionCategories: Array<{ key: keyof Omit<InterviewQuestionsSet, 'id' | 'userId' | 'createdAt' | 'roleTitle' | 'jobDescriptionDataUri' | 'focusAreas'>, title: string, icon: React.ElementType }> = [
     { key: "technicalQuestions", title: "Technical Questions", icon: Brain },
     { key: "behavioralQuestions", title: "Behavioral Questions", icon: Users },
     { key: "situationalQuestions", title: "Situational Questions", icon: HelpCircle },
     { key: "roleSpecificQuestions", title: "Role-Specific Questions", icon: ScrollText },
   ];
-  
+
   const isProcessing = isLoading || isLoadingFromDB;
 
   return (
@@ -446,17 +446,17 @@ export default function InterviewQuestionGeneratorPage() {
                 <CardContent className="space-y-6">
                   <div className="space-y-2">
                     <Label htmlFor="job-description-content">Job Description Content</Label>
-                    <Textarea id="job-description-content" value={activeForm.jdContent} onChange={(e) => handleInputChange('jdContent', e.target.value)} placeholder="Paste the full job description here..." className="min-h-[200px]" disabled={isProcessing}/>
+                    <Textarea id="job-description-content" value={activeForm.jdContent} onChange={(e) => handleInputChange('jdContent', e.target.value)} placeholder="Paste the full job description here..." className="min-h-[200px]" disabled={isProcessing} />
                   </div>
                   <Separator />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="roleTitle">Role Title (Optional)</Label>
-                      <Input id="roleTitle" value={activeForm.roleTitle} onChange={(e) => handleInputChange('roleTitle', e.target.value)} placeholder="e.g., Senior Software Engineer" disabled={isProcessing}/>
+                      <Input id="roleTitle" value={activeForm.roleTitle} onChange={(e) => handleInputChange('roleTitle', e.target.value)} placeholder="e.g., Senior Software Engineer" disabled={isProcessing} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="focusAreas">Key Focus Areas (Optional)</Label>
-                      <Input id="focusAreas" value={activeForm.focusAreas} onChange={(e) => handleInputChange('focusAreas', e.target.value)} placeholder="e.g., JavaScript, Team Leadership" disabled={isProcessing}/>
+                      <Input id="focusAreas" value={activeForm.focusAreas} onChange={(e) => handleInputChange('focusAreas', e.target.value)} placeholder="e.g., JavaScript, Team Leadership" disabled={isProcessing} />
                     </div>
                   </div>
                 </CardContent>
@@ -469,7 +469,7 @@ export default function InterviewQuestionGeneratorPage() {
                   <CardDescription>The AI will extract content and create a new draft.</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow flex flex-col">
-                  <FileUploadArea onFilesUpload={handleJobDescriptionUpload} acceptedFileTypes={{ "application/pdf": [".pdf"], "text/plain": [".txt"],"application/msword": [".doc"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"]}} multiple={false} label="PDF, TXT, DOC, DOCX (Max 5MB)" id="job-description-upload" maxSizeInBytes={MAX_FILE_SIZE_BYTES} dropzoneClassName="h-full" showFileList={false}/>
+                  <FileUploadArea onFilesUpload={handleJobDescriptionUpload} acceptedFileTypes={{ "application/pdf": [".pdf"], "text/plain": [".txt"], "application/msword": [".doc"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"] }} multiple={false} label="PDF, TXT, DOC, DOCX (Max 5MB)" id="job-description-upload" maxSizeInBytes={MAX_FILE_SIZE_BYTES} dropzoneClassName="h-full" showFileList={false} />
                 </CardContent>
               </Card>
             </div>
@@ -488,13 +488,13 @@ export default function InterviewQuestionGeneratorPage() {
                   </SelectContent>
                 </Select>
                 <div className="flex gap-2">
-                    <TooltipProvider><Tooltip><TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" onClick={handleAddNewEntry} disabled={isProcessing} aria-label="Add new JD session"><PlusCircle className="w-5 h-5"/></Button>
-                    </TooltipTrigger><TooltipContent>New Draft</TooltipContent></Tooltip></TooltipProvider>
-                    
-                    <TooltipProvider><Tooltip><TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" onClick={handleOpenDeleteDialog} disabled={isProcessing || !activeForm.id} aria-label="Delete current JD session"><Trash2 className="w-5 h-5"/></Button>
-                    </TooltipTrigger><TooltipContent>Delete Selected Set</TooltipContent></Tooltip></TooltipProvider>
+                  <TooltipProvider><Tooltip><TooltipTrigger asChild>
+                    <Button variant="outline" size="icon" onClick={handleAddNewEntry} disabled={isProcessing} aria-label="Add new JD session"><PlusCircle className="w-5 h-5" /></Button>
+                  </TooltipTrigger><TooltipContent>New Draft</TooltipContent></Tooltip></TooltipProvider>
+
+                  <TooltipProvider><Tooltip><TooltipTrigger asChild>
+                    <Button variant="outline" size="icon" onClick={handleOpenDeleteDialog} disabled={isProcessing || !activeForm.id} aria-label="Delete current JD session"><Trash2 className="w-5 h-5" /></Button>
+                  </TooltipTrigger><TooltipContent>Delete Selected Set</TooltipContent></Tooltip></TooltipProvider>
                 </div>
               </div>
               <Separator />
@@ -506,12 +506,12 @@ export default function InterviewQuestionGeneratorPage() {
               </div>
             </div>
           </Card>
-          
+
           {/* Results Section */}
           <div ref={resultsSectionRef}>
             {isProcessing && !activeForm.questions && (<Card className="shadow-lg"><CardContent className="pt-6 flex flex-col items-center justify-center space-y-4 min-h-[200px]"><Loader2 className="w-12 h-12 animate-spin text-primary" /><p className="text-lg text-muted-foreground">AI is crafting questions...</p></CardContent></Card>)}
             {error && !isLoading && (<Alert variant="destructive" className="shadow-md"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>)}
-            
+
             {activeForm.questions && !isLoading && (
               <div className="space-y-6 mt-8">
                 <div className="p-4 bg-background">
@@ -520,14 +520,14 @@ export default function InterviewQuestionGeneratorPage() {
                     <h2 className="text-xl font-semibold text-foreground font-headline text-center md:text-left">
                       Interview Questions for {activeForm.roleTitle ? <span className="text-primary">{activeForm.roleTitle}</span> : 'the Role'}
                     </h2>
-                     <Button onClick={handleDownloadPdf} disabled={isDownloading} variant="outline" size="sm">
-                        {isDownloading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
-                        Download PDF
-                      </Button>
+                    <Button onClick={handleDownloadPdf} disabled={isDownloading} variant="outline" size="sm">
+                      {isDownloading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                      Download PDF
+                    </Button>
                   </div>
-                   {activeForm.focusAreas && (<p className="text-sm text-muted-foreground text-center md:text-left pb-4">Focusing on: {activeForm.focusAreas}</p>)}
+                  {activeForm.focusAreas && (<p className="text-sm text-muted-foreground text-center md:text-left pb-4">Focusing on: {activeForm.focusAreas}</p>)}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {questionCategories.map(({key, title, icon: Icon}) => {
+                    {questionCategories.map(({ key, title, icon: Icon }) => {
                       const questions = activeForm.questions?.[key as keyof typeof activeForm.questions];
                       if (questions && Array.isArray(questions) && questions.length > 0) {
                         return (
@@ -543,18 +543,18 @@ export default function InterviewQuestionGeneratorPage() {
                           </motion.div>
                         );
                       }
-                      return null; 
+                      return null;
                     })}
                   </div>
                 </div>
               </div>
             )}
-             {!isProcessing && !activeForm.questions && !error && (
-                 <Card className="shadow-lg"><CardContent className="pt-6"><p className="text-center text-muted-foreground py-8">Select a saved set or start a new draft to begin.</p></CardContent></Card>
+            {!isProcessing && !activeForm.questions && !error && (
+              <Card className="shadow-lg"><CardContent className="pt-6"><p className="text-center text-muted-foreground py-8">Select a saved set or start a new draft to begin.</p></CardContent></Card>
             )}
           </div>
 
-           <AlertDialog open={!!setToDelete} onOpenChange={(open) => !open && setSetToDelete(null)}>
+          <AlertDialog open={!!setToDelete} onOpenChange={(open) => !open && setSetToDelete(null)}>
             <AlertDialogContent>
               <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the interview question set for <span className="font-semibold">{setToDelete?.roleTitle}</span>.</AlertDialogDescription></AlertDialogHeader>
               <AlertDialogFooter><AlertDialogCancel onClick={() => setSetToDelete(null)}>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Delete</AlertDialogAction></AlertDialogFooter>
