@@ -18,7 +18,7 @@ import { pipeline, Pipeline } from '@xenova/transformers';
 // ============================================
 
 const EMBEDDING_MODEL = 'Xenova/all-MiniLM-L6-v2';
-const MAX_CACHE_SIZE = 100;
+const MAX_CACHE_SIZE = 200; // Increased from 100 for 16GB RAM systems
 
 // ============================================
 // Types
@@ -117,7 +117,7 @@ class EmbeddingService {
         const results: EmbeddingResult[] = [];
 
         // Process in batches to avoid memory issues
-        const batchSize = 5;
+        const batchSize = 10; // Increased from 5 for 16GB RAM systems
         for (let i = 0; i < texts.length; i += batchSize) {
             const batch = texts.slice(i, i + batchSize);
             const batchResults = await Promise.all(

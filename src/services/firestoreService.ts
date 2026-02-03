@@ -15,6 +15,8 @@ import {
   Timestamp,
   writeBatch,
   deleteDoc,
+  getDoc,
+  onSnapshot,
 } from 'firebase/firestore';
 import type { JobScreeningResult, AtsScoreResult, InterviewQuestionsSet } from '@/lib/types';
 
@@ -26,8 +28,34 @@ if (!db) {
 // --- JobScreeningResult Functions ---
 
 /**
+ * Subscribes to a specific job screening result for real-time updates.
+ * Essential for Progressive Enhancement to show feedback as it streams in.
+ * @param {string} resultId - The ID of the document to listen to.
+ * @param {(data: JobScreeningResult) => void} onUpdate - Callback when data changes.
+ * @returns {() => void} Unsubscribe function.
+ */
+export const subscribeToJobScreeningResult = (
+  resultId: string,
+  onUpdate: (data: JobScreeningResult) => void
+): () => void => {
+  if (!db) return () => { };
+
+  const docRef = doc(db, "jobScreeningResults", resultId);
+
+  return onSnapshot(docRef, (docSnap) => {
+    if (docSnap.exists()) {
+      onUpdate({ id: docSnap.id, ...docSnap.data() } as JobScreeningResult);
+    }
+  });
+};
+
+/**
  * Saves a new job screening result to Firestore and manages history limits.
- * It ensures that only the most recent 10 screening sessions per job role are kept.
+ * It ensures that only the most recent 20 screening sessions per job role are kept.
+ *
+ * IMPORTANT: Removes resumeDataUri from candidates to avoid Firestore's 1MB document limit.
+ * Resume data URIs can be 50-700KB each, causing 100 resumes to exceed 1MB easily.
+ *
  * @param {Omit<JobScreeningResult, 'id' | 'userId' | 'createdAt'>} resultData - The data for the new screening result.
  * @returns {Promise<JobScreeningResult>} A promise that resolves with the newly created and saved result object.
  */
@@ -48,21 +76,74 @@ export const saveJobScreeningResult = async (resultData: Omit<JobScreeningResult
   // 2. If the history limit is reached, delete the oldest entries to make space for the new one.
   if (querySnapshot.size >= HISTORY_LIMIT) {
     const batch = writeBatch(db);
-    const numToDelete = querySnapshot.size - HISTORY_LIMIT + 1;
+    const numToDelete = querySnapshot.docs.length - HISTORY_LIMIT + 1; // Corrected calculation
     const docsToDelete = querySnapshot.docs.slice(0, numToDelete);
     docsToDelete.forEach(docSnapshot => batch.delete(docSnapshot.ref));
     await batch.commit();
   }
-  
-  // 3. Add the new screening result document.
-  const docRef = await addDoc(collection(db, "jobScreeningResults"), {
+
+  // 3. Strip resumeDataUri from all candidates to avoid exceeding Firestore's 1MB document size limit
+  const sanitizedCandidates = resultData.candidates.map(candidate => {
+    const { resumeDataUri, ...rest } = candidate;
+    return rest as typeof candidate;
+  });
+
+  const sanitizedResultData = {
     ...resultData,
+    candidates: sanitizedCandidates,
+  };
+
+  // 4. Add the new screening result document.
+  const docRef = await addDoc(collection(db, "jobScreeningResults"), {
+    ...sanitizedResultData,
     userId,
     createdAt: serverTimestamp(), // Use server timestamp for consistency.
   });
 
-  // 4. Return the new result object for immediate use in the UI.
-  return { ...resultData, id: docRef.id, userId, createdAt: Timestamp.now() } as JobScreeningResult;
+  console.log(`✅ Saved job screening result (${resultData.candidates.length} candidates, document size reduced by removing data URIs)`);
+
+  // 5. Return the new result object for immediate use in the UI.
+  return { ...sanitizedResultData, id: docRef.id, userId, createdAt: Timestamp.now() } as JobScreeningResult;
+};
+
+/**
+ * Updates a specific candidate's feedback in an existing job screening result.
+ * Used for progressive enhancement to add AI feedback after the initial save.
+ */
+export const updateCandidateFeedback = async (
+  resultId: string,
+  candidateId: string,
+  updates: {
+    feedback: string;
+    feedbackStatus: 'pending' | 'generating' | 'complete' | 'failed';
+    detailedFeedback?: any;
+    feedbackGeneratedAt?: any;
+  }
+): Promise<void> => {
+  if (!db) throw new Error("Firestore not available");
+
+  const docRef = doc(db, "jobScreeningResults", resultId);
+  const docSnap = await getDocs(query(collection(db, "jobScreeningResults"), where("__name__", "==", resultId)));
+
+  if (docSnap.empty) {
+    console.error(`Result document ${resultId} not found`);
+    return;
+  }
+
+  // We need to read, modify array, and write back because Firestore 
+  // doesn't support updating a single item in an array easily
+  const data = docSnap.docs[0].data() as JobScreeningResult;
+  const updatedCandidates = data.candidates.map(c => {
+    if (c.id === candidateId) {
+      return {
+        ...c,
+        ...updates
+      };
+    }
+    return c;
+  });
+
+  await setDoc(docRef, { candidates: updatedCandidates }, { merge: true });
 };
 
 /**
@@ -149,14 +230,14 @@ export const saveAtsScoreResult = async (resultData: Omit<AtsScoreResult, 'id' |
  * @returns {Promise<AtsScoreResult[]>} A promise that resolves with an array of the newly saved result objects.
  */
 export const saveMultipleAtsScoreResults = async (resultsData: Array<Omit<AtsScoreResult, 'id' | 'userId' | 'createdAt'>>): Promise<AtsScoreResult[]> => {
-    if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
-    const userId = auth.currentUser.uid;
-    const savedResults: AtsScoreResult[] = [];
-    for (const result of resultsData) {
-        const docRef = await addDoc(collection(db, "atsScoreResults"), { ...result, userId, createdAt: serverTimestamp() });
-        savedResults.push({ ...result, id: docRef.id, userId, createdAt: Timestamp.now() } as AtsScoreResult);
-    }
-    return savedResults;
+  if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
+  const userId = auth.currentUser.uid;
+  const savedResults: AtsScoreResult[] = [];
+  for (const result of resultsData) {
+    const docRef = await addDoc(collection(db, "atsScoreResults"), { ...result, userId, createdAt: serverTimestamp() });
+    savedResults.push({ ...result, id: docRef.id, userId, createdAt: Timestamp.now() } as AtsScoreResult);
+  }
+  return savedResults;
 };
 
 /**
@@ -230,7 +311,7 @@ export const deleteAllAtsScoreResults = async (): Promise<void> => {
 export const saveInterviewQuestionSet = async (setData: Omit<InterviewQuestionsSet, 'id' | 'userId' | 'createdAt'>): Promise<InterviewQuestionsSet> => {
   if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
   const userId = auth.currentUser.uid;
-  
+
   const docRef = await addDoc(collection(db, "interviewQuestionSets"), {
     ...setData,
     userId,

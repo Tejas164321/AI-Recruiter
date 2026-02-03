@@ -20,12 +20,23 @@ import { Users, ScanSearch, Briefcase, Snail, ServerOff, Mail, RefreshCw } from 
 // Hooks and Contexts
 import { useLoading } from "@/contexts/loading-context";
 import { useAuth } from "@/contexts/auth-context";
-// AI Flows and Types (HYBRID - Local LLM)
-import { performBulkScreening } from "@/ai/flows/rank-candidates-hybrid";
+// AI Flows and Types (PROGRESSIVE ENHANCEMENT)
+// Replaced rank-candidates-hybrid with progressive version
+import {
+  performBulkScreeningFast,
+  enrichCandidateWithFeedback,
+  type FeedbackGenerationContext
+} from "@/ai/flows/rank-candidates-progressive";
 import { extractJobRoles as extractJobRolesAI, type ExtractJobRolesInput as ExtractJobRolesAIInput, type ExtractJobRolesOutput as ExtractJobRolesAIOutput } from "@/ai/flows/extract-job-roles-hybrid";
 import type { ResumeFile, RankedCandidate, Filters, JobScreeningResult, ExtractedJobRole, ProcessingProgress, PerformBulkScreeningInput, PerformBulkScreeningOutput } from "@/lib/types";
 // Firebase Services
-import { saveJobScreeningResult, getAllJobScreeningResultsForUser, deleteJobScreeningResult, deleteAllJobScreeningResults } from "@/services/firestoreService";
+import {
+  saveJobScreeningResult,
+  getAllJobScreeningResultsForUser,
+  deleteJobScreeningResult,
+  deleteAllJobScreeningResults,
+  subscribeToJobScreeningResult // New real-time subscription
+} from "@/services/firestoreService";
 import { db as firestoreDb } from "@/lib/firebase/config";
 
 
@@ -113,6 +124,23 @@ export default function ResumeRankerPage() {
     }
   }, [isLoadingScreening]);
 
+  // NEW: Real-time subscription for current screening result (Progressive Enhancement)
+  // This updates the UI automatically as AI feedback finishes in the background
+  useEffect(() => {
+    if (!currentScreeningResult?.id || !isFirestoreAvailable) return;
+
+    // Subscribe to the specific document for real-time updates
+    const unsubscribe = subscribeToJobScreeningResult(currentScreeningResult.id, (updatedResult) => {
+      // Update the current view
+      setCurrentScreeningResult(updatedResult);
+
+      // Also update it in the history list if it exists there
+      setAllScreeningResults(prev => prev.map(r => r.id === updatedResult.id ? updatedResult : r));
+    });
+
+    return () => unsubscribe();
+  }, [currentScreeningResult?.id, isFirestoreAvailable]);
+
   const handleJobDescriptionUploadAndExtraction = useCallback(async (files: File[]) => {
     if (!currentUser?.uid) return;
     setIsLoadingJDExtraction(true);
@@ -151,27 +179,67 @@ export default function ResumeRankerPage() {
     }
 
     setIsLoadingScreening(true);
+    // Phase 1: Fast Screening
     setScreeningProgress({
       current: 0,
       total: uploadedResumeFiles.length,
       succeeded: 0,
       failed: 0,
       percentComplete: 0,
-      status: "Initializing...",
+      status: "⚡ Phase 1: Fast Ranking (Deterministic)...",
     });
+
     try {
       const plainRoleToScreen = { id: roleToScreen.id, name: roleToScreen.name, contentDataUri: roleToScreen.contentDataUri, originalDocumentName: roleToScreen.originalDocumentName };
       const input: PerformBulkScreeningInput = { jobRolesToScreen: [plainRoleToScreen], resumesToRank: uploadedResumeFiles };
-      const outputFromAI: PerformBulkScreeningOutput = await performBulkScreening(input);
+
+      // STEP 1: Fast Deterministic Ranking (Immediate Results)
+      // This returns detailed scores but "pending" AI feedback
+      // It also returns 'feedbackContexts' needed for Phase 2
+      const { results: outputFromAI, feedbackContexts } = await performBulkScreeningFast(input);
 
       if (outputFromAI.length > 0 && outputFromAI[0]) {
         const resultToSave: Omit<JobScreeningResult, 'id' | 'userId' | 'createdAt'> = outputFromAI[0];
+
+        // Save initial results to Firestore
+        // Note: resumes are sanitized (data URIs removed) in firestoreService
         const savedResult = await saveJobScreeningResult(resultToSave);
 
         setCurrentScreeningResult(savedResult);
         setAllScreeningResults(prev => [savedResult, ...prev.filter(r => r.id !== savedResult.id)]);
 
-        toast({ title: "Screening Complete", description: "Results have been saved to your history." });
+        toast({ title: "Rankings Ready!", description: "Candidates ranked by score. detailed AI feedback is generating in background." });
+
+        // STEP 2: Trigger Phase 2 (Async AI Feedback)
+        // We do this client-side to ensure long-running requests don't time out the server action
+        // We'll process candidates in batches to be nice to the server/rate limits
+
+        // Sort candidates by score (highest first) to prioritize top talent
+        const sortedCandidates = [...savedResult.candidates].sort((a, b) => b.score - a.score);
+
+        // Fire and forget - let the effect handle updates via Firestore subscription
+        (async () => {
+          const MAX_CONCURRENT = 3; // Process 3 feedbacks at a time
+          const resultId = savedResult.id;
+
+          // Helper for concurrency
+          const processQueue = async () => {
+            for (let i = 0; i < sortedCandidates.length; i += MAX_CONCURRENT) {
+              const batch = sortedCandidates.slice(i, i + MAX_CONCURRENT);
+              await Promise.all(batch.map(candidate => {
+                const context = feedbackContexts[candidate.id]; // Get saved context
+                if (context) {
+                  return enrichCandidateWithFeedback(resultId, candidate.id, context);
+                }
+                return Promise.resolve();
+              }));
+            }
+          };
+
+          await processQueue();
+          console.log("✅ Phase 2 Background Processing Complete");
+        })();
+
       } else {
         toast({ title: "Screening Processed", description: "No new results were generated.", variant: 'destructive' });
       }

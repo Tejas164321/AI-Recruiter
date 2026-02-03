@@ -137,8 +137,8 @@ export async function generateJDInterviewQuestions(
             {
                 system: SYSTEM_PROMPTS.STRICT_JSON,
                 temperature: 0.7, // Higher temperature for creative question generation
-                maxTokens: 1200,
-                timeout: 20000, // 20s timeout
+                maxTokens: 800, // Reduced from 1200 for faster generation
+                timeout: 15000, // 15s timeout
             }
         );
 

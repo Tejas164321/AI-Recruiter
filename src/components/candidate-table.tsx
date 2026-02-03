@@ -111,8 +111,23 @@ export function CandidateTable({ candidates, onViewFeedback, onSendEmail }: Cand
               </div>
             </CardContent>
             <CardFooter className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => onViewFeedback(candidate)} className="flex-1"><MessageSquareText className="w-4 h-4 mr-2" />Feedback</Button>
-                <Button variant="secondary" size="sm" onClick={() => onSendEmail(candidate)} className="flex-1"><Mail className="w-4 h-4 mr-2" />Email</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onViewFeedback(candidate)}
+                className="flex-1 relative"
+              >
+                <MessageSquareText className="w-4 h-4 mr-2" />
+                Feedback
+                {/* Show generating indicator */}
+                {(candidate.feedbackStatus === 'pending' || candidate.feedbackStatus === 'generating') && (
+                  <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+                  </span>
+                )}
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => onSendEmail(candidate)} className="flex-1"><Mail className="w-4 h-4 mr-2" />Email</Button>
             </CardFooter>
           </Card>
         ))}
@@ -144,7 +159,23 @@ export function CandidateTable({ candidates, onViewFeedback, onSendEmail }: Cand
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end space-x-1">
-                    <Button variant="ghost" size="sm" onClick={() => onViewFeedback(candidate)} aria-label={`View feedback for ${candidate.name}`} className="hover:text-primary"><MessageSquareText className="w-4 h-4 mr-2" />Feedback</Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onViewFeedback(candidate)}
+                      aria-label={`View feedback for ${candidate.name}`}
+                      className="hover:text-primary relative"
+                    >
+                      <MessageSquareText className="w-4 h-4 mr-2" />
+                      Feedback
+                      {/* Show generating indicator */}
+                      {(candidate.feedbackStatus === 'pending' || candidate.feedbackStatus === 'generating') && (
+                        <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+                        </span>
+                      )}
+                    </Button>
                     <Button variant="ghost" size="sm" onClick={() => onSendEmail(candidate)} aria-label={`Send email to ${candidate.name}`} className="hover:text-primary"><Mail className="w-4 h-4 mr-2" />Email</Button>
                   </div>
                 </TableCell>
@@ -157,4 +188,3 @@ export function CandidateTable({ candidates, onViewFeedback, onSendEmail }: Cand
   );
 }
 
-    

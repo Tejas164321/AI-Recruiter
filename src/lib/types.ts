@@ -40,6 +40,9 @@ export interface ExtractedJobRole {
 /**
  * Represents a single candidate's ranking and feedback against a specific job role.
  * This is typically part of a larger JobScreeningResult.
+ * 
+ * Progressive Enhancement: Supports two-phase processing where deterministic scores
+ * are calculated first, then AI feedback is added asynchronously.
  */
 export interface RankedCandidate {
   id: string; // A unique ID for this specific ranking entry.
@@ -51,6 +54,34 @@ export interface RankedCandidate {
   feedback: string; // Detailed AI-generated feedback.
   originalResumeName: string; // The original filename of the resume.
   resumeDataUri: string; // The data URI of the resume content.
+
+  // Progressive Enhancement Fields
+  feedbackStatus?: 'pending' | 'generating' | 'complete' | 'failed'; // Status of AI feedback
+  feedbackGeneratedAt?: Timestamp; // When AI feedback was generated
+  processingPriority?: number; // Higher score = process first (equals score value)
+  detailedFeedback?: DetailedAIFeedback; // Rich structured feedback
+}
+
+/**
+ * Detailed structured AI feedback with improvements and gap analysis.
+ * Generated in Phase 2 of progressive enhancement.
+ */
+export interface DetailedAIFeedback {
+  summary: string; // Overall assessment (e.g., "Strong match for Senior Developer")
+
+  matchedSkills: string[]; // Skills found in resume
+  matchedExperience: string; // Experience level match explanation
+
+  missingSkills: string[]; // Skills mentioned in JD but not in resume
+  missingExperience?: string; // Experience gaps
+
+  improvements: string[]; // Specific actionable improvements
+  scoreImpact?: string; // How improvements could affect score
+
+  concerns: string[]; // Red flags or concerns
+  strengths: string[]; // Candidate's key strengths
+
+  scoreExplanation: string; // Why this score was given
 }
 
 /**

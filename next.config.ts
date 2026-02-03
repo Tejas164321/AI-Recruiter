@@ -1,5 +1,5 @@
 
-import type {NextConfig} from 'next';
+import type { NextConfig } from 'next';
 
 /**
  * @type {import('next').NextConfig}
@@ -8,6 +8,11 @@ import type {NextConfig} from 'next';
  */
 const nextConfig: NextConfig = {
   /* config options here */
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '50mb', // Increased to 50MB to support 100+ resume uploads
+    },
+  },
 
   // TypeScript configuration
   typescript: {

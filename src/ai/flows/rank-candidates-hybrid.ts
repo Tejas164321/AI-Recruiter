@@ -38,6 +38,14 @@ import type {
 } from '@/lib/types';
 
 // ============================================
+// Configuration Constants
+// ============================================
+
+const ENABLE_FAST_MODE = process.env.NEXT_PUBLIC_ENABLE_FAST_MODE === 'true'; // Can be toggled via env
+const PARALLEL_BATCH_SIZE = 4; // Process 4 resumes in parallel (16GB RAM optimized)
+const MAX_CACHE_SIZE = 100; // Cache up to 100 documents for bulk operations
+
+// ============================================
 // Types
 // ============================================
 
@@ -58,6 +66,7 @@ interface ProcessingContext {
     jdSkills: ReturnType<typeof extractSkills>;
     totalResumes: number;
     currentIndex: number;
+    skipLLM?: boolean; // Fast Mode: skip LLM qualitative analysis
 }
 
 // ============================================
@@ -156,60 +165,73 @@ async function processResumeSingleJob(
     console.log(`   📊 Composite score: ${compositeResult.finalScore}/100 (${compositeResult.grade})`);
 
     // ============================================
-    // STEP 7: LLM Qualitative Analysis (FINAL STEP)
+    // STEP 7: LLM Qualitative Analysis (OPTIONAL - Fast Mode can skip this)
     // ============================================
-    console.log(`   🤖 Generating qualitative feedback...`);
-    const llmStart = Date.now();
-
     let qualitativeAnalysis;
-    try {
-        const ollamaClient = getOllamaClient();
-        const prompt = createQualitativeAnalysisPrompt({
-            jdText: context.jdText,
-            resumeText: parsedResume.text,
-            scores: {
-                final: compositeResult.finalScore,
-                semantic: semanticResult.score,
-                skill: skillMatchResult.score,
-                ats: atsResult.atsScore,
-                experience: experienceScore,
-            },
-            matchedSkills: skillMatchResult.matchedSkills,
-            missingSkills: skillMatchResult.missingSkills,
-        });
 
-        const llmResult = await ollamaClient.generateJSON(
-            prompt,
-            QualitativeAnalysisSchema,
-            {
-                system: SYSTEM_PROMPTS.QUALITATIVE_ANALYSIS,
-                temperature: 0.3,
-                maxTokens: 600,
-                timeout: 15000, // 15s timeout for LLM
-            }
+    if (context.skipLLM) {
+        // Fast Mode: Skip LLM and use deterministic fallback immediately
+        console.log(`   ⚡ Fast Mode: Skipping LLM analysis`);
+        qualitativeAnalysis = createFallbackAnalysis(
+            compositeResult,
+            skillMatchResult,
+            atsResult
         );
+        breakdown.llmTimeMs = 0;
+    } else {
+        // Standard Mode: Use LLM for qualitative feedback
+        console.log(`   🤖 Generating qualitative feedback...`);
+        const llmStart = Date.now();
 
-        if (llmResult.success) {
-            qualitativeAnalysis = llmResult.data;
-            console.log(`   ✓ LLM analysis: ${llmResult.tokensGenerated} tokens in ${llmResult.inferenceTimeMs}ms`);
-        } else {
-            console.warn(`   ⚠ LLM failed: ${llmResult.error}. Using fallback.`);
+        try {
+            const ollamaClient = getOllamaClient();
+            const prompt = createQualitativeAnalysisPrompt({
+                jdText: context.jdText,
+                resumeText: parsedResume.text,
+                scores: {
+                    final: compositeResult.finalScore,
+                    semantic: semanticResult.score,
+                    skill: skillMatchResult.score,
+                    ats: atsResult.atsScore,
+                    experience: experienceScore,
+                },
+                matchedSkills: skillMatchResult.matchedSkills,
+                missingSkills: skillMatchResult.missingSkills,
+            });
+
+            const llmResult = await ollamaClient.generateJSON(
+                prompt,
+                QualitativeAnalysisSchema,
+                {
+                    system: SYSTEM_PROMPTS.QUALITATIVE_ANALYSIS,
+                    temperature: 0.3,
+                    maxTokens: 300, // Reduced for faster inference (RTX 3050 4GB optimized)
+                    timeout: 10000, // 10s timeout for LLM
+                }
+            );
+
+            if (llmResult.success) {
+                qualitativeAnalysis = llmResult.data;
+                console.log(`   ✓ LLM analysis: ${llmResult.tokensGenerated} tokens in ${llmResult.inferenceTimeMs}ms`);
+            } else {
+                console.warn(`   ⚠ LLM failed: ${llmResult.error}. Using fallback.`);
+                qualitativeAnalysis = createFallbackAnalysis(
+                    compositeResult,
+                    skillMatchResult,
+                    atsResult
+                );
+            }
+        } catch (error) {
+            console.error(`   ❌ LLM error:`, error);
             qualitativeAnalysis = createFallbackAnalysis(
                 compositeResult,
                 skillMatchResult,
                 atsResult
             );
         }
-    } catch (error) {
-        console.error(`   ❌ LLM error:`, error);
-        qualitativeAnalysis = createFallbackAnalysis(
-            compositeResult,
-            skillMatchResult,
-            atsResult
-        );
-    }
 
-    breakdown.llmTimeMs = Date.now() - llmStart;
+        breakdown.llmTimeMs = Date.now() - llmStart;
+    }
 
     // ============================================
     // Assemble Final Candidate Object
@@ -364,6 +386,8 @@ export async function performBulkScreening(
     console.log(`   Job Roles: ${jobRolesToScreen.length}`);
     console.log(`   Resumes: ${resumesToRank.length}`);
     console.log(`   Total Operations: ${jobRolesToScreen.length * resumesToRank.length}`);
+    console.log(`   Batch Size: ${PARALLEL_BATCH_SIZE} parallel`);
+    console.log(`   Fast Mode: ${ENABLE_FAST_MODE ? '⚡ ENABLED' : '❌ DISABLED'}`);
     console.log(`${'═'.repeat(70)}\n`);
 
     // Early exit
@@ -390,50 +414,72 @@ export async function performBulkScreening(
             jdSkills,
             totalResumes: resumesToRank.length,
             currentIndex: 0,
+            skipLLM: ENABLE_FAST_MODE, // Use Fast Mode if enabled
         };
 
         const candidates: RankedCandidate[] = [];
         let successCount = 0;
         let failCount = 0;
 
-        // Process resumes sequentially to avoid overwhelming local LLM
-        for (let i = 0; i < resumesToRank.length; i++) {
-            const resume = resumesToRank[i];
-            context.currentIndex = i;
+        // ============================================
+        // PARALLEL BATCH PROCESSING (16GB RAM Optimized)
+        // Process 4 resumes in parallel for maximum throughput
+        // ============================================
+        console.log(`   🚀 Processing in batches of ${PARALLEL_BATCH_SIZE} (parallel)...`);
 
-            try {
-                const result = await processResumeSingleJob(
-                    resume.dataUri,
-                    resume.name,
-                    resume.id,
-                    jobRole,
-                    context
-                );
+        for (let i = 0; i < resumesToRank.length; i += PARALLEL_BATCH_SIZE) {
+            const batch = resumesToRank.slice(i, Math.min(i + PARALLEL_BATCH_SIZE, resumesToRank.length));
+            const batchNum = Math.floor(i / PARALLEL_BATCH_SIZE) + 1;
+            const totalBatches = Math.ceil(resumesToRank.length / PARALLEL_BATCH_SIZE);
+            const progressPct = Math.round((i / resumesToRank.length) * 100);
 
-                candidates.push(result.candidate);
-                successCount++;
+            console.log(`\n   📦 Batch ${batchNum}/${totalBatches} (${progressPct}% complete, ${batch.length} resumes)...`);
 
-                // Small delay between resumes to prevent overload
-                if (i < resumesToRank.length - 1) {
-                    await new Promise(resolve => setTimeout(resolve, 500));
+            // Process batch in parallel
+            const batchResults = await Promise.allSettled(
+                batch.map((resume, batchIdx) => {
+                    const globalIdx = i + batchIdx;
+                    context.currentIndex = globalIdx;
+
+                    return processResumeSingleJob(
+                        resume.dataUri,
+                        resume.name,
+                        resume.id,
+                        jobRole,
+                        context
+                    );
+                })
+            );
+
+            // Collect results from batch
+            for (let batchIdx = 0; batchIdx < batchResults.length; batchIdx++) {
+                const result = batchResults[batchIdx];
+                const resume = batch[batchIdx];
+
+                if (result.status === 'fulfilled') {
+                    candidates.push(result.value.candidate);
+                    successCount++;
+                } else {
+                    failCount++;
+                    console.error(`   ❌ Failed to process ${resume.name}:`, result.reason);
+
+                    // Create error candidate
+                    candidates.push({
+                        id: resume.id,
+                        name: resume.name.replace(/\.[^/.]+$/, ''),
+                        email: '',
+                        score: 0,
+                        atsScore: 0,
+                        keySkills: 'Processing failed',
+                        feedback: `Error: ${result.reason instanceof Error ? result.reason.message : 'Unknown error'}`,
+                        originalResumeName: resume.name,
+                        resumeDataUri: resume.dataUri,
+                    });
                 }
-            } catch (error) {
-                failCount++;
-                console.error(`   ❌ Failed to process ${resume.name}:`, error);
-
-                // Create error candidate
-                candidates.push({
-                    id: resume.id,
-                    name: resume.name.replace(/\.[^/.]+$/, ''),
-                    email: '',
-                    score: 0,
-                    atsScore: 0,
-                    keySkills: 'Processing failed',
-                    feedback: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                    originalResumeName: resume.name,
-                    resumeDataUri: resume.dataUri,
-                });
             }
+
+            // Log batch completion
+            console.log(`   ✓ Batch ${batchNum}/${totalBatches} complete (Success: ${batchResults.filter(r => r.status === 'fulfilled').length}/${batch.length})`);
         }
 
         // Sort by score (descending)
@@ -504,6 +550,7 @@ export async function performBulkScreeningWithProgress(
             jdSkills,
             totalResumes: resumesToRank.length,
             currentIndex: 0,
+            skipLLM: ENABLE_FAST_MODE,
         };
 
         const candidates: RankedCandidate[] = [];
@@ -542,11 +589,6 @@ export async function performBulkScreeningWithProgress(
 
             processedCount++;
             sendProgress(`Completed: ${resume.name}`);
-
-            // Delay between resumes
-            if (i < resumesToRank.length - 1) {
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
         }
 
         candidates.sort((a, b) => b.score - a.score);

@@ -224,7 +224,7 @@ export class OllamaClient {
             options: {
                 temperature: options?.temperature ?? 0.3,
                 num_predict: options?.maxTokens ?? 500,
-                num_ctx: 2048,
+                num_ctx: 1024, // Reduced from 2048 for RTX 3050 4GB (faster + less VRAM)
             },
         };
 
@@ -282,7 +282,7 @@ export class OllamaClient {
             options: {
                 temperature: options?.temperature ?? 0.2,
                 num_predict: options?.maxTokens ?? 800,
-                num_ctx: 2048,
+                num_ctx: 1024, // Reduced from 2048 for RTX 3050 4GB (faster + less VRAM)
             },
         };
 

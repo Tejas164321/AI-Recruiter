@@ -12,6 +12,8 @@ import { Separator } from "@/components/ui/separator";
 import { Star, Activity, ThumbsDown, ShieldCheck } from "lucide-react";
 // Types
 import type { RankedCandidate } from "@/lib/types";
+// Loading Component
+import { AIFeedbackLoading } from "@/components/ai-feedback-loading";
 
 /**
  * Props for the FeedbackModal component.
@@ -24,11 +26,15 @@ interface FeedbackModalProps {
 
 /**
  * A modal dialog to display detailed AI-generated feedback for a ranked candidate.
+ * Shows modern loading state if AI feedback is still being generated.
  * @param {FeedbackModalProps} props - The component props.
  */
 export function FeedbackModal({ isOpen, onClose, candidate }: FeedbackModalProps) {
   // Do not render if there's no candidate data.
   if (!candidate) return null;
+
+  // Check if AI feedback is still pending
+  const isFeedbackPending = candidate.feedbackStatus === 'pending' || candidate.feedbackStatus === 'generating';
 
   /**
    * Determines the icon and style for a score badge.
@@ -42,7 +48,7 @@ export function FeedbackModal({ isOpen, onClose, candidate }: FeedbackModalProps
       if (score <= 50) IconComponent = ThumbsDown;
       else if (score <= 75) IconComponent = Activity;
     }
-    
+
     let badgeClass = "bg-accent text-accent-foreground"; // Default: Good score
     if (score <= 50) badgeClass = "bg-destructive text-destructive-foreground"; // Low score
     else if (score <= 75) badgeClass = "bg-yellow-500 text-black"; // Medium score
@@ -78,24 +84,36 @@ export function FeedbackModal({ isOpen, onClose, candidate }: FeedbackModalProps
               <h4 className="font-semibold text-foreground mb-2">Key Skills Matched</h4>
               {candidate.keySkills && candidate.keySkills.split(',').filter(skill => skill.trim()).length > 0 ? (
                 <div className="flex flex-wrap gap-2">
-                    {candidate.keySkills.split(',').map(skill => skill.trim()).filter(Boolean).map((skill, index) => (
-                      <Badge key={index} variant="secondary">{skill}</Badge>
-                    ))}
+                  {candidate.keySkills.split(',').map(skill => skill.trim()).filter(Boolean).map((skill, index) => (
+                    <Badge key={index} variant="secondary">{skill}</Badge>
+                  ))}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">No specific key skills were highlighted by the AI.</p>
               )}
             </div>
             <Separator />
-            {/* AI Feedback Section */}
+
+            {/* AI Feedback Section - Show loading if pending */}
             <div>
-              <h4 className="font-semibold text-foreground mb-2">AI Generated Feedback</h4>
-              <div className="p-4 bg-muted/50 rounded-md">
-                {/* whitespace-pre-wrap preserves line breaks from the AI's response */}
-                <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-                  {candidate.feedback}
-                </p>
-              </div>
+              <h4 className="font-semibold text-foreground mb-3">AI Generated Feedback</h4>
+
+              {isFeedbackPending ? (
+                // Show beautiful loading state
+                <AIFeedbackLoading
+                  candidateName={candidate.name}
+                  score={candidate.score}
+                  variant="full"
+                />
+              ) : (
+                // Show actual feedback
+                <div className="p-4 bg-muted/50 rounded-md">
+                  {/* whitespace-pre-wrap preserves line breaks from the AI's response */}
+                  <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                    {candidate.feedback}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </ScrollArea>

@@ -322,41 +322,60 @@ function parsePlainText(buffer: Buffer, fileName: string): ParsedDocument {
 /**
  * Parse a document from a data URI
  * Automatically detects file type and uses appropriate parser
+ * Includes caching to avoid re-parsing same documents
  */
 export async function parseDocument(
     dataUri: string,
     fileName: string = 'document'
 ): Promise<ParsedDocument> {
     try {
+        // Check cache first
+        const { getCachedDocument, cacheDocument } = await import('../caching/document-cache');
+        const cached = getCachedDocument(dataUri);
+        if (cached) {
+            console.log(`[DocumentParser] Using cached ${fileName}`);
+            return cached;
+        }
+
         // Convert data URI to buffer
         const { buffer, mimeType } = dataUriToBuffer(dataUri);
         const fileType = detectFileType(mimeType);
 
         console.log(`[DocumentParser] Parsing ${fileName} (${fileType}, ${buffer.length} bytes)`);
 
+        let parsed: ParsedDocument;
+
         // Route to appropriate parser
         switch (fileType) {
             case 'pdf':
-                return await parsePDF(buffer, fileName);
+                parsed = await parsePDF(buffer, fileName);
+                break;
 
             case 'docx':
-                return await parseDOCX(buffer, fileName);
+                parsed = await parseDOCX(buffer, fileName);
+                break;
 
             case 'txt':
-                return parsePlainText(buffer, fileName);
+                parsed = parsePlainText(buffer, fileName);
+                break;
 
             default:
                 // Try PDF first, then DOCX, then plain text
                 try {
-                    return await parsePDF(buffer, fileName);
+                    parsed = await parsePDF(buffer, fileName);
                 } catch {
                     try {
-                        return await parseDOCX(buffer, fileName);
+                        parsed = await parseDOCX(buffer, fileName);
                     } catch {
-                        return parsePlainText(buffer, fileName);
+                        parsed = parsePlainText(buffer, fileName);
                     }
                 }
         }
+
+        // Cache the result
+        cacheDocument(dataUri, parsed);
+
+        return parsed;
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         console.error(`[DocumentParser] Failed to parse ${fileName}:`, message);
