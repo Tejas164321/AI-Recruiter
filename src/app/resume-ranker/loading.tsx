@@ -1,19 +1,13 @@
-import { PageHeaderSkeleton } from "@/components/skeletons/page-header-skeleton";
-import { Skeleton } from "@/components/ui/skeleton";
+import { CandidateListSkeleton } from "@/components/skeletons";
 
-export default function ResumeRankerLoading() {
+export default function Loading() {
     return (
-        <div className="container mx-auto p-4 md:p-8 space-y-8 pt-24">
-            <PageHeaderSkeleton />
-
-            {/* Upload Area Skeleton */}
-            <Skeleton className="w-full h-[300px] rounded-xl" />
-
-            {/* Results placeholder */}
-            <div className="space-y-4">
-                <Skeleton className="h-8 w-[200px]" />
-                <Skeleton className="h-[400px] w-full rounded-xl" />
+        <div className="container py-8">
+            <div className="mb-8 space-y-2">
+                <div className="h-8 w-48 bg-muted/50 rounded animate-pulse" />
+                <div className="h-4 w-96 bg-muted/50 rounded animate-pulse" />
             </div>
+            <CandidateListSkeleton />
         </div>
     );
 }

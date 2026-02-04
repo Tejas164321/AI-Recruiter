@@ -76,92 +76,140 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="container mx-auto p-4 md:p-8 pt-24">
-      {/* Page Header */}
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold font-headline text-foreground">Welcome to Your Dashboard, {userName}!</h1>
-        <p className="text-muted-foreground">Select a tool below to get started.</p>
-      </header>
-
-      {/* Main content grid with feature cards */}
-      <div className="flex flex-col gap-8">
-        {/* AI Resume Ranker Card */}
-        <motion.div
-          initial="initial"
-          whileHover="hover"
-          whileTap={{ scale: 0.98 }}
-          variants={cardHoverVariants}
-        >
-          <Link href="/resume-ranker" onClick={handleLinkClick} className="block group">
-            <Card className="shadow-lg h-full flex flex-col border border-primary/10 hover:border-primary/50 transition-colors duration-300">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <BrainCircuit className="w-12 h-12 text-primary mb-2" />
-                  <ArrowRight className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
-                </div>
-                <CardTitle className="text-2xl font-headline text-primary">AI Resume Ranker</CardTitle>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                <CardDescription className="text-base">
-                  Upload job descriptions and resumes to intelligently rank candidates. Leverage AI insights for faster, more accurate screening.
-                </CardDescription>
-              </CardContent>
-            </Card>
-          </Link>
-        </motion.div>
-
-        {/* Grid for smaller feature cards */}
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* ATS Score Finder Card */}
-          <motion.div
-            initial="initial"
-            whileHover="hover"
-            whileTap={{ scale: 0.98 }}
-            variants={cardHoverVariants}
-          >
-            <Link href="/ats-score-finder" onClick={handleLinkClick} className="block group">
-              <Card className="shadow-lg h-full flex flex-col hover:border-primary/50 transition-colors duration-300">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <BarChartBig className="w-10 h-10 text-primary mb-2" />
-                    <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                  </div>
-                  <CardTitle className="text-xl font-headline text-primary">ATS Score Finder</CardTitle>
-                </CardHeader>
-                <CardContent className="flex-grow">
-                  <CardDescription>
-                    Analyze resumes for Applicant Tracking System (ATS) compatibility. Get scores and suggestions to optimize for automated screening.
-                  </CardDescription>
-                </CardContent>
-              </Card>
-            </Link>
-          </motion.div>
-
-          {/* Interview Question Generator Card */}
-          <motion.div
-            initial="initial"
-            whileHover="hover"
-            whileTap={{ scale: 0.98 }}
-            variants={cardHoverVariants}
-          >
-            <Link href="/interview-question-generator" onClick={handleLinkClick} passHref className="block group">
-              <Card className="shadow-lg h-full flex flex-col hover:border-primary/50 transition-colors duration-300">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <MessageSquarePlus className="w-10 h-10 text-primary mb-2" />
-                    <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                  </div>
-                  <CardTitle className="text-xl font-headline text-primary">AI Interview Question Generator</CardTitle>
-                </CardHeader>
-                <CardContent className="flex-grow">
-                  <CardDescription>
-                    Upload a job description to generate categorized interview questions (technical, behavioral, etc.) tailored to the role.
-                  </CardDescription>
-                </CardContent>
-              </Card>
-            </Link>
-          </motion.div>
+    <div className="h-screen w-full bg-graph-paper font-sans overflow-hidden flex flex-col">
+      <div className="container mx-auto p-4 md:p-8 pt-24 md:pt-28 max-w-7xl flex-1 flex flex-col min-h-0">
+        {/* Page Header */}
+        <div className="mb-6 md:mb-8 flex-shrink-0">
+          <h1 className="text-3xl md:text-5xl font-headline font-black text-foreground/90 tracking-tight mb-2 uppercase" data-text={userName}>
+            Welcome back, <span className="font-hand text-primary lowercase px-2 transform -rotate-1 inline-block">{userName.includes('@') ? userName.split('@')[0] : userName}</span>
+          </h1>
+          <p className="font-mono text-muted-foreground text-sm tracking-widest uppercase">
+            Recruitment Operations Center • {new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </p>
         </div>
+
+        {/* Main content grid - PEN & PAPER LAYOUT */}
+        <motion.div
+          className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 pb-4 flex-1 min-h-0"
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: { opacity: 0 },
+            visible: {
+              opacity: 1,
+              transition: {
+                staggerChildren: 0.1,
+                delayChildren: 0.2
+              }
+            }
+          }}
+        >
+
+          {/* CARD 1: Resume Ranker */}
+          <motion.div
+            className="h-full"
+            variants={{
+              hidden: { y: 20, opacity: 0 },
+              visible: { y: 0, opacity: 1, transition: { type: "tween", ease: "easeOut", duration: 0.5 } }
+            }}
+            whileHover={{ y: -5, transition: { duration: 0.2 } }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Link href="/resume-ranker" onClick={handleLinkClick} className="block group h-full">
+              <Card className="h-full flex flex-col border border-border/60 bg-card paper-shadow paper-stack hover:shadow-lg transition-all duration-300 rounded-lg overflow-hidden relative">
+                <CardHeader className="pb-2 flex-shrink-0">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="p-2 bg-muted/50 rounded-md">
+                      <BrainCircuit className="w-6 h-6 text-foreground/70 stroke-1" />
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                  </div>
+                  <CardTitle className="text-2xl font-hand text-foreground">Resume Ranker</CardTitle>
+                </CardHeader>
+                <CardContent className="flex-grow flex flex-col min-h-0">
+                  <CardDescription className="text-base text-muted-foreground font-light leading-relaxed mb-4 flex-grow">
+                    Score candidates automatically based on job descriptions.
+                  </CardDescription>
+                  <div className="mt-auto pt-4 border-t border-dashed border-border/50 flex-shrink-0">
+                    <span className="font-hand text-sm text-foreground/60 transform -rotate-2 inline-block">
+                      Ready for analysis
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          </motion.div>
+
+          {/* CARD 2: ATS Analyzer */}
+          <motion.div
+            className="h-full"
+            variants={{
+              hidden: { y: 10, opacity: 0 },
+              visible: { y: 0, opacity: 1, transition: { type: "tween", ease: "easeOut", duration: 0.5 } }
+            }}
+            whileHover={{ y: -4, transition: { duration: 0.2 } }}
+            whileTap={{ scale: 0.99 }}
+          >
+            <Link href="/ats-score-finder" onClick={handleLinkClick} className="block group h-full">
+              <Card className="h-full flex flex-col border border-border/60 bg-card paper-shadow paper-stack hover:shadow-lg transition-all duration-300 rounded-lg overflow-hidden relative">
+                <CardHeader className="pb-2 flex-shrink-0">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="p-2 bg-muted/50 rounded-md">
+                      <BarChartBig className="w-6 h-6 text-foreground/70 stroke-1" />
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                  </div>
+                  <CardTitle className="text-2xl font-hand text-foreground">ATS Analyzer</CardTitle>
+                </CardHeader>
+                <CardContent className="flex-grow flex flex-col min-h-0">
+                  <CardDescription className="text-base text-muted-foreground font-light leading-relaxed mb-4 flex-grow">
+                    Check resume compatibility with filtering systems.
+                  </CardDescription>
+                  <div className="mt-auto pt-4 border-t border-dashed border-border/50 flex-shrink-0">
+                    <span className="font-hand text-sm text-foreground/60 transform rotate-1 inline-block">
+                      Parser active
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          </motion.div>
+
+          {/* CARD 3: Interview Question Generator */}
+          <motion.div
+            className="h-full"
+            variants={{
+              hidden: { y: 10, opacity: 0 },
+              visible: { y: 0, opacity: 1, transition: { type: "tween", ease: "easeOut", duration: 0.5 } }
+            }}
+            whileHover={{ y: -4, transition: { duration: 0.2 } }}
+            whileTap={{ scale: 0.99 }}
+          >
+            <Link href="/interview-question-generator" onClick={handleLinkClick} className="block group h-full">
+              <Card className="h-full flex flex-col border border-border/60 bg-card paper-shadow paper-stack hover:shadow-lg transition-all duration-300 rounded-lg overflow-hidden relative">
+                <CardHeader className="pb-2 flex-shrink-0">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="p-2 bg-muted/50 rounded-md">
+                      <MessageSquarePlus className="w-6 h-6 text-foreground/70 stroke-1" />
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                  </div>
+                  <CardTitle className="text-2xl font-hand text-foreground">Interview Gen</CardTitle>
+                </CardHeader>
+                <CardContent className="flex-grow flex flex-col min-h-0">
+                  <CardDescription className="text-base text-muted-foreground font-light leading-relaxed mb-4 flex-grow">
+                    Generate tailored interview questions for your role.
+                  </CardDescription>
+                  <div className="mt-auto pt-4 border-t border-dashed border-border/50 flex-shrink-0">
+                    <span className="font-hand text-sm text-foreground/60 transform -rotate-1 inline-block">
+                      AI Scripting
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          </motion.div>
+        </motion.div>
       </div>
     </div>
   );

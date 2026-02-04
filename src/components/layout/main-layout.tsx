@@ -32,13 +32,16 @@ export function MainLayout({ children }: MainLayoutProps) {
   const applyPadding = !noPaddingPages.includes(pathname);
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    <div className="flex flex-col min-h-screen bg-background relative overflow-x-hidden selection:bg-primary selection:text-primary-foreground font-mono">
+      {/* Global Noise Overlay */}
+      <div className="pointer-events-none fixed inset-0 z-50 opacity-[0.03] mix-blend-overlay" style={{ backgroundImage: 'url("https://grainy-gradients.vercel.app/noise.svg")' }}></div>
+
       {/* Conditionally render the full-page loader */}
       {isPageLoading && <PageLoader />}
-      
-      {/* The main application header */}
-      <Header />
-      
+
+      {/* The main application header. Hidden on login/signup pages. */}
+      {!['/login', '/signup'].includes(pathname) && <Header />}
+
       {/* The main content area where pages will be rendered */}
       {/* Conditionally apply top padding to prevent content from being obscured by the floating header. */}
       <main className={cn(

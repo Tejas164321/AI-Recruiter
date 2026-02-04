@@ -7,7 +7,7 @@ import { MainLayout } from '@/components/layout/main-layout';
 import { Toaster } from "@/components/ui/toaster";
 // Providers for theming, loading state, and authentication
 import { ThemeProvider } from "@/components/theme-provider";
-import { LoadingProvider } from "@/contexts/loading-context"; 
+import { LoadingProvider } from "@/contexts/loading-context";
 import { AuthProvider } from "@/contexts/auth-context";
 import { cn } from '@/lib/utils';
 import { SpeedInsights } from "@vercel/speed-insights/next"
@@ -17,9 +17,16 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
  * Initializes the Inter font with specified subsets and a CSS variable.
  * This is the modern, optimized approach for handling fonts in Next.js.
  */
-const inter = Inter({ 
+const inter = Inter({
   subsets: ['latin'],
-  variable: '--font-inter', // Defines a CSS variable for the font
+  variable: '--font-inter',
+});
+
+import { Caveat } from 'next/font/google';
+
+const caveat = Caveat({
+  subsets: ['latin'],
+  variable: '--font-caveat',
 });
 
 
@@ -57,8 +64,8 @@ export default function RootLayout({
       <head>
         {/* Font link tags are no longer needed as we are using next/font */}
       </head>
-      <body className={cn(inter.variable, "font-body antialiased")}>
-      <SpeedInsights/>
+      <body className={cn(inter.variable, caveat.variable, "font-body antialiased")}>
+        <SpeedInsights />
         {/* ThemeProvider manages light/dark mode */}
         <ThemeProvider
           attribute="class"

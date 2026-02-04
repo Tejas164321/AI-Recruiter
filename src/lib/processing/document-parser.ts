@@ -53,13 +53,16 @@ export interface DocumentSection {
  */
 function dataUriToBuffer(dataUri: string): { buffer: Buffer; mimeType: string } {
     if (!dataUri.startsWith('data:')) {
-        throw new Error('Invalid data URI format');
+        throw new Error('Invalid data URI format: Must start with "data:"');
     }
 
-    const [header, base64Data] = dataUri.split(',');
-    if (!base64Data) {
-        throw new Error('Invalid data URI: no base64 data found');
+    const commaIndex = dataUri.indexOf(',');
+    if (commaIndex === -1) {
+        throw new Error('Invalid data URI: Missing comma separating metadata and data');
     }
+
+    const header = dataUri.slice(0, commaIndex);
+    const base64Data = dataUri.slice(commaIndex + 1);
 
     const mimeType = header.match(/data:([^;]+)/)?.[1] || 'application/octet-stream';
     const buffer = Buffer.from(base64Data, 'base64');

@@ -1,5 +1,5 @@
 
-import type {Config} from 'tailwindcss';
+import type { Config } from 'tailwindcss';
 
 /**
  * Tailwind CSS configuration file.
@@ -14,9 +14,10 @@ export default {
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
+
   theme: {
     // Defines default styles for the .container class.
-    container: { 
+    container: {
       center: true,
       padding: "2rem",
       screens: {
@@ -30,6 +31,8 @@ export default {
         body: ['var(--font-inter)', 'sans-serif'],
         headline: ['var(--font-inter)', 'sans-serif'],
         code: ['monospace', 'monospace'],
+        mono: ['monospace', 'Menlo', 'Monaco', 'Courier New', 'monospace'],
+        hand: ['var(--font-caveat)', 'cursive'],
       },
       // Custom color palette using CSS variables defined in globals.css.
       // This allows for easy theming (light/dark mode).
@@ -92,11 +95,25 @@ export default {
           from: { height: 'var(--radix-accordion-content-height)' },
           to: { height: '0' },
         },
+        'float': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-10px)' },
+        },
+        'pulse-glow': {
+          '0%, 100%': { boxShadow: '0 0 20px -5px hsl(var(--primary) / 0.3)' },
+          '50%': { boxShadow: '0 0 30px 5px hsl(var(--primary) / 0.5)' },
+        },
+        'shimmer': {
+          '100%': { transform: 'translateX(100%)' },
+        },
       },
       // Binds the keyframes to animation utility classes.
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'float': 'float 6s ease-in-out infinite',
+        'pulse-glow': 'pulse-glow 3s infinite',
+        'shimmer': 'shimmer 2s infinite',
       },
     },
   },

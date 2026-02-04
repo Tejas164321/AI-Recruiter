@@ -13,7 +13,7 @@ import { ArrowRight, CheckCircle, BarChartBig, ScanSearch, MessageSquarePlus, Sh
 import { motion, useMotionValue, useTransform } from "framer-motion";
 // Hooks and Contexts
 import { useAuth } from "@/contexts/auth-context";
-import { FloatingCards } from "@/components/floating-cards";
+import { Hero3DCard } from "@/components/hero-3d-card";
 
 
 /**
@@ -59,39 +59,39 @@ const itemVariants = {
  * @param {React.RefObject<HTMLSpanElement>} props.letterRef - Ref to the letter's span element.
  */
 const Letter = ({ children, mouse, letterRef }: { children: React.ReactNode, mouse: any, letterRef: React.RefObject<HTMLSpanElement> }) => {
-    // State to store the letter's position for distance calculation.
-    const [position, setPosition] = useState({ top: 0, left: 0, width: 0, height: 0 });
+  // State to store the letter's position for distance calculation.
+  const [position, setPosition] = useState({ top: 0, left: 0, width: 0, height: 0 });
 
-    // Effect to measure the letter's position once it's rendered.
-    useEffect(() => {
-        if (letterRef.current) {
-            setPosition({
-                top: letterRef.current.offsetTop,
-                left: letterRef.current.offsetLeft,
-                width: letterRef.current.offsetWidth,
-                height: letterRef.current.offsetHeight,
-            });
-        }
-    }, [letterRef]);
+  // Effect to measure the letter's position once it's rendered.
+  useEffect(() => {
+    if (letterRef.current) {
+      setPosition({
+        top: letterRef.current.offsetTop,
+        left: letterRef.current.offsetLeft,
+        width: letterRef.current.offsetWidth,
+        height: letterRef.current.offsetHeight,
+      });
+    }
+  }, [letterRef]);
 
-    // Transform hook to calculate the distance from the mouse to the letter.
-    const distance = useTransform(mouse, (mousePos: {x: number, y: number}) => {
-        if (mousePos.x === Infinity || position.width === 0) return Infinity;
-        // Only apply effect if mouse is vertically aligned with the letter's line.
-        if (mousePos.y < position.top || mousePos.y > position.top + position.height) return Infinity;
-        // Calculate horizontal distance from the center of the letter.
-        return Math.abs(mousePos.x - (position.left + position.width / 2));
-    });
+  // Transform hook to calculate the distance from the mouse to the letter.
+  const distance = useTransform(mouse, (mousePos: { x: number, y: number }) => {
+    if (mousePos.x === Infinity || position.width === 0) return Infinity;
+    // Only apply effect if mouse is vertically aligned with the letter's line.
+    if (mousePos.y < position.top || mousePos.y > position.top + position.height) return Infinity;
+    // Calculate horizontal distance from the center of the letter.
+    return Math.abs(mousePos.x - (position.left + position.width / 2));
+  });
 
-    // Transform distance into scale and y-offset for the animation.
-    const scale = useTransform(distance, [0, 30, 90], [1.2, 1.1, 1]);
-    const y = useTransform(distance, [0, 30, 90], [-6, -3, 0]);
+  // Transform distance into scale and y-offset for the animation.
+  const scale = useTransform(distance, [0, 30, 90], [1.2, 1.1, 1]);
+  const y = useTransform(distance, [0, 30, 90], [-6, -3, 0]);
 
-    return (
-        <motion.span ref={letterRef} style={{ scale, y }} className="inline-block" transition={{ type: "spring", stiffness: 350, damping: 20 }}>
-            {children}
-        </motion.span>
-    );
+  return (
+    <motion.span ref={letterRef} style={{ scale, y }} className="inline-block" transition={{ type: "spring", stiffness: 350, damping: 20 }}>
+      {children}
+    </motion.span>
+  );
 };
 
 /**
@@ -102,20 +102,20 @@ const Letter = ({ children, mouse, letterRef }: { children: React.ReactNode, mou
  * @param {boolean} [props.isSpecial=false] - Whether to apply special styling (e.g., primary color).
  */
 const AnimatedText = ({ text, mouse, isSpecial = false }: { text: string, mouse: any, isSpecial?: boolean }) => {
-    const letters = text.split("");
-    const letterRefs = useRef(letters.map(() => React.createRef<HTMLSpanElement>())).current;
+  const letters = text.split("");
+  const letterRefs = useRef(letters.map(() => React.createRef<HTMLSpanElement>())).current;
 
-    return (
-        <>
-            {letters.map((char, index) => (
-                <Letter key={`${char}-${index}`} mouse={mouse} letterRef={letterRefs[index]}>
-                    <span style={{ whiteSpace: "pre" }} className={isSpecial ? "text-primary" : ""}>
-                        {char}
-                    </span>
-                </Letter>
-            ))}
-        </>
-    );
+  return (
+    <>
+      {letters.map((char, index) => (
+        <Letter key={`${char}-${index}`} mouse={mouse} letterRef={letterRefs[index]}>
+          <span style={{ whiteSpace: "pre" }} className={isSpecial ? "text-primary" : ""}>
+            {char}
+          </span>
+        </Letter>
+      ))}
+    </>
+  );
 };
 
 /**
@@ -123,42 +123,42 @@ const AnimatedText = ({ text, mouse, isSpecial = false }: { text: string, mouse:
  * and orchestrating the responsive text layout.
  */
 const HeroHeading = () => {
-    const ref = useRef<HTMLHeadingElement>(null);
-    const mouse = useMotionValue({x: Infinity, y: Infinity});
+  const ref = useRef<HTMLHeadingElement>(null);
+  const mouse = useMotionValue({ x: Infinity, y: Infinity });
 
-    return (
-        <motion.h1
-            ref={ref}
-            onMouseMove={(e) => {
-                if (ref.current) {
-                    const rect = ref.current.getBoundingClientRect();
-                    mouse.set({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-                }
-            }}
-            onMouseLeave={() => mouse.set({x: Infinity, y: Infinity})}
-            className="text-3xl font-bold tracking-tight sm:text-4xl lg:text-4xl xl:text-5xl font-headline"
-            aria-label="Unlock Your Hiring Potential with AI Recruiter"
-        >
-            {/* Mobile & Tablet view (flowing text) */}
-            <span className="lg:hidden">
-                <AnimatedText text="Unlock Your Hiring Potential with " mouse={mouse} />
-                <span style={{ whiteSpace: 'nowrap' }}>
-                    <AnimatedText text="AI Recruiter" mouse={mouse} isSpecial={true} />
-                </span>
-            </span>
+  return (
+    <motion.h1
+      ref={ref}
+      onMouseMove={(e) => {
+        if (ref.current) {
+          const rect = ref.current.getBoundingClientRect();
+          mouse.set({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+        }
+      }}
+      onMouseLeave={() => mouse.set({ x: Infinity, y: Infinity })}
+      className="text-3xl font-bold tracking-tight sm:text-4xl lg:text-4xl xl:text-5xl font-headline"
+      aria-label="Unlock Your Hiring Potential with AI Recruiter"
+    >
+      {/* Mobile & Tablet view (flowing text) */}
+      <span className="lg:hidden">
+        <AnimatedText text="Unlock Your " mouse={mouse} />
+        <span className="font-hand text-primary text-5xl relative inline-block transform -rotate-2">Hiring Potential</span>
+        <AnimatedText text=" with " mouse={mouse} />
+        <span className="marker-highlight inline-block skew-x-[-10deg] px-2"><AnimatedText text="AI Recruiter" mouse={mouse} /></span>
+      </span>
 
-            {/* Desktop view (three lines for better control over line breaks) */}
-            <span className="hidden lg:inline">
-                <span className="block"><AnimatedText text="Unlock Your Hiring" mouse={mouse} /></span>
-                <span className="block"><AnimatedText text="Potential with" mouse={mouse} /></span>
-                <span className="block" style={{ whiteSpace: 'nowrap' }}>
-                    <AnimatedText text="AI" mouse={mouse} isSpecial={true} />
-                    <AnimatedText text=" " mouse={mouse} />
-                    <AnimatedText text="Recruiter" mouse={mouse} isSpecial={true} />
-                </span>
-            </span>
-        </motion.h1>
-    );
+      {/* Desktop view (three lines for better control over line breaks) */}
+      <span className="hidden lg:inline">
+        <span className="block"><AnimatedText text="Unlock Your" mouse={mouse} /> <span className="font-hand text-5xl text-primary inline-block transform -rotate-2 relative top-1">Hiring</span></span>
+        <span className="block"><span className="pen-underline decoration-wavy"><AnimatedText text="Potential" mouse={mouse} /></span> <AnimatedText text="with" mouse={mouse} /></span>
+        <span className="block mt-2">
+          <span className="marker-highlight inline-block transform -rotate-1 px-4 py-1">
+            <AnimatedText text="AI Recruiter" mouse={mouse} isSpecial={false} />
+          </span>
+        </span>
+      </span>
+    </motion.h1>
+  );
 }
 
 
@@ -182,7 +182,7 @@ export default function LandingPage() {
     <div className="flex flex-col min-h-screen overflow-x-hidden landing-page-gradient">
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="relative w-full pt-24 md:pt-32 lg:pt-40">
+        <section className="relative w-full pt-20 md:pt-28 lg:pt-32">
           <div className="container px-4 md:px-6 relative z-10">
             <div className="grid gap-10 lg:grid-cols-2 lg:gap-12 xl:gap-24 items-center">
               {/* Hero Text Content */}
@@ -195,24 +195,24 @@ export default function LandingPage() {
                 </div>
                 {/* Call to Action Buttons */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.6 }} className="flex flex-col gap-4 min-[400px]:flex-row">
-                  <motion.div whileHover={{ scale: 1.05, y: -2, transition: {type: 'spring', stiffness: 300} }} whileTap={{ scale: 0.95 }}>
+                  <motion.div whileHover={{ scale: 1.05, y: -2, transition: { type: 'spring', stiffness: 300 } }} whileTap={{ scale: 0.95 }}>
                     <Button asChild size="lg" className="shiny-button"><Link href={getStartedLink}>{currentUser ? "Go to Dashboard" : "Get Started"}<ArrowRight className="ml-2 h-5 w-5" /></Link></Button>
                   </motion.div>
-                   <motion.div whileHover={{ scale: 1.05, y: -2, transition: {type: 'spring', stiffness: 300} }} whileTap={{ scale: 0.95 }}>
-                     <Button variant="outline" size="lg" asChild><Link href="/#features">Learn More</Link></Button>
+                  <motion.div whileHover={{ scale: 1.05, y: -2, transition: { type: 'spring', stiffness: 300 } }} whileTap={{ scale: 0.95 }}>
+                    <Button variant="outline" size="lg" asChild><Link href="/#features">Learn More</Link></Button>
                   </motion.div>
                 </motion.div>
               </motion.div>
               {/* Hero Image / Animation */}
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.8, y: 50 }} 
-                animate={{ opacity: 1, scale: 1, y: 0 }} 
-                transition={{ type: 'spring', stiffness: 100, damping: 20, delay: 0.3 }} 
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8, y: 50 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ type: 'spring', stiffness: 100, damping: 20, delay: 0.3 }}
                 className="relative min-h-[300px] lg:min-h-[400px] flex items-center justify-center"
               >
-                 <div className="w-full h-full">
-                    <FloatingCards />
-                 </div>
+                <div className="w-full h-full flex items-center justify-center py-10 lg:py-0 mt-[2px]">
+                  <Hero3DCard />
+                </div>
               </motion.div>
             </div>
           </div>
@@ -223,42 +223,40 @@ export default function LandingPage() {
           <div className="container px-4 md:px-6">
             <motion.div className="flex flex-col items-center justify-center space-y-4 text-center" initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.3 }} variants={sectionVariants} custom={0.2}>
               <div className="space-y-2">
-                <motion.div initial={{ opacity:0, scale:0.8 }} whileInView={{ opacity:1, scale:1 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration:0.5, delay:0.3 }} className="inline-block rounded-lg bg-primary/10 text-primary px-3 py-1 text-sm font-medium">Key Features</motion.div>
-                <motion.h2 initial={{ opacity:0, y:20 }} whileInView={{ opacity:1, y:0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration:0.5, delay:0.4 }} className="text-3xl font-bold tracking-tighter sm:text-5xl font-headline">Optimize Your Recruitment Workflow</motion.h2>
-                <motion.p initial={{ opacity:0, y:20 }} whileInView={{ opacity:1, y:0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration:0.5, delay:0.5 }} className="max-w-[900px] text-muted-foreground md:text-xl/relaxed">Our platform offers a suite of tools designed to make your hiring process more efficient and effective.</motion.p>
+                <motion.div initial={{ opacity: 0, scale: 0.8 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5, delay: 0.3 }} className="inline-block rounded-lg bg-primary/10 text-primary px-3 py-1 text-sm font-medium">Key Features</motion.div>
+                <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5, delay: 0.4 }} className="text-3xl font-bold tracking-tighter sm:text-5xl font-headline">Optimize Your Recruitment Workflow</motion.h2>
+                <motion.p initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5, delay: 0.5 }} className="max-w-[900px] text-muted-foreground md:text-xl/relaxed">Our platform offers a suite of tools designed to make your hiring process more efficient and effective.</motion.p>
               </div>
             </motion.div>
-            
+
             {/* Timeline structure for features */}
             <div className="relative mt-12 max-w-5xl mx-auto">
               <div className="timeline-line"></div>
               {features.map((feature, index) => (
-                <motion.div 
-                    key={index} 
-                    className="timeline-item"
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={{ once: true, amount: 0.5 }}
-                    variants={sectionVariants}
-                    custom={feature.delay}
+                <motion.div
+                  key={index}
+                  className="timeline-item"
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true, amount: 0.5 }}
+                  variants={sectionVariants}
+                  custom={feature.delay}
                 >
                   <div className="timeline-icon-container">
                     <feature.icon className="h-6 w-6 text-primary" />
                   </div>
-                  <div className="timeline-content">
-                     <Card className="shadow-lg h-full flex flex-col backdrop-blur-sm border-border/20 transition-all hover:-translate-y-2 hover:shadow-[0_8px_30px_hsl(var(--primary)/0.25)]">
-                        <CardHeader className="pb-4">
-                          <CardTitle className="font-headline">{feature.title}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex flex-col flex-grow">
-                          <CardDescription className="text-muted-foreground mb-4">{feature.description}</CardDescription>
-                          <motion.ul className="space-y-2 text-sm flex-grow">
-                            {feature.items.map((item, itemIndex) => (
-                              <motion.li key={itemIndex} custom={feature.delay + 0.2 + itemIndex * 0.1} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={itemVariants} className="flex items-center"><CheckCircle className="mr-2 h-4 w-4 text-accent" />{item}</motion.li>
-                            ))}
-                          </motion.ul>
-                        </CardContent>
-                      </Card>
+                  <div className="timeline-content group">
+                    <div className="pb-4 space-y-1.5">
+                      <h3 className="font-semibold leading-none tracking-tight font-headline text-lg">{feature.title}</h3>
+                    </div>
+                    <div className="flex flex-col flex-grow space-y-4">
+                      <p className="text-sm text-muted-foreground">{feature.description}</p>
+                      <motion.ul className="space-y-2 text-sm flex-grow font-mono">
+                        {feature.items.map((item, itemIndex) => (
+                          <motion.li key={itemIndex} custom={feature.delay + 0.2 + itemIndex * 0.1} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={itemVariants} className="flex items-center"><CheckCircle className="mr-2 h-4 w-4 text-primary" />{item}</motion.li>
+                        ))}
+                      </motion.ul>
+                    </div>
                   </div>
                 </motion.div>
               ))}
@@ -275,7 +273,7 @@ export default function LandingPage() {
               <p className="mx-auto max-w-[600px] text-muted-foreground md:text-xl/relaxed">Join AI Recruiter today and start making data-driven hiring decisions.</p>
             </motion.div>
             <motion.div className="mx-auto w-full max-w-sm space-y-2" initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }} variants={sectionVariants} custom={0.4}>
-              <motion.div whileHover={{ scale: 1.05, transition: {type: 'spring', stiffness: 300} }} whileTap={{ scale: 0.95 }}>
+              <motion.div whileHover={{ scale: 1.05, transition: { type: 'spring', stiffness: 300 } }} whileTap={{ scale: 0.95 }}>
                 <Button asChild size="lg" className="shiny-button"><Link href={getStartedLink}>{currentUser ? "Go to Dashboard" : "Sign Up for Free"}<ArrowRight className="ml-2 h-5 w-5" /></Link></Button>
               </motion.div>
               <p className="text-xs text-muted-foreground">Get started with our core features. No credit card required.</p>
@@ -295,15 +293,15 @@ export default function LandingPage() {
             <p className="mt-2 text-xs text-muted-foreground">&copy; {new Date().getFullYear()} AI Recruiter. All rights reserved.</p>
           </div>
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:gap-6">
-              <nav className="flex flex-wrap items-center justify-center gap-4 text-sm font-medium sm:gap-6">
-                <Link href="/terms" className="text-muted-foreground transition-colors hover:text-primary">Terms</Link>
-                <Link href="/privacy" className="text-muted-foreground transition-colors hover:text-primary">Privacy</Link>
-                <Link href="/#features" className="text-muted-foreground transition-colors hover:text-primary">Features</Link>
-              </nav>
-              <div className="flex items-center gap-4">
-                <a href="mailto:tejas2382004@gmail.com" aria-label="Email Us" className="text-muted-foreground hover:text-primary transition-colors"><Mail className="h-5 w-5" /></a>
-                <a href="tel:+919960469732" aria-label="Call Us" className="text-muted-foreground hover:text-primary transition-colors"><Phone className="h-5 w-5" /></a>
-              </div>
+            <nav className="flex flex-wrap items-center justify-center gap-4 text-sm font-medium sm:gap-6">
+              <Link href="/terms" className="text-muted-foreground transition-colors hover:text-primary">Terms</Link>
+              <Link href="/privacy" className="text-muted-foreground transition-colors hover:text-primary">Privacy</Link>
+              <Link href="/#features" className="text-muted-foreground transition-colors hover:text-primary">Features</Link>
+            </nav>
+            <div className="flex items-center gap-4">
+              <a href="mailto:tejas2382004@gmail.com" aria-label="Email Us" className="text-muted-foreground hover:text-primary transition-colors"><Mail className="h-5 w-5" /></a>
+              <a href="tel:+919960469732" aria-label="Call Us" className="text-muted-foreground hover:text-primary transition-colors"><Phone className="h-5 w-5" /></a>
+            </div>
           </div>
         </div>
       </footer>
