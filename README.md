@@ -37,14 +37,14 @@ The system uses a **Progressive Enhancement** pattern to balance performance and
 ```mermaid
 flowchart TD
     subgraph Client [💻 User Environment]
-        Browser[Modern Browser]
-        LocalAI[🦙 Local LLM (Ollama)]
+        Browser["Modern Browser"]
+        LocalAI["🦙 Local LLM (Ollama)"]
     end
 
     subgraph Cloud [☁️ Cloud Infrastructure]
-        Server[⚡ Next.js Server Actions]
-        DB[(🔥 Firestore)]
-        Auth[🛡️ Firebase Auth]
+        Server["⚡ Next.js Server Actions"]
+        DB[("🔥 Firestore")]
+        Auth["🛡️ Firebase Auth"]
     end
 
     User[👩‍💼 Recruiter] -->|1. Upload JD & Resumes| Browser
