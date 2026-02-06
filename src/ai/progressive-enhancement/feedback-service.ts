@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { RankedCandidate, DetailedAIFeedback } from '@/lib/types';
 import { getOllamaClient } from '@/ai/local-llm/ollama-client';
+import { updateCandidateFeedback } from '@/services/firestoreService';
 import type { SkillMatchResult } from '@/lib/skills/skill-matcher';
 import type { ATSScoreResult } from '@/lib/ats/ats-analyzer';
 import type { CompositeScoreResult } from '@/lib/scoring/composite-scorer';
@@ -44,7 +45,7 @@ const DetailedAIFeedbackSchema = z.object({
 // ============================================
 
 function createDetailedFeedbackPrompt(context: FeedbackGenerationContext): string {
-    return `You are an expert recruiter analyzing a resume against a job description.
+    return `You are a Senior Technical Recruiter with 15 years of experience. Write a personal, constructive feedback email to this candidate.
 
 JOB DESCRIPTION:
 ${context.jdText.substring(0, 2000)}
@@ -52,38 +53,36 @@ ${context.jdText.substring(0, 2000)}
 RESUME:
 ${context.resumeText.substring(0, 2000)}
 
-SCORING ANALYSIS:
+SCORING CONTEXT (For your reference only, do not mention these numbers explicitly):
 - Overall Match: ${context.scores.final}/100
 - Skill Match: ${context.scores.skill}/100
 - ATS Score: ${context.atsResult.atsScore}/100
-- Semantic Similarity: ${context.scores.semantic}/100
 
-MATCHED SKILLS: ${context.skillMatch.matchedSkills.slice(0, 10).join(', ')}
-MISSING SKILLS: ${context.skillMatch.missingSkills.slice(0, 10).join(', ')}
+INSTRUCTIONS:
+1.  **Tone**: Professional, conversational, and direct. Write like a human speaking to another human. Avoid robotic phrases like "Based on the analysis" or "The candidate displays".
+2.  **Structure**:
+    *   **Summary**: A 2-3 sentence "elevator pitch" about the candidate.
+    *   **Strengths**: Highlight 3 specific things they do well and WHY it matters for this role.
+    *   **Weaknesses (Improvements)**: brutally honest but constructive feedback on missing skills or experience gaps.
+    *   **Action Plan**: What exactly should they learn or change to get this job?
 
-Provide a comprehensive analysis in JSON format with the following structure:
+OUTPUT FORMAT (JSON):
 {
-  "summary": "2-3 sentence overall assessment",
-  "matchedSkills": ["skill with context", ...],
-  "matchedExperience": "explanation of experience match",
-  "missingSkills": ["critical missing skill", ...],
-  "missingExperience": "if applicable, experience gaps",
+  "summary": "Direct, human summary of the candidate's fit.",
+  "matchedSkills": ["Skill 1 (Context: why it matters)", "Skill 2 ..."],
+  "matchedExperience": "Conversational assessment of their experience level.",
+  "missingSkills": ["Critical missing skill 1", "Critical missing skill 2"],
+  "missingExperience": "Clear explanation of any experience gaps.",
   "improvements": [
-    "Specific actionable improvement 1",
-    "Specific actionable improvement 2",
-    "Specific actionable improvement 3"
+    "Weakness 1: Explanation and how to fix it",
+    "Weakness 2: Explanation and how to fix it",
+    "Weakness 3: Explanation and how to fix it"
   ],
-  "scoreImpact": "Adding X, Y, Z could increase score by N points",
-  "concerns": ["concern 1 if any", ...],
-  "strengths": ["key strength 1", "key strength 2", ...],
-  "scoreExplanation": "Detailed explanation of why this score was given"
-}
-
-Focus on:
-1. Be specific and actionable in improvements
-2. Explain exact keyword/skill gaps
-3. Mention formatting issues if ATS score is low
-4. Suggest concrete changes to increase match score`;
+  "scoreImpact": "If you fix X and Y, your profile would be much stronger.",
+  "concerns": ["Major red flag 1", "Major red flag 2"],
+  "strengths": ["Strength 1: Why it is impressive", "Strength 2: Why it is impressive"],
+  "scoreExplanation": "Professional justification for the rating."
+}`;
 }
 
 // ============================================
@@ -106,7 +105,7 @@ export async function generateDetailedFeedback(
             {
                 temperature: 0.3,
                 maxTokens: 800, // Detailed feedback
-                timeout: 15000, // 15s timeout
+                timeout: 120000, // 120s timeout
             }
         );
 
@@ -219,4 +218,51 @@ export async function processCandidateFeedbackQueue(
     }
 
     console.log(`\n✅ AI Feedback Generation Complete!\n`);
+}
+
+// ============================================
+// Client-Side Feedback Enrichment
+// ============================================
+
+/**
+ * Triggers AI feedback for a single candidate (Client-Side).
+ * executing this on the client ensures we have the Auth Context for Firestore writes.
+ */
+export async function enrichCandidateWithFeedback(
+    resultId: string,
+    candidateId: string,
+    context: FeedbackGenerationContext
+): Promise<DetailedAIFeedback | null> {
+    try {
+        console.log(`🤖 Generating AI feedback for candidate ${candidateId}...`);
+
+        // Update status to generating
+        await updateCandidateFeedback(resultId, candidateId, {
+            feedback: "Generating detailed analysis...",
+            feedbackStatus: 'generating'
+        });
+
+        // Generate feedback (calls local Ollama)
+        const detailedFeedback = await generateDetailedFeedback(context);
+
+        // Update Firestore with result
+        await updateCandidateFeedback(resultId, candidateId, {
+            feedback: detailedFeedback.summary, // Update main feedback text
+            detailedFeedback: detailedFeedback,
+            feedbackStatus: 'complete',
+            feedbackGeneratedAt: new Date().toISOString()
+        });
+
+        console.log(`✅ Feedback generated and saved for ${candidateId}`);
+        return detailedFeedback;
+    } catch (error) {
+        console.error(`❌ Failed to generate feedback for ${candidateId}:`, error);
+
+        await updateCandidateFeedback(resultId, candidateId, {
+            feedback: "AI analysis failed. Please try again.",
+            feedbackStatus: 'failed'
+        });
+
+        return null;
+    }
 }

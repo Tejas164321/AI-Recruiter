@@ -138,22 +138,22 @@ export default function ProfilePage() {
                 className="w-full max-w-6xl relative z-10"
             >
                 {/* Main "Open Folder" / Ledger Layout */}
-                <div className="flex flex-col md:flex-row gap-0 shadow-2xl rounded-sm overflow-hidden border border-foreground/20 bg-[#fdfdfd]">
+                <div className="flex flex-col md:flex-row gap-0 shadow-2xl rounded-sm overflow-hidden border border-foreground/20 bg-card">
 
                     {/* LEFT PANEL: Identity & Status (Darker/Contrast or Sidebar style) */}
-                    <div className="w-full md:w-1/3 bg-secondary/30 border-r-2 border-dashed border-foreground/20 p-8 flex flex-col relative overflow-hidden group/sidebar">
-                        {/* Decorative 'Tape' */}
-                        <div className="absolute top-4 -left-8 w-32 h-8 bg-yellow-400/20 rotate-[-45deg] border border-yellow-500/30"></div>
+                    <div className="w-full md:w-1/3 bg-muted/30 border-r-2 border-dashed border-foreground/20 p-8 flex flex-col relative overflow-hidden group/sidebar">
+                        {/* Decorative 'Tape' - Changed to Red for 'Classified' feel */}
+                        <div className="absolute top-4 -left-8 w-32 h-8 bg-red-500/10 rotate-[-45deg] border border-red-500/20"></div>
 
                         {/* ID Card Header */}
                         <div className="mb-8 text-center relative flex flex-col items-center">
                             <div className="inline-block relative group cursor-pointer" onClick={handleImageClick}>
-                                <div className="w-40 h-40 rounded-sm border-[6px] border-white shadow-md overflow-hidden bg-white relative transition-transform group-hover:scale-105">
+                                <div className="w-40 h-40 rounded-sm border-[6px] border-card shadow-md overflow-hidden bg-muted relative transition-transform group-hover:scale-105">
                                     {(filePreview || photoURL) ? (
                                         // eslint-disable-next-line @next/next/no-img-element
                                         <img src={filePreview || photoURL} alt="Agent" className="w-full h-full object-cover filter sepia-[.2] contrast-110" />
                                     ) : (
-                                        <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100 text-muted-foreground gap-2">
+                                        <div className="w-full h-full flex flex-col items-center justify-center bg-muted text-muted-foreground gap-2">
                                             <Upload className="w-8 h-8 opacity-50" />
                                             <span className="text-[10px] font-mono uppercase">Upload Photo</span>
                                         </div>
@@ -165,8 +165,7 @@ export default function ProfilePage() {
                                     {/* Scan Line Animation */}
                                     <div className="absolute top-0 left-0 w-full h-1 bg-green-400/50 shadow-[0_0_10px_rgba(74,222,128,0.5)] animate-scanline opacity-0 group-hover:opacity-100 pointer-events-none"></div>
                                 </div>
-                                {/* Badge */}
-                                <div className="absolute -bottom-3 -right-3 bg-foreground text-background text-[10px] font-mono font-bold px-2 py-1 rounded-sm rotate-3 shadow-sm border border-white">
+                                <div className="absolute -bottom-3 -right-3 bg-foreground text-background text-[10px] font-mono font-bold px-2 py-1 rounded-sm rotate-3 shadow-sm border border-card">
                                     Lvl. 4
                                 </div>
                             </div>
@@ -188,7 +187,7 @@ export default function ProfilePage() {
 
                         {/* Key Stats / Data Points (Easter Eggs) */}
                         <div className="space-y-6 flex-1">
-                            <div className="bg-white/50 p-4 rounded-sm border border-foreground/5 relative overflow-hidden group/stat">
+                            <div className="bg-background/50 p-4 rounded-sm border border-foreground/5 relative overflow-hidden group/stat">
                                 <div className="absolute right-2 top-2 w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
                                 <h3 className="font-mono text-[10px] uppercase text-muted-foreground mb-3 flex items-center gap-2">
                                     <Scan className="w-3 h-3" /> Biometric ID
@@ -203,7 +202,9 @@ export default function ProfilePage() {
                                 </div>
                             </div>
 
-                            <div className="bg-white/50 p-4 rounded-sm border border-foreground/5 hover:border-foreground/10 transition-colors">
+
+
+                            <div className="bg-background/50 p-4 rounded-sm border border-foreground/5 hover:border-foreground/10 transition-colors">
                                 <h3 className="font-mono text-[10px] uppercase text-muted-foreground mb-3 flex items-center gap-2">
                                     <ShieldCheck className="w-3 h-3" /> Clearance
                                 </h3>
@@ -221,7 +222,7 @@ export default function ProfilePage() {
 
                         {/* Decorative Footer: Real QR Code */}
                         <div className="mt-8 pt-6 border-t border-dashed border-foreground/10 flex justify-between items-end opacity-80">
-                            <div className="relative group/qr bg-white p-1 border border-foreground/5 shadow-sm">
+                            <div className="relative group/qr bg-card p-1 border border-foreground/5 shadow-sm">
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
                                     src={qrUrl}
@@ -323,7 +324,7 @@ export default function ProfilePage() {
                                     <div className="h-px bg-foreground/10 flex-1 ml-2"></div>
                                 </div>
 
-                                <div className="relative bg-[#f4f4f4] p-1 rounded-sm shadow-inner min-h-[160px]">
+                                <div className="relative bg-muted/50 p-1 rounded-sm shadow-inner min-h-[160px]">
                                     {/* Notebook binding effect */}
                                     <div className="absolute top-0 left-4 bottom-0 w-[2px] bg-red-300/50 z-10"></div>
                                     <div className="absolute top-0 left-5 bottom-0 w-[2px] bg-red-300/50 z-10"></div>
@@ -368,7 +369,7 @@ export default function ProfilePage() {
                     </div>
 
                 </div>
-            </motion.div>
-        </div>
+            </motion.div >
+        </div >
     );
 }

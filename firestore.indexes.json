@@ -1,0 +1,65 @@
+{
+    "indexes": [
+        {
+            "collectionGroup": "jobScreeningResults",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "userId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "createdAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "jobScreeningResults",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "userId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "jobDescriptionId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "createdAt",
+                    "order": "ASCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "atsScoreResults",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "userId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "createdAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "interviewQuestionSets",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "userId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "createdAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        }
+    ],
+    "fieldOverrides": []
+}

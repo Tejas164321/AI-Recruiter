@@ -1,45 +1,37 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Extracted Job Roles ---
-    // Rule for a collection that is not actively written to by the app, but is kept for completeness.
-    match /extractedJobRoles/{jobRoleId} {
-      // Allow reading, updating, or deleting an existing document if the user is the owner.
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    // Helper: User is authenticated and owns the data
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
 
-      // Allow creating a new document if the user is logged in and the new document's userId is their own.
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    // --- Extracted Job Roles ---
+    match /extractedJobRoles/{jobRoleId} {
+      allow read, update, delete: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
     }
 
     // --- Job Screening Results ---
     match /jobScreeningResults/{resultId} {
-      // Allow reading, updating, or deleting an existing document if the user is the owner.
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
-
-      // Allow creating a new document if the user is logged in and the new document's userId is their own.
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      // 404 fix: Ensure reads are allowed if you own it
+      allow read, update, delete: if isOwner(resource.data.userId);
+      // Allow creation if you claim it as yours
+      allow create: if isOwner(request.resource.data.userId);
     }
 
     // --- ATS Score Results ---
     match /atsScoreResults/{resultId} {
-      // Allow reading, updating, or deleting an existing document if the user is the owner.
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
-
-      // Allow creating a new document if the user is logged in and the new document's userId is their own.
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      allow read, update, delete: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
     }
 
     // --- Interview Question Sets ---
-    // This rule block had a typo in the collection name which is now corrected.
     match /interviewQuestionSets/{setId} {
-      // Allow reading, updating, or deleting an existing document if the user is the owner.
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
-      
-      // Allow creating a new document if the user is logged in and the new document's userId is their own.
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      allow read, update, delete: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
     }
 
   }

@@ -18,11 +18,9 @@ import { calculateJDResumeMatch } from '@/ai/embeddings/embedding-service';
 import { calculateCompositeScore } from '@/lib/scoring/composite-scorer';
 import { extractCandidateName, extractEmail } from '@/lib/processing/document-parser';
 import {
-    generateDetailedFeedback,
     createQuickFeedbackSummary
 } from '../progressive-enhancement/feedback-service';
 import type { SkillMatchResult } from '@/lib/skills/skill-matcher';
-import { updateCandidateFeedback } from '@/services/firestoreService';
 
 // ============================================
 // Types
@@ -220,48 +218,4 @@ export async function performBulkScreeningFast(
 }
 
 // ============================================
-// Phase 2: AI Enrichment Action
-// ============================================
-
-/**
- * Server Action to trigger AI feedback for a single candidate
- * Generates feedback and updates Firestore directly
- */
-export async function enrichCandidateWithFeedback(
-    resultId: string,
-    candidateId: string,
-    context: FeedbackGenerationContext
-): Promise<DetailedAIFeedback | null> {
-    try {
-        console.log(`🤖 Generating AI feedback for candidate ${candidateId}...`);
-
-        // Update status to generating
-        await updateCandidateFeedback(resultId, candidateId, {
-            feedback: "Generating detailed analysis...",
-            feedbackStatus: 'generating'
-        });
-
-        // Generate feedback
-        const detailedFeedback = await generateDetailedFeedback(context);
-
-        // Update Firestore with result
-        await updateCandidateFeedback(resultId, candidateId, {
-            feedback: detailedFeedback.summary, // Update main feedback text
-            detailedFeedback: detailedFeedback,
-            feedbackStatus: 'complete',
-            feedbackGeneratedAt: new Date().toISOString()
-        });
-
-        console.log(`✅ Feedback generated and saved for ${candidateId}`);
-        return detailedFeedback;
-    } catch (error) {
-        console.error(`❌ Failed to generate feedback for ${candidateId}:`, error);
-
-        await updateCandidateFeedback(resultId, candidateId, {
-            feedback: "AI analysis failed. Please try again.",
-            feedbackStatus: 'failed'
-        });
-
-        return null;
-    }
-}
+// Phase 2 logic moved to client side (feedback-service.ts) to share auth context

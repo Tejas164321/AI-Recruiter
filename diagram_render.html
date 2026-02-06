@@ -155,75 +155,78 @@
             %%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#e3f2fd', 'edgeLabelBackground':'#ffffff',
             'tertiaryColor': '#fff'}}}%%
             flowchart LR
-            %% Define Styles
-            classDef clientSection fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0c4a6e,stroke-dasharray: 0
-            classDef appSection fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#14532d,stroke-dasharray: 0
-            classDef cloudSection fill:#fff7ed,stroke:#ea580c,stroke-width:2px,color:#7c2d12,stroke-dasharray: 0
+            %% ==========================================
+            %% STYLE DEFINITIONS
+            %% ==========================================
+            classDef layer1 fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1e40af
+            classDef layer2 fill:#faf5ff,stroke:#9333ea,stroke-width:2px,color:#6b21a8
+            classDef layer3 fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#166534
+            classDef layer4 fill:#fff7ed,stroke:#ea580c,stroke-width:2px,color:#9a3412
 
-            classDef componentNode fill:#ffffff,stroke:#334155,stroke-width:1px,color:#333333,rx:5,ry:5
-            classDef aiNode fill:#f3e8ff,stroke:#9333ea,stroke-width:2px,color:#581c87
-            classDef dbNode fill:#fee2e2,stroke:#ef4444,stroke-width:2px,color:#991b1b
+            classDef nodeStyle fill:#ffffff,stroke:#475569,stroke-width:1px,color:#0f172a,rx:5,ry:5
 
-            %% CLIENT LAYER
-            subgraph Client_Layer ["🖥️ CLIENT LAYER (Browser)"]
+            %% ==========================================
+            %% LAYER 1: FRONTEND (Browser)
+            %% ==========================================
+            subgraph L1 ["🖥️ 1. FRONTEND LAYER"]
             direction TB
-            Recruiter["👩‍💼 Recruiter"]
-            Browser["🌐 React UI"]
-            State["🔄 State (Context)"]
+            UI["🌐 React UI"]
+            AuthCtx["🔐 Auth Context"]
             end
 
-            %% APP LAYER
-            subgraph App_Layer ["⚡ APPLICATION SERVER (Next.js)"]
+            %% ==========================================
+            %% LAYER 2: LOCAL AI (Private Host)
+            %% ==========================================
+            subgraph L2 ["🤖 2. LOCAL AI LAYER"]
             direction TB
-            ServerAction["🛡️ Server Action"]
-
-            subgraph Logic ["⚙️ Processing Logic"]
-            RateLimit["⏱️ Rate Limiter"]
-            Retry["🔁 Retry Handler"]
+            Ollama["🦙 Ollama Server"]
+            Qwen["🧠 Qwen Model"]
             end
 
-            subgraph AI_Orchestration ["🧠 AI Orchestration (Genkit)"]
-            Flow["🌊 Extraction Flow"]
-            Prompt["📝 Prompt Eng."]
-            end
-            end
-
-            %% INFRA LAYER
-            subgraph Cloud_Layer ["☁️ CLOUD INFRASTRUCTURE"]
+            %% ==========================================
+            %% LAYER 3: BACKEND API (Server)
+            %% ==========================================
+            subgraph L3 ["⚡ 3. BACKEND LAYER"]
             direction TB
-            GeminiAPI["✨ Gemini 2.0 Flash API"]
-            Firestore["🔥 Firestore DB"]
-            FirebaseAuth["🛡️ Firebase Auth"]
+            API["🛡️ Next.js API"]
+            Logic["⚙️ Scoring Logic"]
             end
 
-            %% Connections
-            Recruiter ==>|1. Upload| Browser
-            Browser -->|2. DataURI| State
-            State -->|3. Invoke| ServerAction
+            %% ==========================================
+            %% LAYER 4: DATABASE (Cloud)
+            %% ==========================================
+            subgraph L4 ["☁️ 4. DATA LAYER"]
+            direction TB
+            DB["🔥 Firestore DB"]
+            end
 
-            ServerAction -->|4. Validate| RateLimit
-            RateLimit -->|5. Execute| Flow
+            %% ==========================================
+            %% FLOW CONNECTIONS
+            %% ==========================================
 
-            Flow -->|6. Load| Prompt
-            Flow ==>|7. Request| GeminiAPI
+            %% Phase 1: Fast Screening
+            UI ==>|1. Upload Resumes| API
+            API -->|2. Parse & Score| Logic
+            Logic -->|3. Save Initial Rank| DB
 
-            GeminiAPI ==>|8. JSON Response| Flow
-            Flow -->|9. Result| ServerAction
+            %% Phase 2: AI Details
+            UI -.->|4. Listen for Updates| DB
+            UI ==>|5. Trigger Feedback| Ollama
+            Ollama --> Qwen
+            Ollama ==>|6. Return Analysis| UI
 
-            ServerAction ==>|10. Save| Firestore
-            Firestore -.->|Real-time| Browser
+            %% Final Save
+            UI ==>|7. Save Result| DB
 
-            Browser -.->|Auth Check| FirebaseAuth
+            %% ==========================================
+            %% APPLY STYLES
+            %% ==========================================
+            class L1 layer1
+            class L2 layer2
+            class L3 layer3
+            class L4 layer4
 
-            %% Apply Section Styles
-            class Client_Layer clientSection
-            class App_Layer appSection
-            class Cloud_Layer cloudSection
-
-            %% Apply Node Styles
-            class Recruiter,Browser,State,ServerAction,RateLimit,Retry,Flow,Prompt componentNode
-            class GeminiAPI aiNode
-            class Firestore,FirebaseAuth dbNode
+            class UI,AuthCtx,Ollama,Qwen,API,Logic,DB nodeStyle
         </div>
 
         <button class="btn-download" onclick="downloadSVG('mermaid-arch', 'AI_Recruiter_Architecture.png')">
@@ -245,38 +248,32 @@
             sequenceDiagram
             autonumber
 
-            box "Client Side" #f0f9ff
-            participant User as 👤 HR User
-            participant UI as 🖥️ React UI
-            end
+            participant User as 👩‍💼 User
+            participant UI as 🖥️ Website
+            participant Server as ⚡ Backend
+            participant AI as 🤖 Local AI
+            participant DB as 🔥 Database
 
-            box "Server Side" #f0fdf4
-            participant Server as ⚡ Next.js Action
-            participant Logic as ⚙️ Logic
-            end
+            %% Step 1
+            Note over User,DB: PHASE 1: FAST SCREENING (Instant)
+            User->>UI: Upload Resumes
+            UI->>Server: Analyze Resumes (PDF)
+            Server->>DB: Save Scores
+            Server-->>UI: Return Ranked List
+            UI->>User: Show Top Candidates
 
-            box "External Services" #fff7ed
-            participant AI as ✨ Gemini API
-            participant DB as 🔥 Firestore
-            end
+            %% Step 2
+            Note over User,DB: PHASE 2: AI FEEDBACK (Background)
 
-            User->>UI: Uploads 10 Resumes
-            UI->>Server: performBulkScreening()
-
-            loop For Each Resume (1 by 1)
-            Server->>Logic: Check Rate Limit
-            Logic->>Logic: ⏱️ Wait 2s
-
-            Logic->>AI: POST /generateContent
+            loop Top Candidates
+            UI->>AI: Request Detailed Feedback
             activate AI
-            AI-->>Logic: JSON Result
+            AI-->>UI: Return Strengths & Weaknesses
             deactivate AI
 
-            Logic->>DB: Save Result
-            Logic-->>UI: Update Progress
+            UI->>DB: Save AI Feedback
+            UI->>User: Update UI with "View Feedback"
             end
-
-            UI->>User: Show Results Table
         </div>
 
         <button class="btn-download" onclick="downloadSVG('mermaid-seq', 'AI_Flow_Sequence.png')">

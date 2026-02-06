@@ -123,16 +123,16 @@ export const updateCandidateFeedback = async (
   if (!db) throw new Error("Firestore not available");
 
   const docRef = doc(db, "jobScreeningResults", resultId);
-  const docSnap = await getDocs(query(collection(db, "jobScreeningResults"), where("__name__", "==", resultId)));
+  const docSnap = await getDoc(docRef);
 
-  if (docSnap.empty) {
+  if (!docSnap.exists()) {
     console.error(`Result document ${resultId} not found`);
     return;
   }
 
   // We need to read, modify array, and write back because Firestore 
   // doesn't support updating a single item in an array easily
-  const data = docSnap.docs[0].data() as JobScreeningResult;
+  const data = docSnap.data() as JobScreeningResult;
   const updatedCandidates = data.candidates.map(c => {
     if (c.id === candidateId) {
       return {

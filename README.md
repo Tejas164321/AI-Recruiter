@@ -1,228 +1,177 @@
 # AI Recruiter 🚀
 
-An AI-powered suite designed to streamline and revolutionize your recruitment workflow.
+**The Next-Generation Hybrid Recruitment Platform**
 
 ![AI Recruiter Hero](./public/hero-hologram.png)
 
 ## 📝 Overview
 
-AI Recruiter is a modern, full-stack web application built to help recruiters and hiring managers make smarter, faster, and data-driven hiring decisions. By leveraging the power of Google's Gemini AI through Genkit, this platform automates the tedious tasks of resume screening, candidate ranking, and interview preparation, allowing you to focus on what truly matters: finding the best talent.
+**AI Recruiter** is a production-grade, privacy-first recruitment platform designed to revolutionize how talent is screened. Unlike traditional cloud-only solutions, AI Recruiter employs a novel **Hybrid Architecture** that combines the speed of server-side deterministic scoring with the depth of **Local LLM Intelligence (Ollama)**.
 
-This project is built with a production-ready stack and serves as a comprehensive example of integrating modern web technologies with cutting-edge AI capabilities.
+This approach ensures **Zero-Latency Screening** while providing rich, human-like qualitative feedback without sending sensitive candidate data to external third-party AI APIs for deep analysis.
 
 ---
 
 ## ✨ Key Features
 
--   **🧠 AI Resume Ranker**: Upload multiple job descriptions and resumes to intelligently rank candidates. The AI provides a match score, ATS compatibility score, and detailed feedback for each candidate.
--   **📊 ATS Score Finder**: Analyze individual resumes for Applicant Tracking System (ATS) compatibility. Get actionable suggestions to optimize resumes for automated screening processes.
--   **❓ AI Interview Question Generator**: Automatically generate a comprehensive set of technical, behavioral, situational, and role-specific interview questions by simply uploading a job description.
--   **🔐 Secure Authentication & Data Storage**: Built-in user authentication (Sign Up/Login) powered by Firebase Authentication. All user data, including uploaded roles and screening results, is securely stored in Firestore and tied to the user's account.
--   **📱 Fully Responsive Design**: A sleek and modern UI built with ShadCN and Tailwind CSS, ensuring a seamless experience on both desktop and mobile devices.
--   **🎨 Light & Dark Mode**: A beautiful, themeable interface that respects user preferences.
+### 🧠 Hybrid Intelligence Engine
+-   **Phase 1: Deterministic Speed (Server-Side)**: Instantly parses resumes and ranks them based on hard skills and semantic matching. Zero latency.
+-   **Phase 2: Cognitive Analysis (Client-Side Local LLM)**: Uses a locally running **Qwen 2.5** model via **Ollama** to act as a "Senior Recruiter," providing nuanced, human-like feedback on candidate soft skills and potential red flags.
 
----
+### 🎨 Premium User Experience
+-   **Glassmorphism UI**: A stunning, modern interface built with **ShadCN UI** and **Tailwind CSS**.
+-   **Professional Dark Mode**: Carefully calibrated "Neutral Zinc" palette for deep contrast and reduced eye strain.
+-   **Reactive Dashboard**: Real-time progress tracking, interactive charts, and seamless drag-and-drop uploads.
 
-## 🛠️ Tech Stack
-
--   **Framework**: [Next.js](https://nextjs.org/) (React)
--   **Generative AI**: [Google AI (Gemini) via Genkit](https://firebase.google.com/docs/genkit)
--   **Backend & DB**: [Firebase](https://firebase.google.com/) (Authentication, Firestore)
--   **Styling**: [Tailwind CSS](https://tailwindcss.com/)
--   **UI Components**: [ShadCN UI](https://ui.shadcn.com/)
--   **Deployment**: Ready for [Firebase App Hosting](https://firebase.google.com/docs/app-hosting)
+### 🛠️ Powerful Toolset
+-   **ATS Score Finder**: Deep-dive analysis of individual resumes against specific job descriptions.
+-   **Interview Question Generator**: Context-aware question generation tailored to the specific gaps found in a candidate's profile.
+-   **Secure Data Handling**: Powered by **Firebase Auth** and **Firestore** with strict security rules—your data belongs to you.
 
 ---
 
 ## 🏗️ Architecture Diagram
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            ResumeRank AI Architecture                       │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-                                      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           User Interface Layer                              │
-│                                                                             │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐              │
-│  │   Landing Page  │  │   Dashboard     │  │   Auth Pages    │              │
-│  │   (Next.js)     │  │   (Protected)   │  │   (Login/Signup)│              │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘              │
-│                                                                             │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐              │
-│  │ Resume Ranker   │  │ ATS Score Finder│  │ Interview Q Gen │              │
-│  │   Feature       │  │   Feature       │  │   Feature       │              │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘              │
-│                                                                             │
-│  Built with: Next.js (App Router), React, ShadCN UI, Tailwind CSS           │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-                                      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                        Authentication & Data Layer                          │
-│                                                                             │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐              │
-│  │ Firebase Auth   │  │ Firestore DB    │  │ User Sessions   │              │
-│  │ (Email/Password)│  │ (NoSQL)         │  │ (Secure)        │              │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘              │
-│                                                                             │
-│    Stores: User data, Job Descriptions, Resumes, Screening Results          │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-                                      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            AI Processing Layer                              │
-│                                                                             │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐              │
-│  │   Genkit Flows  │  │   AI Prompts    │  │   Data Analysis │              │
-│  │  (Server Actions│  │   (Structured)  │  │   (Resume/JD)   │              │
-│  │   in Next.js)   │  │                 │  │                 │              │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘              │
-│                                                                             │
-│  Flows: Rank Candidates, Calculate ATS Score, Generate Interview Questions  │
-│                                                                             │
-│  ┌─────────────────┐                                                        │
-│  │ Google AI Gemini│                                                        │
-│  │   (LLM Model)   │                                                        │
-│  └─────────────────┘                                                        │
-│                                                                             │
-│  Powered by: Genkit Framework, Google AI API                                │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-                                      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            Deployment & Hosting                             │
-│                                                                             │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐              │
-│  │ Firebase App    │  │   CI/CD         │  │   Environment   │              │
-│  │   Hosting       │  │   (GitHub)      │  │   Variables     │              │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘              │
-│                                                                             │
-│          Ready for production deployment with Firebase                      │
-└─────────────────────────────────────────────────────────────────────────────┘
+The system uses a **Progressive Enhancement** pattern to balance performance and intelligence.
+
+```mermaid
+flowchart TD
+    subgraph Client [💻 User Environment]
+        Browser[Modern Browser]
+        LocalAI[🦙 Local LLM (Ollama)]
+    end
+
+    subgraph Cloud [☁️ Cloud Infrastructure]
+        Server[⚡ Next.js Server Actions]
+        DB[(🔥 Firestore)]
+        Auth[🛡️ Firebase Auth]
+    end
+
+    User[👩‍💼 Recruiter] -->|1. Upload JD & Resumes| Browser
+    
+    %% Phase 1: Fast Screening
+    Browser -->|2. fast-screen (Phase 1)| Server
+    Server -->|3. Deterministic Scoring| Server
+    Server -->|4. Save Initial Rank| DB
+    
+    %% Phase 2: Deep Analysis
+    Browser -.->|5. Realtime Subscription| DB
+    Browser -->|6. Trigger Deep Analysis (Phase 2)| LocalAI
+    LocalAI -->|7. Generate Human Feedback| Browser
+    Browser -->|8. Secure Write| DB
+    
+    classDef client fill:#e0f2fe,stroke:#38bdf8,stroke-width:2px;
+    classDef cloud fill:#f3e8ff,stroke:#a855f7,stroke-width:2px;
+    
+    class Browser,LocalAI client;
+    class Server,DB,Auth cloud;
 ```
 
-### Architecture Description
+### Flow Breakdown
+1.  **Fast Screen**: The server instantly processes files to give immediate UI feedback.
+2.  **Local Inference**: The browser connects to `localhost:11434` (Ollama) to generate expensive textual feedback, saving cloud costs and ensuring privacy.
+3.  **Secure Sync**: The authenticated client writes the final detailed feedback to Firestore, ensuring only authorized users modify data.
 
-The architecture of ResumeRank AI is designed as a modern, scalable full-stack web application that integrates cutting-edge AI capabilities with robust backend services. It follows a layered architecture pattern to ensure separation of concerns, maintainability, and extensibility.
+---
 
-#### 1. **User Interface Layer**
-   - **Technology**: Next.js with App Router, React components, ShadCN UI library, Tailwind CSS for styling.
-   - **Purpose**: Provides the frontend interface for user interactions, including landing pages, authentication forms, dashboard, and feature-specific pages (Resume Ranker, ATS Score Finder, Interview Question Generator).
-   - **Key Features**: Responsive design, light/dark mode support, drag-and-drop file uploads, real-time loading indicators, and toast notifications.
-   - **Data Flow**: Handles user input (file uploads, form submissions), displays results, and manages client-side state with React contexts (AuthContext, LoadingContext).
+## 🛠️ Tech Stack
 
-#### 2. **Authentication & Data Layer**
-   - **Technology**: Firebase Authentication and Firestore NoSQL database.
-   - **Purpose**: Manages user authentication (email/password), session handling, and secure data storage.
-   - **Data Storage**: User profiles, uploaded job descriptions (as data URIs), candidate resumes, screening results, and generated interview questions.
-   - **Security**: All data is tied to authenticated users, ensuring privacy and data isolation.
-
-#### 3. **AI Processing Layer**
-   - **Technology**: Genkit framework integrated with Google AI's Gemini 2.0 Flash model.
-   - **Purpose**: Handles all AI-driven operations through structured flows and prompts.
-   - **Key Components**:
-     - **AI Flows**: Server-side functions (rank-candidates, calculate-ats-score, extract-job-roles, generate-jd-interview-questions) that orchestrate AI processing.
-     - **Prompts**: Structured prompts that guide the LLM to perform specific tasks like resume analysis, scoring, and question generation.
-     - **Data Processing**: Converts uploaded files to data URIs for AI consumption, processes AI responses, and formats results for frontend display.
-   - **AI Capabilities**: Leverages Gemini's natural language understanding for intelligent candidate ranking, ATS compatibility analysis, and contextual interview question creation.
-
-#### 4. **Deployment & Hosting Layer**
-   - **Technology**: Firebase App Hosting for seamless deployment, GitHub Actions for CI/CD.
-   - **Purpose**: Ensures reliable, scalable hosting with automatic builds and environment management.
-   - **Configuration**: Environment variables for API keys, Firebase config, and other secrets.
-
-#### Data Flow Overview
-1. **User Interaction**: User uploads job descriptions and resumes via the UI.
-2. **Authentication**: Firebase Auth verifies user identity.
-3. **Data Storage**: Files are temporarily processed and stored in Firestore.
-4. **AI Processing**: Genkit flows invoke Google AI Gemini to analyze documents and generate results.
-5. **Result Delivery**: Processed data (scores, feedback, questions) is stored and displayed to the user.
-6. **Persistence**: All results are saved in Firestore for future access and analysis.
-
-This architecture ensures high performance, security, and scalability while providing a seamless user experience for AI-powered recruitment workflows.
+-   **Frontend**: [Next.js 14](https://nextjs.org/) (App Router), React, [ShadCN UI](https://ui.shadcn.com/)
+-   **Styling**: [Tailwind CSS](https://tailwindcss.com/) (Custom Zinc Theme)
+-   **Local AI**: [Ollama](https://ollama.com/) (Model: `qwen2.5:7b`)
+-   **Backend**: [Next.js Server Actions](https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions)
+-   **Database**: [Firebase Firestore](https://firebase.google.com/docs/firestore)
+-   **Auth**: [Firebase Authentication](https://firebase.google.com/docs/auth)
 
 ---
 
 ## 🚀 Getting Started
 
-Follow these instructions to get a copy of the project up and running on your local machine for development and testing purposes.
+Follow these instructions to set up the **Hybrid AI** environment on your local machine.
 
 ### Prerequisites
 
--   [Node.js](https://nodejs.org/en/) (v18 or later recommended)
--   [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
--   A [Firebase](https://firebase.google.com/) project.
--   A [Google AI API Key](https://aistudio.google.com/app/apikey).
+-   **Node.js 18+** installed.
+-   **Ollama** installed and running. ([Download](https://ollama.com/download))
+-   **Firebase Project** created.
 
-### 1. Clone the Repository
+### 1. Setup Local AI (Ollama)
+
+This project relies on a local Large Language Model for Phase 2 feedback.
 
 ```bash
-git clone https://github.com/your-username/resumerank-ai.git
-cd resumerank-ai
+# 1. Install Ollama from ollama.com
+
+# 2. Pull the Qwen model (Optimized for reasoning & coding)
+ollama pull qwen2.5:7b
+
+# 3. Start the Inference Server (Must align with CORS settings)
+ollama serve
 ```
 
-### 2. Install Dependencies
+### 2. Clone the Repository
+
+```bash
+git clone https://github.com/your-username/ai-recruiter.git
+cd ai-recruiter
+```
+
+### 3. Install Dependencies
 
 ```bash
 npm install
 ```
 
-### 3. Set Up Environment Variables
+### 4. Configure Environment
 
-You'll need to provide your secret keys for Firebase and Google AI. Create a file named `.env.local` in the root of the project by copying the example file:
+Create a `.env.local` file in the root directory:
 
 ```bash
-cp .env.example .env.local
+# Firebase Configuration
+NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+
+# Feature Flags
+NEXT_PUBLIC_USE_EMULATORS=false 
+NEXT_PUBLIC_ENABLE_LOCAL_LLM=true
 ```
 
-Now, open `.env.local` and fill in the required values.
-
-#### **How to get your Firebase credentials:**
-
-1.  Go to your [Firebase Console](https://console.firebase.google.com/).
-2.  Create a new project (or select an existing one).
-3.  In your project, go to **Project Settings** (the gear icon).
-4.  Under the "General" tab, scroll down to "Your apps".
-5.  Click the **Web** icon (`</>`) to create a new web app.
-6.  Give it a nickname and register the app.
-7.  Firebase will provide you with a `firebaseConfig` object. Copy the values from this object into the corresponding `NEXT_PUBLIC_FIREBASE_*` variables in your `.env.local` file.
-8.  Enable **Authentication** (with Email/Password provider) and **Firestore Database** in the Firebase console.
-
-#### **How to get your Google AI API key:**
-
-1.  Visit [Google AI Studio](https://aistudio.google.com/app/apikey).
-2.  Click "Create API key in new project".
-3.  Copy the generated API key and paste it as the `GOOGLE_API_KEY` value in your `.env.local` file.
-
-### 4. Run the Development Server
-
-Once your environment variables are set, you can run the application:
+### 5. Run the Application
 
 ```bash
 npm run dev
 ```
-
-The application should now be running on [http://localhost:3000](http://localhost:3000).
+Visit `http://localhost:3000` to access the platform.
 
 ---
 
-## 📁 Folder Structure
-
-The project follows a standard Next.js App Router structure with some key directories:
+## 📂 Project Structure
 
 ```
-/
-├── src/
-│   ├── app/                # Main application pages and layouts
-│   ├── ai/                 # Genkit AI flows and configuration
-│   ├── components/         # Reusable UI components
-│   ├── contexts/           # React contexts (Auth, Loading)
-│   ├── hooks/              # Custom React hooks (useToast)
-│   ├── lib/                # Libraries, utilities, and type definitions
-│   └── services/           # Firestore service functions
-├── public/                 # Static assets (images, fonts)
-└── .env.local              # Your secret environment variables (ignored by Git)
+/src
+├── app/                    # Next.js App Router (Pages & Layouts)
+├── ai/
+│   ├── flows/              # Server-side Deterministic Logic (Phase 1)
+│   └── progressive-enhancement/ 
+│       └── feedback-service.ts # Client-side Local LLM Logic (Phase 2)
+├── components/             # Reusable UI (ShadCN + Custom)
+├── styles/                 # Global styles & Tailwind config
+└── services/               # Firestore Service Layer
 ```
+
 ---
+
+## 🤝 Contributing
+
+We welcome contributions! Specifically, we are looking for:
+-   **Prompt Engineering**: Improving the "Senior Recruiter" persona in `feedback-service.ts`.
+-   **Algorithm Tuning**: Enhancing the semantic matching logic in `rank-candidates-fast.ts`.
+
+---
+
+### License
+MIT

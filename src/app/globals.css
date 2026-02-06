@@ -49,36 +49,50 @@
   }
 
   .dark {
-    /* Dark Mode: Layered Greys */
-    --background: 0 0% 7%;
-    /* Not pitch black */
-    --foreground: 0 0% 95%;
+    /* Professional Dark Mode: Neutral/Zinc Palette (True Grey/Black) */
 
-    --card: 0 0% 12%;
-    /* Lighter than BG for depth */
-    --card-foreground: 0 0% 95%;
+    /* Main Background: Pure Dark Grey/Black */
+    --background: 0 0% 3.9%;
+    /* #0a0a0a (Zinc-950) */
+    --foreground: 0 0% 98%;
+    /* #fafafa */
 
-    --popover: 0 0% 12%;
-    --popover-foreground: 0 0% 95%;
+    /* Cards: Distinct, slightly lighter surface */
+    --card: 0 0% 9%;
+    /* #171717 (Zinc-900) */
+    --card-foreground: 0 0% 98%;
 
-    --primary: 0 100% 60%;
+    /* Popovers */
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+
+    /* Primary: Brand Red */
+    --primary: 0 72% 51%;
+    /* #dc2626 */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 20%;
-    --secondary-foreground: 0 0% 95%;
+    /* Secondary: Muted Grey */
+    --secondary: 240 3.7% 15.9%;
+    /* #27272a */
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 0 0% 20%;
-    --muted-foreground: 0 0% 60%;
+    /* Muted: Subtle text */
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    /* #a1a1aa */
 
-    --accent: 0 0% 90%;
-    --accent-foreground: 0 0% 10%;
+    /* Accent: Interactive states */
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
 
-    --destructive: 0 100% 50%;
-    --destructive-foreground: 0 0% 100%;
+    /* Destructive */
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 25%;
-    --input: 0 0% 25%;
-    --ring: 0 0% 80%;
+    /* Borders: Subtle definition */
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
   }
 }
 

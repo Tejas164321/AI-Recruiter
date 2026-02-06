@@ -31,8 +31,8 @@ const headerVariants = {
     y: 0,
     width: "calc(100% - 2rem)",
     maxWidth: "1200px",
-    backgroundColor: "rgba(253, 253, 253, 0.95)", // #fdfdfd
-    borderBottomColor: "rgba(0,0,0,0.1)",
+    // backgroundColor handled by className
+    // borderBottomColor handled by className
     transition: { type: "spring", stiffness: 300, damping: 30 },
   },
 };
@@ -77,7 +77,7 @@ export function Header() {
           "flex items-center justify-between px-8 py-3 h-18",
           // Scrolled: keep rounded/bordered look
           isScrolled
-            ? "rounded-full border-2 border-dashed border-foreground/10 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.05)] backdrop-blur-md bg-[#fdfdfd]/95"
+            ? "rounded-full border-2 border-dashed border-foreground/10 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.05)] backdrop-blur-md bg-background/95 supports-[backdrop-filter]:bg-background/80"
             : "rounded-none border-b-0 border-transparent bg-transparent"
         )}
         initial="top"
@@ -197,6 +197,6 @@ export function Header() {
         </div>
 
       </motion.div>
-    </header>
+    </header >
   );
 }

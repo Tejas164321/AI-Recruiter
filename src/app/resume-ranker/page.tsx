@@ -24,9 +24,11 @@ import { useAuth } from "@/contexts/auth-context";
 // Replaced rank-candidates-hybrid with progressive version
 import {
   performBulkScreeningFast,
-  enrichCandidateWithFeedback,
   type FeedbackGenerationContext
 } from "@/ai/flows/rank-candidates-progressive";
+import {
+  enrichCandidateWithFeedback
+} from "@/ai/progressive-enhancement/feedback-service";
 import { extractJobRoles as extractJobRolesAI, type ExtractJobRolesInput as ExtractJobRolesAIInput, type ExtractJobRolesOutput as ExtractJobRolesAIOutput } from "@/ai/flows/extract-job-roles-hybrid";
 import type { ResumeFile, RankedCandidate, Filters, JobScreeningResult, ExtractedJobRole, ProcessingProgress, PerformBulkScreeningInput, PerformBulkScreeningOutput } from "@/lib/types";
 // Firebase Services
