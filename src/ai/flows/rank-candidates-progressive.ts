@@ -59,7 +59,7 @@ async function rankCandidateQuick(
     resumeId: string,
     jdText: string,
     jdSkills: ReturnType<typeof extractSkills>
-): Promise<QuickRankingResult> {
+): Promise<QuickRankingResult | null> {
     const startTime = Date.now();
 
     // Parse resume
@@ -94,7 +94,12 @@ async function rankCandidateQuick(
 
     // Extract candidate info
     const candidateName = extractCandidateName(parsedResume) || resumeName.replace(/\.[^/.]+$/, '');
-    const email = extractEmail(parsedResume) ?? undefined;
+    const email = extractEmail(parsedResume);
+
+    if (!email) {
+        console.warn(`   ⚠ Skipping candidate ${candidateName} - no email address extracted.`);
+        return null;
+    }
 
     // Create quick feedback summary (no AI)
     const quickFeedback = createQuickFeedbackSummary(
@@ -110,7 +115,7 @@ async function rankCandidateQuick(
     const candidate: RankedCandidate = {
         id: resumeId,
         name: candidateName,
-        email,
+        email: email || '',
         score: compositeResult.finalScore,
         atsScore: atsResult.atsScore,
         keySkills: skillMatch.matchedSkills.slice(0, 8).join(', '),
@@ -192,7 +197,7 @@ export async function performBulkScreeningFast(
             );
 
             for (const result of batchResults) {
-                if (result.status === 'fulfilled') {
+                if (result.status === 'fulfilled' && result.value !== null) {
                     candidates.push(result.value.candidate);
                     feedbackContexts[result.value.candidate.id] = result.value.context;
                 }

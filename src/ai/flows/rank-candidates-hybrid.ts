@@ -77,9 +77,9 @@ async function processResumeSingleJob(
     resumeDataUri: string,
     resumeName: string,
     resumeId: string,
-    jobRole: ExtractedJobRole,
+    jobRole: Omit<ExtractedJobRole, 'userId' | 'createdAt'>,
     context: ProcessingContext
-): Promise<HybridScoringResult> {
+): Promise<HybridScoringResult | null> {
     const startTime = Date.now();
     const breakdown = {
         parsingTimeMs: 0,
@@ -102,7 +102,12 @@ async function processResumeSingleJob(
 
     // Extract candidate info
     const candidateName = extractCandidateName(parsedResume) || resumeName.replace(/\.[^/.]+$/, '');
-    const candidateEmail = extractEmail(parsedResume) || '';
+    const candidateEmail = extractEmail(parsedResume);
+
+    if (!candidateEmail) {
+        console.warn(`   ⚠ Skipping candidate ${candidateName} - no email address extracted.`);
+        return null;
+    }
 
     // ============================================
     // STEP 2: Semantic Similarity (Embeddings)
@@ -241,7 +246,7 @@ async function processResumeSingleJob(
     const candidate: RankedCandidate = {
         id: resumeId,
         name: candidateName,
-        email: candidateEmail,
+        email: candidateEmail || '',
         score: compositeResult.finalScore,
         atsScore: atsResult.atsScore,
         keySkills: skillMatchResult.matchedSkills.slice(0, 10).join(', '),
@@ -456,12 +461,15 @@ export async function performBulkScreening(
                 const result = batchResults[batchIdx];
                 const resume = batch[batchIdx];
 
-                if (result.status === 'fulfilled') {
+                if (result.status === 'fulfilled' && result.value !== null) {
                     candidates.push(result.value.candidate);
                     successCount++;
+                } else if (result.status === 'fulfilled' && result.value === null) {
+                    // Filtered out due to no email
                 } else {
                     failCount++;
-                    console.error(`   ❌ Failed to process ${resume.name}:`, result.reason);
+                    const reason = result.status === 'rejected' ? result.reason : 'Unknown error';
+                    console.error(`   ❌ Failed to process ${resume.name}:`, reason);
 
                     // Create error candidate
                     candidates.push({
@@ -471,7 +479,7 @@ export async function performBulkScreening(
                         score: 0,
                         atsScore: 0,
                         keySkills: 'Processing failed',
-                        feedback: `Error: ${result.reason instanceof Error ? result.reason.message : 'Unknown error'}`,
+                        feedback: `Error: ${reason instanceof Error ? reason.message : String(reason)}`,
                         originalResumeName: resume.name,
                         resumeDataUri: resume.dataUri,
                     });
@@ -570,8 +578,12 @@ export async function performBulkScreeningWithProgress(
                     context
                 );
 
-                candidates.push(result.candidate);
-                succeededCount++;
+                if (result !== null) {
+                    candidates.push(result.candidate);
+                    succeededCount++;
+                } else {
+                    console.log(`   ✓ Skipped ${resume.name} (no email)`);
+                }
             } catch (error) {
                 failedCount++;
                 candidates.push({

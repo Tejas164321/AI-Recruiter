@@ -21,6 +21,7 @@ import { useAuth } from "@/contexts/auth-context";
 // AI Flows and Types (HYBRID - Local LLM)
 import { calculateAtsScore, type CalculateAtsScoreInput, type CalculateAtsScoreOutput } from "@/ai/flows/calculate-ats-score-hybrid";
 import type { ResumeFile, AtsScoreResult } from "@/lib/types";
+import { type ApiConfig, getUserApiConfig, DEFAULT_API_CONFIG } from "@/services/user-config";
 // Firebase Services
 import { saveMultipleAtsScoreResults, getAtsScoreResults, deleteAtsScoreResult, deleteAllAtsScoreResults } from "@/services/firestoreService";
 import { db as firestoreDb } from "@/lib/firebase/config";
@@ -65,6 +66,15 @@ export default function AtsScoreFinderPage() {
   // Refs for scrolling to specific sections
   const resultsSectionRef = useRef<HTMLDivElement | null>(null);
   const analyzeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [apiConfig, setApiConfig] = useState<ApiConfig>(DEFAULT_API_CONFIG);
+
+  useEffect(() => {
+    if (currentUser?.uid) {
+      getUserApiConfig(currentUser.uid).then(config => {
+        setApiConfig(config);
+      });
+    }
+  }, [currentUser]);
 
   // Check if Firestore is available (based on Firebase config)
   const isFirestoreAvailable = !!firestoreDb;
@@ -171,7 +181,7 @@ export default function AtsScoreFinderPage() {
     const processingPromises = uploadedResumeFiles.map(async (resumeFile) => {
       try {
         const input: CalculateAtsScoreInput = { resumeDataUri: resumeFile.dataUri, originalResumeName: resumeFile.name };
-        const output: CalculateAtsScoreOutput = await calculateAtsScore(input);
+        const output: CalculateAtsScoreOutput = await calculateAtsScore(input, apiConfig);
 
         // Prepare the result for saving to Firestore
         aiResultsToSave.push({
@@ -209,7 +219,7 @@ export default function AtsScoreFinderPage() {
     // Reset state after processing
     setIsProcessingAts(false);
     setUploadedResumeFiles([]);
-  }, [uploadedResumeFiles, toast, currentUser?.uid, isFirestoreAvailable]);
+  }, [uploadedResumeFiles, toast, currentUser?.uid, isFirestoreAvailable, apiConfig]);
 
   // Handler to open the feedback modal
   const handleViewInsights = (result: AtsScoreResult) => {

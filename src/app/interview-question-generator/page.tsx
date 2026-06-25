@@ -21,9 +21,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useLoading } from "@/contexts/loading-context";
 import { useAuth } from "@/contexts/auth-context";
 // AI Flows and Types (HYBRID - Local LLM)
-import { generateJDInterviewQuestions, type GenerateJDInterviewQuestionsInput } from "@/ai/flows/generate-jd-interview-questions-hybrid";
+import { generateJDInterviewQuestions, type GenerateJDInterviewQuestionsInput, type GenerateJDInterviewQuestionsOutput } from "@/ai/flows/generate-jd-interview-questions-hybrid";
 import { extractJobRoles as extractJobRolesAI, type ExtractJobRolesInput as ExtractJobRolesAIInput, type ExtractJobRolesOutput as ExtractJobRolesAIOutput } from "@/ai/flows/extract-job-roles-hybrid";
 import type { InterviewQuestionsSet } from "@/lib/types";
+import { type ApiConfig, getUserApiConfig, DEFAULT_API_CONFIG } from "@/services/user-config";
 // Firebase Services
 import { saveInterviewQuestionSet, getInterviewQuestionSets, deleteInterviewQuestionSet } from "@/services/firestoreService";
 import { db as firestoreDb } from "@/lib/firebase/config";
@@ -48,7 +49,7 @@ interface FormState {
   jdContent: string;
   roleTitle: string;
   focusAreas: string;
-  questions: Omit<InterviewQuestionsSet, 'id' | 'userId' | 'createdAt'> | null;
+  questions: GenerateJDInterviewQuestionsOutput | null;
 }
 
 /**
@@ -89,6 +90,15 @@ export default function InterviewQuestionGeneratorPage() {
   // Ref for scrolling to the results section
   const resultsSectionRef = useRef<HTMLDivElement | null>(null);
   const isFirestoreAvailable = !!firestoreDb;
+  const [apiConfig, setApiConfig] = useState<ApiConfig>(DEFAULT_API_CONFIG);
+
+  useEffect(() => {
+    if (currentUser?.uid) {
+      getUserApiConfig(currentUser.uid).then(config => {
+        setApiConfig(config);
+      });
+    }
+  }, [currentUser]);
 
   // Effect to fetch saved question sets from Firestore on component mount or user change
   useEffect(() => {
@@ -288,7 +298,7 @@ export default function InterviewQuestionGeneratorPage() {
         roleTitle: roleTitle.trim() || undefined,
         focusAreas: focusAreas.trim() || undefined,
       };
-      const aiOutput = await generateJDInterviewQuestions(input);
+      const aiOutput = await generateJDInterviewQuestions(input, apiConfig);
 
       const questionSetToSave: Omit<InterviewQuestionsSet, 'id' | 'userId' | 'createdAt'> = {
         roleTitle: roleTitle.trim() || "Untitled Role",
@@ -326,7 +336,7 @@ export default function InterviewQuestionGeneratorPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [activeForm, toast, currentUser?.uid, isFirestoreAvailable]);
+  }, [activeForm, toast, currentUser?.uid, isFirestoreAvailable, apiConfig]);
 
   /**
    * Handler to generate and download a PDF of the currently active questions.

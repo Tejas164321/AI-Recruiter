@@ -1,24 +1,25 @@
 /**
- * Embedding Service - Semantic Similarity via Transformers
+ * Embedding Service - Semantic Similarity via Google Gemini or Local Transformers
  * 
- * Generates semantic embeddings for text using @xenova/transformers (ONNX Runtime for Node.js).
- * Uses all-MiniLM-L6-v2 model for 384-dimensional embeddings.
+ * Primary: Google text-embedding-004 API (768 dimensions) for state-of-the-art semantic accuracy.
+ * Fallback: Local @xenova/transformers (384 dimensions) for offline-capable fault tolerance.
  * 
  * Features:
- * - Language-agnostic embeddings
+ * - Highly accurate, production-grade cloud embeddings from Google
+ * - Seamless offline/error fallback to local MiniLM transformer model
  * - In-memory caching for performance
- * - Batch processing support
  * - Cosine similarity calculation
  */
 
-import { pipeline, Pipeline } from '@xenova/transformers';
+import { pipeline } from '@xenova/transformers';
 
 // ============================================
 // Configuration
 // ============================================
 
-const EMBEDDING_MODEL = 'Xenova/all-MiniLM-L6-v2';
-const MAX_CACHE_SIZE = 200; // Increased from 100 for 16GB RAM systems
+const LOCAL_EMBEDDING_MODEL = 'Xenova/all-MiniLM-L6-v2';
+const GEMINI_EMBEDDING_MODEL = 'gemini-embedding-2';
+const MAX_CACHE_SIZE = 200; // LRU Cache size
 
 // ============================================
 // Types
@@ -41,25 +42,25 @@ export interface SimilarityScore {
 // ============================================
 
 class EmbeddingService {
-    private pipeline: Pipeline | null = null;
+    private pipeline: any = null;
     private cache: Map<string, number[]> = new Map();
     private initPromise: Promise<void> | null = null;
 
     /**
-     * Initialize the embedding pipeline
+     * Initialize the local embedding pipeline (only loaded as a fallback)
      */
     private async initialize(): Promise<void> {
         if (this.pipeline) return;
 
         if (!this.initPromise) {
             this.initPromise = (async () => {
-                console.log(`[EmbeddingService] Loading model: ${EMBEDDING_MODEL}...`);
+                console.log(`[EmbeddingService] Loading local fallback model: ${LOCAL_EMBEDDING_MODEL}...`);
                 const startTime = Date.now();
 
-                this.pipeline = await pipeline('feature-extraction', EMBEDDING_MODEL);
+                this.pipeline = await pipeline('feature-extraction', LOCAL_EMBEDDING_MODEL);
 
                 const loadTime = Date.now() - startTime;
-                console.log(`[EmbeddingService] Model loaded in ${loadTime}ms`);
+                console.log(`[EmbeddingService] Local model loaded in ${loadTime}ms`);
             })();
         }
 
@@ -67,41 +68,96 @@ class EmbeddingService {
     }
 
     /**
-     * Generate embedding for a single text
+     * Fetch embeddings using the official Google Gemini API (text-embedding-004)
+     */
+    private async generateGeminiEmbedding(text: string): Promise<number[] | null> {
+        const apiKey = process.env.GOOGLE_API_KEY;
+        if (!apiKey) return null;
+
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_EMBEDDING_MODEL}:embedContent?key=${apiKey}`;
+        const requestBody = {
+            model: `models/${GEMINI_EMBEDDING_MODEL}`,
+            content: {
+                parts: [{ text }]
+            }
+        };
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+            const errText = await response.text();
+            console.warn(`[EmbeddingService] Gemini Embedding API error (HTTP ${response.status}): ${errText}`);
+            return null;
+        }
+
+        const data = await response.json();
+        const values = data.embedding?.values;
+
+        if (!values || !Array.isArray(values)) {
+            console.warn('[EmbeddingService] Gemini Embedding API response missing values.');
+            return null;
+        }
+
+        return values;
+    }
+
+    /**
+     * Generate embedding for a single text (Cloud primary, Local fallback)
      */
     async generateEmbedding(text: string): Promise<EmbeddingResult> {
-        await this.initialize();
-
-        // Check cache
         const cacheKey = this.getCacheKey(text);
+        const startTime = Date.now();
+
+        // 1. Check Cache
         if (this.cache.has(cacheKey)) {
+            const cachedEmbedding = this.cache.get(cacheKey)!;
             return {
-                embedding: this.cache.get(cacheKey)!,
-                model: EMBEDDING_MODEL,
-                dimensions: 384,
+                embedding: cachedEmbedding,
+                model: cachedEmbedding.length > 500 ? GEMINI_EMBEDDING_MODEL : LOCAL_EMBEDDING_MODEL,
+                dimensions: cachedEmbedding.length,
                 processingTimeMs: 0, // Cached
             };
         }
 
-        const startTime = Date.now();
+        let embedding: number[] | null = null;
+        let modelUsed = GEMINI_EMBEDDING_MODEL;
+        let dimensions = 768;
 
-        // Generate embedding
-        const output = await this.pipeline!(text, {
-            pooling: 'mean',
-            normalize: true,
-        });
+        // 2. Try Gemini Cloud Embedding API
+        if (process.env.GOOGLE_API_KEY) {
+            try {
+                embedding = await this.generateGeminiEmbedding(text);
+            } catch (err) {
+                console.warn('[EmbeddingService] Failed to generate Gemini cloud embedding. Falling back to local model:', err);
+            }
+        }
 
-        // Convert to array
-        const embedding = Array.from(output.data);
+        // 3. Fallback to Local Transformers Model
+        if (!embedding) {
+            await this.initialize();
+            console.log('[EmbeddingService] Generating embedding using local fallback...');
+            const output = await this.pipeline!(text, {
+                pooling: 'mean',
+                normalize: true,
+            });
+            embedding = Array.from(output.data) as number[];
+            modelUsed = LOCAL_EMBEDDING_MODEL;
+            dimensions = 384;
+        }
 
-        // Cache the result
+        // 4. Cache and Return
         this.cacheEmbedding(cacheKey, embedding);
-
         const processingTimeMs = Date.now() - startTime;
 
         return {
             embedding,
-            model: EMBEDDING_MODEL,
+            model: modelUsed,
             dimensions: embedding.length,
             processingTimeMs,
         };
@@ -111,13 +167,11 @@ class EmbeddingService {
      * Generate embeddings for multiple texts (batch)
      */
     async generateEmbeddings(texts: string[]): Promise<EmbeddingResult[]> {
-        await this.initialize();
-
         const startTime = Date.now();
         const results: EmbeddingResult[] = [];
 
-        // Process in batches to avoid memory issues
-        const batchSize = 10; // Increased from 5 for 16GB RAM systems
+        // Process in batches
+        const batchSize = 10;
         for (let i = 0; i < texts.length; i += batchSize) {
             const batch = texts.slice(i, i + batchSize);
             const batchResults = await Promise.all(
@@ -137,7 +191,7 @@ class EmbeddingService {
      */
     cosineSimilarity(vecA: number[], vecB: number[]): number {
         if (vecA.length !== vecB.length) {
-            throw new Error('Vectors must have the same dimensions');
+            throw new Error(`Vectors must have the same dimensions (got ${vecA.length} and ${vecB.length})`);
         }
 
         const dotProduct = vecA.reduce((sum, a, i) => sum + a * vecB[i], 0);
@@ -175,21 +229,11 @@ class EmbeddingService {
 
     /**
      * Normalize cosine similarity (-1 to 1) to a 0-100 score
+     * sigmoidal mapping provides high contrast for candidate comparison
      */
     private normalizeToScore(similarity: number): number {
-        // Cosine similarity ranges from -1 to 1
-        // Map to 0-100 scale
-        // In practice, resume/JD similarity is usually 0.2 to 0.8
-        // We'll use a slightly adjusted scale to give better differentiation
-
-        // Simple linear mapping: [-1, 1] -> [0, 100]
         const linearScore = ((similarity + 1) / 2) * 100;
-
-        // Apply slight sigmoid-like curve to spread mid-range scores
-        // This gives better differentiation between candidates
         const adjusted = 50 + 50 * Math.tanh((similarity - 0.4) * 2);
-
-        // Use average of both for balanced results
         const finalScore = (linearScore + adjusted) / 2;
 
         return Math.max(0, Math.min(100, Math.round(finalScore)));
@@ -199,35 +243,29 @@ class EmbeddingService {
      * Cache management
      */
     private getCacheKey(text: string): string {
-        // Use first 100 chars as cache key (most text is unique there)
         return text.substring(0, 100);
     }
 
     private cacheEmbedding(key: string, embedding: number[]): void {
-        // Simple LRU: remove oldest if cache is full
         if (this.cache.size >= MAX_CACHE_SIZE) {
             const firstKey = this.cache.keys().next().value;
-            this.cache.delete(firstKey);
+            if (firstKey !== undefined) {
+                this.cache.delete(firstKey);
+            }
         }
         this.cache.set(key, embedding);
     }
 
-    /**
-     * Clear cache
-     */
     clearCache(): void {
         this.cache.clear();
         console.log('[EmbeddingService] Cache cleared');
     }
 
-    /**
-     * Get cache statistics
-     */
     getCacheStats(): { size: number; maxSize: number; hitRate: number } {
         return {
             size: this.cache.size,
             maxSize: MAX_CACHE_SIZE,
-            hitRate: 0, // TODO: Implement hit rate tracking
+            hitRate: 0,
         };
     }
 }
@@ -249,18 +287,12 @@ export function getEmbeddingService(): EmbeddingService {
 // Convenience Functions
 // ============================================
 
-/**
- * Generate embedding for text
- */
 export async function generateEmbedding(text: string): Promise<number[]> {
     const service = getEmbeddingService();
     const result = await service.generateEmbedding(text);
     return result.embedding;
 }
 
-/**
- * Calculate semantic similarity between two texts (0-100 score)
- */
 export async function calculateSemanticSimilarity(
     textA: string,
     textB: string
@@ -270,10 +302,6 @@ export async function calculateSemanticSimilarity(
     return result.normalizedScore;
 }
 
-/**
- * Calculate semantic similarity between JD and resume
- * Returns a normalized 0-100 score
- */
 export async function calculateJDResumeMatch(
     jobDescription: string,
     resumeText: string
@@ -295,9 +323,6 @@ export async function calculateJDResumeMatch(
     };
 }
 
-/**
- * Batch process multiple resume comparisons against a single JD
- */
 export async function batchCalculateMatches(
     jobDescription: string,
     resumes: string[]
@@ -332,9 +357,6 @@ export async function batchCalculateMatches(
     return results;
 }
 
-/**
- * Preload the embedding model (optional, for faster first request)
- */
 export async function preloadEmbeddingModel(): Promise<void> {
     const service = getEmbeddingService();
     await service['initialize']();

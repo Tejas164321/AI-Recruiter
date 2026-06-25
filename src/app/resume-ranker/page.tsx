@@ -31,6 +31,7 @@ import {
 } from "@/ai/progressive-enhancement/feedback-service";
 import { extractJobRoles as extractJobRolesAI, type ExtractJobRolesInput as ExtractJobRolesAIInput, type ExtractJobRolesOutput as ExtractJobRolesAIOutput } from "@/ai/flows/extract-job-roles-hybrid";
 import type { ResumeFile, RankedCandidate, Filters, JobScreeningResult, ExtractedJobRole, ProcessingProgress, PerformBulkScreeningInput, PerformBulkScreeningOutput } from "@/lib/types";
+import { type ApiConfig, getUserApiConfig, DEFAULT_API_CONFIG } from "@/services/user-config";
 // Firebase Services
 import {
   saveJobScreeningResult,
@@ -75,10 +76,12 @@ export default function ResumeRankerPage() {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState<boolean>(false);
   const [isHistorySheetOpen, setIsHistorySheetOpen] = useState<boolean>(false);
   const [emailRecipients, setEmailRecipients] = useState<EmailRecipient[]>([]);
+  const [emailModalMode, setEmailModalMode] = useState<'single' | 'bulk'>('single');
 
   // State for deletion confirmations
   const [sessionToDelete, setSessionToDelete] = useState<JobScreeningResult | null>(null);
   const [isDeleteAllDialogOpen, setIsDeleteAllDialogOpen] = useState<boolean>(false);
+  const [apiConfig, setApiConfig] = useState<ApiConfig>(DEFAULT_API_CONFIG);
 
   const resultsSectionRef = useRef<HTMLDivElement | null>(null);
   const processButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -103,6 +106,14 @@ export default function ResumeRankerPage() {
       setIsLoadingHistory(false);
     }
   }, [currentUser, isFirestoreAvailable, setIsPageLoading, toast]);
+
+  useEffect(() => {
+    if (currentUser?.uid) {
+      getUserApiConfig(currentUser.uid).then(config => {
+        setApiConfig(config);
+      });
+    }
+  }, [currentUser]);
 
 
   const isProcessing = isLoadingJDExtraction || isLoadingScreening || isLoadingHistory;
@@ -231,7 +242,7 @@ export default function ResumeRankerPage() {
               await Promise.all(batch.map(candidate => {
                 const context = feedbackContexts[candidate.id]; // Get saved context
                 if (context) {
-                  return enrichCandidateWithFeedback(resultId, candidate.id, context);
+                  return enrichCandidateWithFeedback(resultId, candidate.id, context, apiConfig);
                 }
                 return Promise.resolve();
               }));
@@ -253,7 +264,7 @@ export default function ResumeRankerPage() {
       setIsLoadingScreening(false);
       setScreeningProgress(null);
     }
-  }, [currentUser?.uid, extractedJobRoles, uploadedResumeFiles, toast, isFirestoreAvailable]);
+  }, [currentUser?.uid, extractedJobRoles, uploadedResumeFiles, toast, isFirestoreAvailable, apiConfig]);
 
   // Handler to retry failed resumes
   const handleRetryFailed = useCallback(async () => {
@@ -357,6 +368,19 @@ export default function ResumeRankerPage() {
     });
   }, [currentScreeningResult, filters]);
 
+  const shortlistedRecipients = useMemo(() => {
+    return displayedCandidates.map(c => ({ name: c.name, email: c.email || '' })).filter(c => c.email);
+  }, [displayedCandidates]);
+
+  const declinedRecipients = useMemo(() => {
+    if (!currentScreeningResult?.candidates) return [];
+    const displayedIds = new Set(displayedCandidates.map(c => c.id));
+    return currentScreeningResult.candidates
+      .filter(c => !displayedIds.has(c.id))
+      .map(c => ({ name: c.name, email: c.email || '' }))
+      .filter(c => c.email);
+  }, [currentScreeningResult, displayedCandidates]);
+
   const emailableCandidateCount = useMemo(() => {
     return displayedCandidates.filter(c => c.email).length;
   }, [displayedCandidates]);
@@ -368,23 +392,17 @@ export default function ResumeRankerPage() {
       toast({ title: "Email Not Found", description: `Could not find an email address for ${candidate.name}.`, variant: "destructive" });
       return;
     }
+    setEmailModalMode('single');
     setEmailRecipients([{ name: candidate.name, email: candidate.email }]);
     setIsEmailModalOpen(true);
   };
 
-  const handleEmailFilteredCandidates = () => {
-    const recipientsWithEmail = displayedCandidates.filter(c => c.email).map(c => ({ name: c.name || "Candidate", email: c.email! }));
-
-    if (recipientsWithEmail.length === 0) {
-      toast({ title: "No Candidates to Email", description: "No candidates with extracted email addresses match the current filters.", variant: "destructive" });
+  const handleOpenBulkEmailModal = () => {
+    if (shortlistedRecipients.length === 0 && declinedRecipients.length === 0) {
+      toast({ title: "No Candidates to Email", description: "There are no candidates in this session.", variant: "destructive" });
       return;
     }
-
-    if (recipientsWithEmail.length < displayedCandidates.length) {
-      toast({ title: "Some Emails Missing", description: `Could not find email addresses for ${displayedCandidates.length - recipientsWithEmail.length} candidate(s). Only sending to ${recipientsWithEmail.length}.` });
-    }
-
-    setEmailRecipients(recipientsWithEmail);
+    setEmailModalMode('bulk');
     setIsEmailModalOpen(true);
   };
 
@@ -454,9 +472,9 @@ export default function ResumeRankerPage() {
                       <CardTitle className="text-2xl font-headline text-primary">Results for: {currentScreeningResult.jobDescriptionName}</CardTitle>
                       <CardDescription>Session from {currentScreeningResult.createdAt.toDate().toLocaleString()}. Processed: {currentScreeningResult.candidates.length}. Showing: {displayedCandidates.length}.</CardDescription>
                     </div>
-                    <Button variant="outline" size="sm" onClick={handleEmailFilteredCandidates} disabled={isProcessing || emailableCandidateCount === 0}>
-                      <Mail className="w-4 h-4 mr-2" />
-                      Email Filtered ({emailableCandidateCount})
+                    <Button variant="outline" size="sm" onClick={handleOpenBulkEmailModal} disabled={isProcessing || currentScreeningResult.candidates.length === 0} className="hover:bg-primary/10">
+                      <Mail className="w-4 h-4 mr-2 text-primary" />
+                      Automated Bulk Email
                     </Button>
                   </div>
                 </CardHeader>
@@ -481,7 +499,10 @@ export default function ResumeRankerPage() {
           <EmailComposeModal
             isOpen={isEmailModalOpen}
             onClose={() => setIsEmailModalOpen(false)}
+            mode={emailModalMode}
             recipients={emailRecipients}
+            shortlistedRecipients={shortlistedRecipients}
+            declinedRecipients={declinedRecipients}
             jobTitle={currentScreeningResult?.jobDescriptionName || 'the position'}
           />
           <HistorySheet

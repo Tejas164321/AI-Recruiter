@@ -13,8 +13,8 @@
 
 import { parseDocument } from '@/lib/processing/document-parser';
 import { extractSkills } from '@/lib/skills/skill-extractor';
-import { getOllamaClient } from '@/ai/local-llm/ollama-client';
-import { SYSTEM_PROMPTS } from '@/ai/local-llm/prompt-templates';
+import { generateFeedbackOrchestrated } from '@/ai/orchestration/model-router';
+import type { ApiConfig } from '@/services/user-config';
 import { z } from 'zod';
 
 // ============================================
@@ -92,12 +92,13 @@ Make questions open-ended, clear, and directly tied to the job requirements. Avo
 // ============================================
 
 export async function generateJDInterviewQuestions(
-    input: GenerateJDInterviewQuestionsInput
+    input: GenerateJDInterviewQuestionsInput,
+    apiConfig?: ApiConfig
 ): Promise<GenerateJDInterviewQuestionsOutput> {
     const { jobDescriptionDataUri, roleTitle, focusAreas } = input;
 
     console.log(`\n${'═'.repeat(60)}`);
-    console.log(`💼 INTERVIEW QUESTION GENERATION (Local LLM)`);
+    console.log(`💼 INTERVIEW QUESTION GENERATION (Orchestrated)`);
     console.log(`   Role: ${roleTitle || 'Unknown'}`);
     console.log(`${'═'.repeat(60)}\n`);
 
@@ -120,9 +121,8 @@ export async function generateJDInterviewQuestions(
             parsedJD.sections.find(s => s.title.toLowerCase().includes('title'))?.content.split('\n')[0] ||
             'Unknown Role';
 
-        // Step 3: Generate questions using local LLM
+        // Step 3: Generate questions using Orchestrated router
         console.log(`   🤖 Generating questions...`);
-        const ollamaClient = getOllamaClient();
 
         const prompt = createInterviewQuestionsPrompt({
             jdText: parsedJD.text,
@@ -131,23 +131,16 @@ export async function generateJDInterviewQuestions(
             focusAreas,
         });
 
-        const result = await ollamaClient.generateJSON(
+        const questions = await generateFeedbackOrchestrated(
             prompt,
             InterviewQuestionsSchema,
             {
-                system: SYSTEM_PROMPTS.STRICT_JSON,
                 temperature: 0.7, // Higher temperature for creative question generation
                 maxTokens: 800, // Reduced from 1200 for faster generation
-                timeout: 15000, // 15s timeout
-            }
+            },
+            apiConfig
         );
 
-        if (!result.success) {
-            console.error(`   ❌ LLM failed: ${result.error}`);
-            return createFallbackQuestions(topSkills, finalRoleTitle);
-        }
-
-        const questions = result.data;
         console.log(`   ✓ Generated questions:`);
         console.log(`      Technical: ${questions.technicalQuestions.length}`);
         console.log(`      Behavioral: ${questions.behavioralQuestions.length}`);

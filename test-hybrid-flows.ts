@@ -4,6 +4,7 @@
  * Use this to quickly test each hybrid flow independently
  */
 
+import 'dotenv/config';
 import { performBulkScreening } from './src/ai/flows/rank-candidates-hybrid';
 import { calculateAtsScore } from './src/ai/flows/calculate-ats-score-hybrid';
 import { extractJobRoles } from './src/ai/flows/extract-job-roles-hybrid';
@@ -37,6 +38,25 @@ Frontend: React.js, TypeScript, JavaScript, HTML, CSS
 Backend: Node.js, Express, Python, Django
 Databases: PostgreSQL, MongoDB, Redis
 DevOps: Docker, Kubernetes, AWS, CI/CD
+  `.trim();
+
+    return `data:text/plain;charset=utf-8;base64,${Buffer.from(sampleResume).toString('base64')}`;
+}
+
+/**
+ * Create a sample resume data URI with no email
+ */
+function createNoEmailResumeDataUri(): string {
+    const sampleResume = `
+JANE SMITH
+Senior Frontend Developer
+
+EXPERIENCE
+Frontend Developer | Web Tech (2021 - Present)
+- Built React apps
+
+SKILLS
+React, JavaScript, HTML, CSS
   `.trim();
 
     return `data:text/plain;charset=utf-8;base64,${Buffer.from(sampleResume).toString('base64')}`;
@@ -83,6 +103,7 @@ async function testResumeRanking() {
             id: 'test-jd-1',
             name: 'Senior Full-Stack Developer',
             contentDataUri: createSampleJDDataUri(),
+            originalDocumentName: 'Senior Developer JD.pdf',
         }],
         resumesToRank: [
             {
@@ -90,11 +111,16 @@ async function testResumeRanking() {
                 name: 'John Doe Resume.pdf',
                 dataUri: createSampleResumeDataUri(),
             },
+            {
+                id: 'test-resume-no-email',
+                name: 'Jane Smith Resume (No Email).pdf',
+                dataUri: createNoEmailResumeDataUri(),
+            },
         ],
     };
 
     const startTime = Date.now();
-    const results = await performBulkScreening(input);
+    const results = await performBulkScreening(input as any);
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
 
     console.log(`\n✅ Test completed in ${elapsed}s`);
@@ -166,13 +192,27 @@ async function testInterviewQuestions() {
 // Run All Tests
 // ============================================
 
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 async function runAllTests() {
-    console.log('\n🚀 TESTING ALL HYBRID FLOWS\n');
+    console.log('\n🚀 TESTING ALL HYBRID FLOWS (with rate-limit protection delays)\n');
 
     try {
         await testResumeRanking();
+        
+        console.log('\n⏳ Waiting 12s to respect API rate limits...');
+        await sleep(12000);
+        
         await testATSScoring();
+        
+        console.log('\n⏳ Waiting 12s to respect API rate limits...');
+        await sleep(12000);
+        
         await testJobRoleExtraction();
+        
+        console.log('\n⏳ Waiting 12s to respect API rate limits...');
+        await sleep(12000);
+        
         await testInterviewQuestions();
 
         console.log('\n' + '='.repeat(60));

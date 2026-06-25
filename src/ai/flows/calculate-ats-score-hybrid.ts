@@ -14,11 +14,11 @@
 
 import { parseDocument, extractCandidateName } from '@/lib/processing/document-parser';
 import { calculateATSScore, getATSImprovements } from '@/lib/ats/ats-analyzer';
-import { getOllamaClient } from '@/ai/local-llm/ollama-client';
+import { generateFeedbackOrchestrated } from '@/ai/orchestration/model-router';
+import type { ApiConfig } from '@/services/user-config';
 import {
     createATSFeedbackPrompt,
-    ATSFeedbackSchema,
-    SYSTEM_PROMPTS
+    ATSFeedbackSchema
 } from '@/ai/local-llm/prompt-templates';
 
 // ============================================
@@ -41,7 +41,8 @@ export interface CalculateAtsScoreOutput {
 // ============================================
 
 export async function calculateAtsScore(
-    input: CalculateAtsScoreInput
+    input: CalculateAtsScoreInput,
+    apiConfig?: ApiConfig
 ): Promise<CalculateAtsScoreOutput> {
     const { resumeDataUri, originalResumeName } = input;
 
@@ -78,7 +79,6 @@ export async function calculateAtsScore(
 
         try {
             console.log(`   🤖 Generating detailed feedback...`);
-            const ollamaClient = getOllamaClient();
 
             const prompt = createATSFeedbackPrompt({
                 resumeText: parsedResume.text,
@@ -89,27 +89,20 @@ export async function calculateAtsScore(
                 layoutType: atsResult.layoutAnalysis.type,
             });
 
-            const llmResult = await ollamaClient.generateJSON(
+            const llmFeedback = await generateFeedbackOrchestrated(
                 prompt,
                 ATSFeedbackSchema,
                 {
-                    system: SYSTEM_PROMPTS.ATS_EXPERT,
                     temperature: 0.3,
                     maxTokens: 400,
-                    timeout: 10000, // 10s timeout
-                }
+                },
+                apiConfig
             );
 
-            if (llmResult.success) {
-                const llmFeedback = llmResult.data;
-                console.log(`   ✓ LLM feedback generated: ${llmResult.tokensGenerated} tokens`);
+            console.log(`   ✓ LLM feedback generated`);
 
-                // Format detailed feedback
-                detailedFeedback = formatATSFeedback(llmFeedback, improvements);
-            } else {
-                console.warn(`   ⚠ LLM failed: ${llmResult.error}. Using rule-based feedback.`);
-                detailedFeedback = formatFallbackFeedback(atsResult, improvements);
-            }
+            // Format detailed feedback
+            detailedFeedback = formatATSFeedback(llmFeedback, improvements);
         } catch (error) {
             console.error(`   ❌ LLM error:`, error);
             detailedFeedback = formatFallbackFeedback(atsResult, improvements);
