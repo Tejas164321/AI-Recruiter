@@ -1,0 +1,3303 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Recruiter — Resume Ranker | University Presentation</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap"
+    rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --bg2: #0f0f1a;
+      --bg3: #141428;
+      --surface: #1a1a2e;
+      --surface2: #16213e;
+      --border: rgba(99, 102, 241, 0.18);
+      --border2: rgba(139, 92, 246, 0.25);
+      --primary: #6366f1;
+      --primary-light: #818cf8;
+      --secondary: #8b5cf6;
+      --accent: #06b6d4;
+      --accent2: #10b981;
+      --accent3: #f59e0b;
+      --accent4: #ef4444;
+      --text: #f1f5f9;
+      --text2: #cbd5e1;
+      --text3: #94a3b8;
+      --text4: #64748b;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+
+    /* NAV */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: rgba(10, 10, 15, 0.9);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      font-size: 1rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--primary), var(--secondary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    .nav-links a {
+      color: var(--text3);
+      font-size: 0.76rem;
+      font-weight: 500;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--primary-light);
+    }
+
+    /* HERO */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(99, 102, 241, 0.15), transparent), radial-gradient(ellipse 50% 40% at 20% 80%, rgba(139, 92, 246, 0.1), transparent), radial-gradient(ellipse 50% 40% at 80% 60%, rgba(6, 182, 212, 0.08), transparent);
+      pointer-events: none;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(99, 102, 241, 0.12);
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      border-radius: 100px;
+      padding: 6px 18px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--primary-light);
+      margin-bottom: 24px;
+      letter-spacing: 0.05em;
+    }
+
+    .hero-badge span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--primary-light);
+      animation: pdot 2s infinite;
+      display: block;
+    }
+
+    @keyframes pdot {
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1)
+      }
+
+      50% {
+        opacity: 0.5;
+        transform: scale(0.8)
+      }
+    }
+
+    .hero h1 {
+      font-size: clamp(2.6rem, 6vw, 4.8rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+    }
+
+    .grad {
+      background: linear-gradient(135deg, #818cf8, #a78bfa, #38bdf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: clamp(0.95rem, 2vw, 1.2rem);
+      color: var(--text3);
+      max-width: 680px;
+      margin: 0 auto 40px;
+    }
+
+    .hero-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      justify-content: center;
+    }
+
+    .stat-chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 24px;
+      text-align: center;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .stat-chip:hover {
+      transform: translateY(-4px);
+      border-color: var(--primary);
+    }
+
+    .stat-chip .val {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--primary-light);
+      line-height: 1;
+    }
+
+    .stat-chip .lbl {
+      font-size: 0.68rem;
+      color: var(--text3);
+      margin-top: 4px;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+    }
+
+    /* SECTION */
+    section {
+      padding: 80px 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-tag {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: var(--primary-light);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-tag::before {
+      content: '';
+      display: block;
+      width: 24px;
+      height: 2px;
+      background: var(--primary);
+      border-radius: 2px;
+    }
+
+    section h2 {
+      font-size: clamp(1.7rem, 4vw, 2.5rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 14px;
+      line-height: 1.2;
+    }
+
+    .lead {
+      font-size: 1rem;
+      color: var(--text2);
+      max-width: 720px;
+      margin-bottom: 40px;
+      line-height: 1.75;
+    }
+
+    hr.divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 0;
+    }
+
+    .hq {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.07));
+      border-left: 4px solid var(--primary);
+      border-radius: 0 12px 12px 0;
+      padding: 18px 22px;
+      margin: 24px 0;
+      font-size: 0.97rem;
+      color: var(--text2);
+      font-style: italic;
+      line-height: 1.7;
+    }
+
+    /* GRID CARDS */
+    .grid3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 18px;
+      margin-top: 28px;
+    }
+
+    .grid2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 18px;
+      margin-top: 28px;
+    }
+
+    .card {
+      background: linear-gradient(135deg, var(--surface), var(--surface2));
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 26px;
+      transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 18px 40px rgba(99, 102, 241, 0.12);
+      border-color: var(--border2);
+    }
+
+    .card-top {
+      height: 3px;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+    }
+
+    .red .card-top {
+      background: linear-gradient(90deg, #ef4444, #f97316);
+    }
+
+    .blue .card-top {
+      background: linear-gradient(90deg, #6366f1, #818cf8);
+    }
+
+    .purple .card-top {
+      background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+    }
+
+    .cyan .card-top {
+      background: linear-gradient(90deg, #06b6d4, #22d3ee);
+    }
+
+    .green .card-top {
+      background: linear-gradient(90deg, #10b981, #34d399);
+    }
+
+    .amber .card-top {
+      background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    }
+
+    .card .icon {
+      font-size: 2rem;
+      margin-bottom: 12px;
+    }
+
+    .card h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .card p {
+      font-size: 0.85rem;
+      color: var(--text3);
+      line-height: 1.65;
+    }
+
+    .feat-icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 14px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+    }
+
+    .fi-blue {
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+    }
+
+    .fi-purple {
+      background: rgba(139, 92, 246, 0.15);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+    }
+
+    .fi-cyan {
+      background: rgba(6, 182, 212, 0.15);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+    }
+
+    .fi-green {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .fi-amber {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .fi-red {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 10px;
+    }
+
+    .tag {
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      border-radius: 5px;
+      padding: 2px 8px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--primary-light);
+    }
+
+    /* TECH TABLE */
+    .ttable {
+      width: 100%;
+      border-collapse: collapse;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      margin-top: 28px;
+    }
+
+    .ttable thead tr {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.1));
+    }
+
+    .ttable th {
+      padding: 13px 18px;
+      text-align: left;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--primary-light);
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .ttable tbody tr {
+      border-bottom: 1px solid rgba(99, 102, 241, 0.07);
+      transition: background 0.2s;
+    }
+
+    .ttable tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    .ttable tbody tr:hover {
+      background: rgba(99, 102, 241, 0.05);
+    }
+
+    .ttable td {
+      padding: 13px 18px;
+      font-size: 0.86rem;
+      vertical-align: top;
+    }
+
+    .ttable td:first-child {
+      color: var(--text3);
+      font-weight: 600;
+      font-size: 0.78rem;
+      width: 160px;
+    }
+
+    .ttable td:nth-child(2) {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .ttable td:last-child {
+      color: var(--text3);
+      font-size: 0.82rem;
+    }
+
+    .badge {
+      display: inline-block;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 5px;
+      padding: 2px 9px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--primary-light);
+      font-family: 'JetBrains Mono', monospace;
+      margin: 2px;
+    }
+
+    .badge.g {
+      background: rgba(16, 185, 129, 0.12);
+      border-color: rgba(16, 185, 129, 0.3);
+      color: #34d399;
+    }
+
+    .badge.c {
+      background: rgba(6, 182, 212, 0.12);
+      border-color: rgba(6, 182, 212, 0.3);
+      color: #22d3ee;
+    }
+
+    .badge.a {
+      background: rgba(245, 158, 11, 0.12);
+      border-color: rgba(245, 158, 11, 0.3);
+      color: #fbbf24;
+    }
+
+    .badge.r {
+      background: rgba(239, 68, 68, 0.12);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #f87171;
+    }
+
+    code.il {
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--accent);
+    }
+
+    /* FLOW DIAGRAM */
+    .flow-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 36px;
+      margin-top: 28px;
+      overflow: hidden;
+    }
+
+    .flow-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--primary-light);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 28px;
+      text-align: center;
+    }
+
+    .phase-badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 8px;
+      padding: 5px 14px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .pb1 {
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      color: var(--primary-light);
+    }
+
+    .pb2 {
+      background: rgba(139, 92, 246, 0.15);
+      border: 1px solid rgba(139, 92, 246, 0.35);
+      color: #a78bfa;
+    }
+
+    .pb3 {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #34d399;
+    }
+
+    .flow-steps {
+      display: flex;
+      align-items: center;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      gap: 0;
+    }
+
+    .fstep {
+      flex: 1;
+      min-width: 100px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .fbox {
+      background: var(--bg3);
+      border-radius: 11px;
+      padding: 12px 6px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .fbox:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 28px rgba(99, 102, 241, 0.18);
+    }
+
+    .fbox .fi {
+      font-size: 1.4rem;
+      line-height: 1;
+    }
+
+    .fbox .fn {
+      font-size: 0.56rem;
+      font-weight: 700;
+      color: var(--primary-light);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .fbox .fl {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text2);
+      line-height: 1.3;
+    }
+
+    .fbox .fs {
+      font-size: 0.6rem;
+      color: var(--text4);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .bp1 {
+      border: 1px solid rgba(99, 102, 241, 0.25);
+    }
+
+    .bp2 {
+      border: 1px solid rgba(139, 92, 246, 0.25);
+    }
+
+    .bcloud {
+      border: 1px solid rgba(6, 182, 212, 0.25);
+    }
+
+    .bllm {
+      border: 1px solid rgba(245, 158, 11, 0.25);
+    }
+
+    .farrow {
+      width: 28px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text4);
+      font-size: 1rem;
+    }
+
+    /* STEP CARDS */
+    .stepgrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+      gap: 14px;
+      margin-top: 28px;
+    }
+
+    .scard {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      padding: 20px;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .scard:hover {
+      transform: translateY(-4px);
+      border-color: var(--border2);
+    }
+
+    .shead {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .snc {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .scard h3 {
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .scard p {
+      font-size: 0.83rem;
+      color: var(--text3);
+      line-height: 1.6;
+    }
+
+    .cpill {
+      display: inline-block;
+      background: rgba(15, 15, 26, 0.8);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 2px 9px;
+      font-size: 0.7rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent);
+      margin-top: 8px;
+    }
+
+    /* SCORE FORMULA */
+    .score-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 36px;
+      margin-top: 28px;
+    }
+
+    .score-box h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    .wrow {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 12px;
+    }
+
+    .wlbl {
+      width: 175px;
+      font-size: 0.83rem;
+      font-weight: 600;
+      color: var(--text2);
+      flex-shrink: 0;
+    }
+
+    .wbar-wrap {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 5px;
+      height: 22px;
+      overflow: hidden;
+    }
+
+    .wbar {
+      height: 100%;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      padding-left: 10px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: white;
+    }
+
+    .wpct {
+      width: 42px;
+      text-align: right;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text);
+      flex-shrink: 0;
+    }
+
+    .ws .wbar {
+      width: 45%;
+      background: linear-gradient(90deg, #6366f1, #818cf8);
+    }
+
+    .wsk .wbar {
+      width: 25%;
+      background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+    }
+
+    .we .wbar {
+      width: 15%;
+      background: linear-gradient(90deg, #10b981, #34d399);
+    }
+
+    .wa .wbar {
+      width: 10%;
+      background: linear-gradient(90deg, #06b6d4, #22d3ee);
+    }
+
+    .wl .wbar {
+      width: 5%;
+      background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    }
+
+    .gtable {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 24px;
+    }
+
+    .gchip {
+      border-radius: 9px;
+      padding: 10px 18px;
+      text-align: center;
+      min-width: 95px;
+    }
+
+    .gchip .gv {
+      font-size: 1.1rem;
+      font-weight: 800;
+      margin-bottom: 2px;
+    }
+
+    .gchip .gl {
+      font-size: 0.68rem;
+      color: var(--text3);
+    }
+
+    .gex {
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .gex .gv {
+      color: #34d399;
+    }
+
+    .ggood {
+      background: rgba(99, 102, 241, 0.12);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+    }
+
+    .ggood .gv {
+      color: var(--primary-light);
+    }
+
+    .gfair {
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .gfair .gv {
+      color: #fbbf24;
+    }
+
+    .gpoor {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .gpoor .gv {
+      color: #f87171;
+    }
+
+    /* ARCH */
+    .arch-zones {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+      margin-top: 28px;
+    }
+
+    @media(max-width:768px) {
+      .arch-zones {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .az {
+      border-radius: 14px;
+      padding: 18px;
+    }
+
+    .az.user {
+      background: rgba(99, 102, 241, 0.06);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+    }
+
+    .az.server {
+      background: rgba(16, 185, 129, 0.06);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    .az.cloud {
+      background: rgba(6, 182, 212, 0.06);
+      border: 1px solid rgba(6, 182, 212, 0.2);
+    }
+
+    .az-title {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .az.user .az-title {
+      color: var(--primary-light);
+    }
+
+    .az.server .az-title {
+      color: #34d399;
+    }
+
+    .az.cloud .az-title {
+      color: #22d3ee;
+    }
+
+    .abox {
+      background: var(--bg3);
+      border-radius: 9px;
+      padding: 10px 12px;
+      margin-bottom: 7px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text2);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .abox:last-child {
+      margin-bottom: 0;
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .az.user .dot {
+      background: var(--primary);
+    }
+
+    .az.server .dot {
+      background: #34d399;
+    }
+
+    .az.cloud .dot {
+      background: #22d3ee;
+    }
+
+    /* ORCHESTRATION DIAGRAM */
+    .orch-diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 36px;
+      margin-top: 28px;
+    }
+
+    .orch-center {
+      text-align: center;
+      margin: 24px 0;
+    }
+
+    .orch-hub {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.15));
+      border: 2px solid rgba(99, 102, 241, 0.4);
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--primary-light);
+      gap: 6px;
+    }
+
+    .orch-hub .hi {
+      font-size: 2rem;
+    }
+
+    .orch-models {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px;
+      margin-top: 24px;
+    }
+
+    .model-card {
+      background: var(--bg3);
+      border-radius: 13px;
+      padding: 16px;
+      text-align: center;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .model-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .model-card .mi {
+      font-size: 1.8rem;
+      margin-bottom: 8px;
+    }
+
+    .model-card .mn {
+      font-size: 0.82rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .model-card .ms {
+      font-size: 0.7rem;
+      color: var(--text3);
+      font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 8px;
+    }
+
+    .model-card .mp {
+      font-size: 0.68rem;
+      color: var(--text4);
+      line-height: 1.5;
+    }
+
+    .model-card.primary {
+      border: 2px solid rgba(99, 102, 241, 0.4);
+    }
+
+    .model-card.secondary {
+      border: 1px solid rgba(139, 92, 246, 0.3);
+    }
+
+    .model-card.local-card {
+      border: 2px solid rgba(16, 185, 129, 0.4);
+    }
+
+    .model-card.fallback {
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .model-badge {
+      display: inline-block;
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 0.62rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .mb-primary {
+      background: rgba(99, 102, 241, 0.2);
+      color: var(--primary-light);
+    }
+
+    .mb-local {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+    }
+
+    .mb-fallback {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
+    }
+
+    .mb-cloud {
+      background: rgba(6, 182, 212, 0.2);
+      color: #22d3ee;
+    }
+
+    .mb-alt {
+      background: rgba(139, 92, 246, 0.2);
+      color: #a78bfa;
+    }
+
+    /* FAILOVER FLOW */
+    .failover {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      margin-top: 24px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .fo-step {
+      flex: 1;
+      min-width: 130px;
+      background: var(--bg3);
+      border-radius: 11px;
+      padding: 14px 10px;
+      text-align: center;
+      position: relative;
+    }
+
+    .fo-step.active {
+      border: 1px solid rgba(99, 102, 241, 0.4);
+    }
+
+    .fo-step.fb {
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .fo-step.local {
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    .fo-step .fo-icon {
+      font-size: 1.4rem;
+      margin-bottom: 6px;
+    }
+
+    .fo-step .fo-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .fo-step .fo-sub {
+      font-size: 0.64rem;
+      color: var(--text4);
+    }
+
+    .fo-arrow {
+      display: flex;
+      align-items: center;
+      padding: 0 6px;
+      color: var(--text4);
+      font-size: 0.8rem;
+      flex-shrink: 0;
+    }
+
+    .fo-arrow .fa-label {
+      font-size: 0.58rem;
+      color: var(--accent4);
+      font-weight: 700;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    /* HARDWARE */
+    .hw-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+      margin-top: 28px;
+    }
+
+    .hw-card {
+      background: var(--surface);
+      border-radius: 14px;
+      padding: 22px;
+      transition: transform 0.2s;
+    }
+
+    .hw-card:hover {
+      transform: translateY(-4px);
+    }
+
+    .hw-card.minimum {
+      border: 1px solid rgba(245, 158, 11, 0.35);
+    }
+
+    .hw-card.recommended {
+      border: 1px solid rgba(99, 102, 241, 0.35);
+    }
+
+    .hw-card.optimal {
+      border: 1px solid rgba(16, 185, 129, 0.35);
+    }
+
+    .hw-card.cloud {
+      border: 1px solid rgba(6, 182, 212, 0.35);
+    }
+
+    .hw-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hw-card.minimum .hw-title {
+      color: #fbbf24;
+    }
+
+    .hw-card.recommended .hw-title {
+      color: var(--primary-light);
+    }
+
+    .hw-card.optimal .hw-title {
+      color: #34d399;
+    }
+
+    .hw-card.cloud .hw-title {
+      color: #22d3ee;
+    }
+
+    .hw-spec {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .hw-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .hw-row:last-child {
+      border-bottom: none;
+    }
+
+    .hw-row .hk {
+      color: var(--text3);
+    }
+
+    .hw-row .hv {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    /* EMBEDDING DIAGRAM */
+    .embed-diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 36px;
+      margin-top: 28px;
+    }
+
+    .embed-flow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      flex-wrap: wrap;
+      margin-bottom: 28px;
+    }
+
+    .embed-node {
+      background: var(--bg3);
+      border-radius: 12px;
+      padding: 14px 18px;
+      text-align: center;
+      min-width: 130px;
+    }
+
+    .embed-node .en-icon {
+      font-size: 1.6rem;
+      margin-bottom: 6px;
+    }
+
+    .embed-node .en-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .embed-node .en-sub {
+      font-size: 0.65rem;
+      color: var(--text4);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .embed-node.jd {
+      border: 1px solid rgba(99, 102, 241, 0.3);
+    }
+
+    .embed-node.resume {
+      border: 1px solid rgba(139, 92, 246, 0.3);
+    }
+
+    .embed-node.vector {
+      border: 1px solid rgba(6, 182, 212, 0.3);
+    }
+
+    .embed-node.result {
+      border: 1px solid rgba(16, 182, 129, 0.3);
+    }
+
+    .embed-arrow {
+      padding: 0 10px;
+      color: var(--text4);
+      font-size: 1.1rem;
+    }
+
+    .cosine-math {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      color: var(--accent);
+      line-height: 2;
+    }
+
+    .vs-table {
+      width: 100%;
+      border-collapse: collapse;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      margin-top: 24px;
+    }
+
+    .vs-table th {
+      padding: 11px 16px;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.1));
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      color: var(--primary-light);
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+
+    .vs-table td {
+      padding: 11px 16px;
+      font-size: 0.83rem;
+      border-bottom: 1px solid rgba(99, 102, 241, 0.06);
+    }
+
+    .vs-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .vs-table tr:hover td {
+      background: rgba(99, 102, 241, 0.04);
+    }
+
+    .tick {
+      color: #34d399;
+      font-weight: 700;
+    }
+
+    .cross {
+      color: #f87171;
+      font-weight: 700;
+    }
+
+    /* EMAIL */
+    .email-flow {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-top: 28px;
+    }
+
+    .email-step {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      padding: 20px;
+      text-align: center;
+      transition: transform 0.2s;
+    }
+
+    .email-step:hover {
+      transform: translateY(-4px);
+      border-color: var(--border2);
+    }
+
+    .email-step .es-icon {
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+
+    .email-step h3 {
+      font-size: 0.88rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .email-step p {
+      font-size: 0.78rem;
+      color: var(--text3);
+      line-height: 1.55;
+    }
+
+    .template-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 14px;
+      margin-top: 20px;
+    }
+
+    .tcard {
+      background: var(--bg3);
+      border-radius: 12px;
+      padding: 18px;
+    }
+
+    .tcard.shortlist {
+      border: 1px solid rgba(16, 185, 129, 0.35);
+    }
+
+    .tcard.decline {
+      border: 1px solid rgba(239, 68, 68, 0.25);
+    }
+
+    .tcard.default {
+      border: 1px solid rgba(99, 102, 241, 0.25);
+    }
+
+    .tcard .tc-head {
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tcard.shortlist .tc-head {
+      color: #34d399;
+    }
+
+    .tcard.decline .tc-head {
+      color: #f87171;
+    }
+
+    .tcard.default .tc-head {
+      color: var(--primary-light);
+    }
+
+    .tcard .tc-subject {
+      font-size: 0.75rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text3);
+      background: var(--bg);
+      border-radius: 6px;
+      padding: 6px 10px;
+      margin-bottom: 8px;
+    }
+
+    .tcard .tc-body {
+      font-size: 0.75rem;
+      color: var(--text4);
+      line-height: 1.55;
+    }
+
+    /* PRIVACY */
+    .priv-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 28px;
+    }
+
+    @media(max-width:640px) {
+      .priv-split {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .priv-card {
+      border-radius: 16px;
+      padding: 24px;
+    }
+
+    .priv-bad {
+      background: rgba(239, 68, 68, 0.06);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+    }
+
+    .priv-good {
+      background: rgba(16, 185, 129, 0.06);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    .priv-bad h3 {
+      color: #f87171;
+      font-size: 0.88rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .priv-good h3 {
+      color: #34d399;
+      font-size: 0.88rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .plist {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .plist li {
+      font-size: 0.82rem;
+      color: var(--text3);
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+      line-height: 1.5;
+    }
+
+    .priv-bad .plist li::before {
+      content: '✕';
+      color: #f87171;
+      font-weight: 700;
+    }
+
+    .priv-good .plist li::before {
+      content: '✓';
+      color: #34d399;
+      font-weight: 700;
+    }
+
+    /* FOOTER */
+    footer {
+      text-align: center;
+      padding: 60px 24px;
+      border-top: 1px solid var(--border);
+      background: linear-gradient(0deg, rgba(99, 102, 241, 0.03), transparent);
+    }
+
+    footer .ft {
+      font-size: 1.6rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--primary-light), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    footer p {
+      color: var(--text4);
+      font-size: 0.82rem;
+      margin-top: 6px;
+    }
+
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(99, 102, 241, 0.4);
+      border-radius: 3px;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(24px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    .fade-in {
+      animation: fadeUp 0.65s ease both;
+    }
+
+    .d1 {
+      animation-delay: 0.1s;
+    }
+
+    .d2 {
+      animation-delay: 0.2s;
+    }
+
+    .codeblock {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--text2);
+      line-height: 2;
+      overflow-x: auto;
+      margin-top: 14px;
+    }
+
+    .kw {
+      color: #a78bfa;
+    }
+
+    .val {
+      color: #22d3ee;
+    }
+
+    .cm {
+      color: #475569;
+    }
+
+    .fn {
+      color: #34d399;
+    }
+
+    .str {
+      color: #fbbf24;
+    }
+  </style>
+</head>
+
+<body>
+
+  <nav>
+    <div class="nav-logo">🤖 AI Recruiter — Resume Ranker</div>
+    <div class="nav-links">
+      <a href="#problem">Problem</a>
+      <a href="#solution">Solution</a>
+      <a href="#tech">Tech Stack</a>
+      <a href="#flow">Flow</a>
+      <a href="#scoring">Scoring</a>
+      <a href="#orchestration">Multi-Model AI</a>
+      <a href="#ollama">Local LLM</a>
+      <a href="#embeddings">Embeddings</a>
+      <a href="#email">Email System</a>
+      <a href="#privacy">Privacy</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-badge"><span></span>University Project Presentation — 2026</div>
+    <h1 class="fade-in">AI-Powered<br /><span class="grad">Resume Ranker</span></h1>
+    <p class="hero-sub fade-in d1">A next-generation hybrid recruitment platform with multi-model AI orchestration,
+      privacy-first local LLM support, semantic embeddings, and automated bulk emailing — ranking hundreds of resumes in
+      seconds.</p>
+    <div class="hero-stats fade-in d2">
+      <div class="stat-chip">
+        <div class="val">2–4s</div>
+        <div class="lbl">Per Resume</div>
+      </div>
+      <div class="stat-chip">
+        <div class="val">6</div>
+        <div class="lbl">AI Models Supported</div>
+      </div>
+      <div class="stat-chip">
+        <div class="val">768</div>
+        <div class="lbl">Dim Embeddings</div>
+      </div>
+      <div class="stat-chip">
+        <div class="val">2</div>
+        <div class="lbl">AI Phases</div>
+      </div>
+      <div class="stat-chip">
+        <div class="val">100%</div>
+        <div class="lbl">Privacy First</div>
+      </div>
+      <div class="stat-chip">
+        <div class="val">∞</div>
+        <div class="lbl">Auto Failover</div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- 01 PROBLEM -->
+  <section id="problem">
+    <div class="section-tag">01 — Problem Statement</div>
+    <h2>The Broken Reality of Traditional Hiring</h2>
+    <p class="lead">Every day, HR teams drown in hundreds of resumes for a single opening. Manual screening is slow,
+      biased, expensive — and existing tools make things worse.</p>
+    <div class="hq">"A typical recruiter spends only <strong>6–7 seconds</strong> per resume. With 200+ applicants per
+      role, most qualified candidates are rejected before anyone truly reads their profile."</div>
+    <div class="grid3">
+      <div class="card red">
+        <div class="card-top"></div>
+        <div class="icon">⏰</div>
+        <h3>Time-Consuming Manual Screening</h3>
+        <p>Reading 100–500 resumes per job takes 10–40 hours. Recruiters burn out and qualified candidates get missed
+          purely due to volume.</p>
+      </div>
+      <div class="card red">
+        <div class="card-top"></div>
+        <div class="icon">🎯</div>
+        <h3>Inconsistent &amp; Biased Evaluation</h3>
+        <p>Human reviewers apply different standards, get fatigued, and unconsciously favor certain formats — creating
+          unfair, unreliable shortlists.</p>
+      </div>
+      <div class="card red">
+        <div class="card-top"></div>
+        <div class="icon">🔒</div>
+        <h3>Privacy &amp; Data Security Risks</h3>
+        <p>Sending sensitive candidate PII to third-party cloud AI APIs risks data leakage, GDPR violations, and loss of
+          candidate trust.</p>
+      </div>
+      <div class="card red">
+        <div class="card-top"></div>
+        <div class="icon">💸</div>
+        <h3>High Cost of Existing AI Tools</h3>
+        <p>Per-resume API billing. Screening 500 resumes against 3 JDs = 1500 API calls. Costs spiral quickly at scale.
+        </p>
+      </div>
+      <div class="card red">
+        <div class="card-top"></div>
+        <div class="icon">📄</div>
+        <h3>ATS Keyword Stuffing</h3>
+        <p>Traditional ATS systems only match exact keywords. Candidates game the system — shortlists become full of
+          false positives.</p>
+      </div>
+      <div class="card red">
+        <div class="card-top"></div>
+        <div class="icon">🤷</div>
+        <h3>No Actionable Feedback</h3>
+        <p>Recruiters get Yes/No decisions with zero transparency. No skill gap analysis, no score breakdown, no
+          understanding of why.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- 02 SOLUTION -->
+  <section id="solution">
+    <div class="section-tag">02 — Our Solution</div>
+    <h2>How We Solve Every Problem</h2>
+    <p class="lead">The Resume Ranker solves all of these issues through a <strong>Hybrid Two-Phase
+        Architecture</strong> with multi-model AI orchestration — instant, fair, transparent, and private at scale.</p>
+    <div class="grid3">
+      <div class="card blue">
+        <div class="card-top"></div>
+        <div class="icon">⚡</div>
+        <h3>Instant Screening at Scale</h3>
+        <p>Phase 1 processes resumes in parallel batches of 4 using deterministic algorithms. Results appear in
+          <strong>2–4 seconds per resume</strong>. No AI calls needed for ranking.</p>
+      </div>
+      <div class="card purple">
+        <div class="card-top"></div>
+        <div class="icon">🧠</div>
+        <h3>Semantic Understanding</h3>
+        <p>Transformer-based embeddings understand <em>meaning</em>, not just words. "Distributed systems design"
+          matches "scalable backend architecture" even with zero keyword overlap.</p>
+      </div>
+      <div class="card cyan">
+        <div class="card-top"></div>
+        <div class="icon">🔐</div>
+        <h3>Privacy-First Design</h3>
+        <p>Phase 1 runs 100% on your server. For maximum privacy, recruiters can run a <strong>local Ollama
+            model</strong> — resume data never leaves your machine.</p>
+      </div>
+      <div class="card green">
+        <div class="card-top"></div>
+        <div class="icon">🔄</div>
+        <h3>Multi-Model AI Orchestration</h3>
+        <p>Automatic failover cascade across 6 AI providers: Gemini → GPT → Claude → Grok → Groq → Local Ollama. If one
+          fails, the next takes over instantly.</p>
+      </div>
+      <div class="card blue">
+        <div class="card-top"></div>
+        <div class="icon">📊</div>
+        <h3>Transparent 5-Component Score</h3>
+        <p>Every candidate gets a 0–100 score split into Semantic (45%), Skill (25%), Experience (15%), ATS (10%), LLM
+          (5%). Fully explainable — zero black boxes.</p>
+      </div>
+      <div class="card purple">
+        <div class="card-top"></div>
+        <div class="icon">✉️</div>
+        <h3>Automated Bulk Email System</h3>
+        <p>One-click shortlist/decline email campaigns with pre-built templates, personalization tokens, and separate
+          bulk send for accepted vs. rejected candidates.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- 03 TECH STACK -->
+  <section id="tech">
+    <div class="section-tag">03 — Technology Stack</div>
+    <h2>Technologies Used</h2>
+    <p class="lead">A production-grade stack — every technology chosen for a precise reason.</p>
+    <table class="ttable">
+      <thead>
+        <tr>
+          <th>Layer</th>
+          <th>Technology</th>
+          <th>Purpose &amp; Rationale</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Frontend</td>
+          <td><span class="badge">Next.js 15</span><span class="badge">React 18</span><span class="badge">App
+              Router</span></td>
+          <td>Full-stack React framework with Server Actions — backend logic runs server-side with no separate API
+            server. Turbopack for fast builds. 50MB body limit for bulk file uploads.</td>
+        </tr>
+        <tr>
+          <td>UI &amp; Styling</td>
+          <td><span class="badge">Tailwind CSS</span><span class="badge">ShadCN UI</span><span class="badge">Framer
+              Motion</span></td>
+          <td>Utility-first CSS, accessible pre-built components, smooth animations. Custom "Zinc" dark-mode theme for
+            premium aesthetics.</td>
+        </tr>
+        <tr>
+          <td>Semantic Embeddings (Primary)</td>
+          <td><span class="badge g">Gemini Embedding API</span><span class="badge g">gemini-embedding-2</span><span
+              class="badge g">768-dim</span></td>
+          <td>State-of-the-art cloud embeddings via Google's REST API. 768 dimensions for maximum semantic accuracy.
+            Used as primary when API key is available.</td>
+        </tr>
+        <tr>
+          <td>Semantic Embeddings (Fallback)</td>
+          <td><span class="badge c">@xenova/transformers</span><span class="badge c">all-MiniLM-L6-v2</span><span
+              class="badge c">384-dim ONNX</span></td>
+          <td>Local ONNX model running in Node.js. Downloads once (~23MB from HuggingFace). Zero cloud dependency.
+            Enables full Phase 1 ranking with no internet connection.</td>
+        </tr>
+        <tr>
+          <td>AI Feedback (Cloud)</td>
+          <td><span class="badge a">Gemini 2.5 Flash</span><span class="badge a">GPT-4o-mini</span><span
+              class="badge a">Claude 3.5 Haiku</span><span class="badge a">Grok Beta</span><span class="badge a">Groq
+              LLaMA 3.3</span></td>
+          <td>Multi-model orchestration via model-router.ts. Automatic failover cascade. JSON output mode with Zod
+            validation on all providers.</td>
+        </tr>
+        <tr>
+          <td>AI Feedback (Local)</td>
+          <td><span class="badge g">Ollama</span><span class="badge g">qwen2.5:7b-instruct</span></td>
+          <td>Privacy-maximum option. All AI inference runs locally on recruiter's machine via Ollama HTTP API
+            (localhost:11434). Zero data sent to any cloud service.</td>
+        </tr>
+        <tr>
+          <td>Document Parsing</td>
+          <td><span class="badge c">pdf-parse</span><span class="badge c">mammoth</span></td>
+          <td>Server-side PDF and DOCX text extraction. Zero cloud dependency. Also extracts candidate name and email
+            via regex heuristics.</td>
+        </tr>
+        <tr>
+          <td>Backend Logic</td>
+          <td><span class="badge">Next.js Server Actions</span><span class="badge">TypeScript</span></td>
+          <td>All scoring, parsing, and AI calls via <code class="il">'use server'</code> actions. Full TypeScript
+            typing with Zod schemas for all AI responses.</td>
+        </tr>
+        <tr>
+          <td>Database</td>
+          <td><span class="badge r">Firebase Firestore</span></td>
+          <td>NoSQL real-time DB. Stores all screening sessions. Real-time <code class="il">onSnapshot()</code> pushes
+            AI feedback to UI instantly without polling.</td>
+        </tr>
+        <tr>
+          <td>Authentication</td>
+          <td><span class="badge r">Firebase Auth</span></td>
+          <td>Secure login. All Firestore data locked to user's UID via security rules — no cross-user data access
+            possible.</td>
+        </tr>
+        <tr>
+          <td>Schema Validation</td>
+          <td><span class="badge">Zod</span></td>
+          <td>Runtime validation of all AI JSON responses. Plus a robust repair pipeline: JSON cleaning → key-based
+            extraction → truncation repair → key normalization across model response formats.</td>
+        </tr>
+        <tr>
+          <td>Email System</td>
+          <td><span class="badge">Next.js API Route /api/send-email</span></td>
+          <td>Server-side email dispatch with HTML templates, personalization tokens ({{candidateName}}, {{jobTitle}}),
+            separate bulk send for shortlisted and declined candidates.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- 04 END-TO-END FLOW -->
+  <section id="flow">
+    <div class="section-tag">04 — End-to-End Flow</div>
+    <h2>How the Resume Ranker Works</h2>
+    <p class="lead">Progressive Enhancement: Phase 1 gives instant ranked results, Phase 2 adds AI qualitative feedback
+      on-demand. Two phases, zero waiting for initial results.</p>
+
+    <div class="flow-wrap">
+      <div class="flow-title">Complete End-to-End Data Flow</div>
+
+      <!-- USER INPUT -->
+      <div style="margin-bottom:24px;">
+        <div class="phase-badge pb1">👤 User Input</div>
+        <div class="flow-steps">
+          <div class="fstep">
+            <div class="fbox bcloud">
+              <div class="fi">📄</div>
+              <div class="fn">Input A</div>
+              <div class="fl">Upload Job<br />Description</div>
+              <div class="fs">PDF / DOCX</div>
+            </div>
+          </div>
+          <div class="farrow">+</div>
+          <div class="fstep">
+            <div class="fbox bcloud">
+              <div class="fi">📦</div>
+              <div class="fn">Input B</div>
+              <div class="fl">Upload Bulk<br />Resumes</div>
+              <div class="fs">Multiple files</div>
+            </div>
+          </div>
+          <div class="farrow">→</div>
+          <div class="fstep">
+            <div class="fbox bcloud">
+              <div class="fi">🔐</div>
+              <div class="fn">Auth</div>
+              <div class="fl">Firebase<br />Auth Check</div>
+              <div class="fs">User verified</div>
+            </div>
+          </div>
+          <div class="farrow">→</div>
+          <div class="fstep">
+            <div class="fbox bp1">
+              <div class="fi">🧩</div>
+              <div class="fn">Pre-step</div>
+              <div class="fl">JD Role<br />Extraction</div>
+              <div class="fs">AI parses roles</div>
+            </div>
+          </div>
+          <div class="farrow">→</div>
+          <div class="fstep">
+            <div class="fbox bp1">
+              <div class="fi">▶️</div>
+              <div class="fn">Start</div>
+              <div class="fl">Begin<br />Screening</div>
+              <div class="fs">Click button</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PHASE 1 -->
+      <div style="margin-bottom:24px;">
+        <div class="phase-badge pb1">⚡ Phase 1 — Fast Deterministic Ranking (2–4s/resume · Zero AI API calls)</div>
+        <div class="flow-steps">
+          <div class="fstep">
+            <div class="fbox bp1">
+              <div class="fi">📝</div>
+              <div class="fn">Step 1</div>
+              <div class="fl">Document<br />Parse</div>
+              <div class="fs">pdf-parse/mammoth</div>
+            </div>
+          </div>
+          <div class="farrow">→</div>
+          <div class="fstep">
+            <div class="fbox bp1">
+              <div class="fi">🔢</div>
+              <div class="fn">Step 2</div>
+              <div class="fl">Semantic<br />Embeddings</div>
+              <div class="fs">768-dim vectors</div>
+            </div>
+          </div>
+          <div class="farrow">→</div>
+          <div class="fstep">
+            <div class="fbox bp1">
+              <div class="fi">🏷️</div>
+              <div class="fn">Step 3</div>
+              <div class="fl">Skill<br />Matching</div>
+              <div class="fs">Regex+Taxonomy</div>
+            </div>
+          </div>
+          <div class="farrow">→</div>
+          <div class="fstep">
+            <div class="fbox bp1">
+              <div class="fi">📋</div>
+              <div class="fn">Step 4</div>
+              <div class="fl">ATS<br />Analysis</div>
+              <div class="fs">Rule-based</div>
+            </div>
+          </div>
+          <div class="farrow">→</div>
+          <div class="fstep">
+            <div class="fbox bp1">
+              <div class="fi">📅</div>
+              <div class="fn">Step 5</div>
+              <div class="fl">Experience<br />Heuristic</div>
+              <div class="fs">Date patterns</div>
+            </div>
+          </div>
+          <div class="farrow">→</div>
+          <div class="fstep">
+            <div class="fbox bp1">
+              <div class="fi">🏆</div>
+              <div class="fn">Step 6</div>
+              <div class="fl">Composite<br />Score 0–100</div>
+              <div class="fs">Weighted formula</div>
+            </div>
+          </div>
+          <div class="farrow">→</div>
+          <div class="fstep">
+            <div class="fbox bcloud">
+              <div class="fi">💾</div>
+              <div class="fn">Save</div>
+              <div class="fl">Firestore<br />Database</div>
+              <div class="fs">Pending feedback</div>
+            </div>
+          </div>
+          <div class="farrow">→</div>
+          <div class="fstep">
+            <div class="fbox bp1">
+              <div class="fi">🖥️</div>
+              <div class="fn">Show</div>
+              <div class="fl">Ranked Table<br />Displayed</div>
+              <div class="fs">Instant result</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PHASE 2 -->
+      <div>
+        <div class="phase-badge pb2">🧠 Phase 2 — AI Qualitative Feedback (On-Demand · Multi-Model Orchestration)</div>
+        <div class="flow-steps">
+          <div class="fstep">
+            <div class="fbox bp2">
+              <div class="fi">👆</div>
+              <div class="fn">Trigger</div>
+              <div class="fl">Recruiter<br />clicks row</div>
+              <div class="fs">Manual</div>
+            </div>
+          </div>
+          <div class="farrow">→</div>
+          <div class="fstep">
+            <div class="fbox bp2">
+              <div class="fi">📜</div>
+              <div class="fn">Build</div>
+              <div class="fl">Construct<br />LLM Prompt</div>
+              <div class="fs">JD+Resume+Scores</div>
+            </div>
+          </div>
+          <div class="farrow">→</div>
+          <div class="fstep">
+            <div class="fbox bllm">
+              <div class="fi">🎛️</div>
+              <div class="fn">Router</div>
+              <div class="fl">Model<br />Orchestrator</div>
+              <div class="fs">Failover cascade</div>
+            </div>
+          </div>
+          <div class="farrow">→</div>
+          <div class="fstep">
+            <div class="fbox bllm">
+              <div class="fi">✨</div>
+              <div class="fn">LLM</div>
+              <div class="fl">Best Available<br />AI Model</div>
+              <div class="fs">JSON output</div>
+            </div>
+          </div>
+          <div class="farrow">→</div>
+          <div class="fstep">
+            <div class="fbox bp2">
+              <div class="fi">🔧</div>
+              <div class="fn">Repair</div>
+              <div class="fl">JSON Clean<br />+ Zod Validate</div>
+              <div class="fs">Type-safe</div>
+            </div>
+          </div>
+          <div class="farrow">→</div>
+          <div class="fstep">
+            <div class="fbox bcloud">
+              <div class="fi">📡</div>
+              <div class="fn">Update</div>
+              <div class="fl">Save to<br />Firestore</div>
+              <div class="fs">Real-time sync</div>
+            </div>
+          </div>
+          <div class="farrow">→</div>
+          <div class="fstep">
+            <div class="fbox bp2">
+              <div class="fi">🖥️</div>
+              <div class="fn">Display</div>
+              <div class="fl">Strengths, Gaps<br />&amp; Resume Tips</div>
+              <div class="fs">Feedback modal</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP BREAKDOWN -->
+    <h2 style="margin-top:56px;font-size:1.7rem;">Phase 1 — Detailed Step Breakdown</h2>
+    <p style="color:var(--text3);margin-top:8px;">Every resume goes through these 6 steps server-side before any AI
+      call.</p>
+    <div class="stepgrid">
+      <div class="scard">
+        <div class="shead">
+          <div class="snc">1</div>
+          <h3>Document Parsing</h3>
+        </div>
+        <p>File (PDF or DOCX) received as Base64 Data URI. Routes to <strong>pdf-parse</strong> (PDFs) or
+          <strong>mammoth</strong> (Word). Raw text extracted, cleaned, normalized. Regex extracts candidate name and
+          email. No email = candidate skipped with warning.</p><span
+          class="cpill">lib/processing/document-parser.ts</span>
+      </div>
+      <div class="scard">
+        <div class="shead">
+          <div class="snc">2</div>
+          <h3>Semantic Embeddings</h3>
+        </div>
+        <p>JD and resume text converted to dense numeric vectors. <strong>Primary:</strong> Gemini <code
+            class="il">gemini-embedding-2</code> (768-dim). <strong>Fallback:</strong> Local ONNX <code
+            class="il">all-MiniLM-L6-v2</code> (384-dim). Cosine similarity → Semantic Score 0–100. In-memory LRU cache
+          (200 entries) prevents re-computation.</p><span class="cpill">ai/embeddings/embedding-service.ts</span>
+      </div>
+      <div class="scard">
+        <div class="shead">
+          <div class="snc">3</div>
+          <h3>Skill Matching</h3>
+        </div>
+        <p>Regex-based extraction against skills taxonomy from both JD and resume. Handles exact matches, partials
+          ("React" = "ReactJS"), and synonyms ("ML" = "Machine Learning"). Returns <code
+            class="il">matchedSkills[]</code> and <code class="il">missingSkills[]</code>. Score = matched/required
+          ratio × 100.</p><span class="cpill">lib/skills/skill-matcher.ts</span>
+      </div>
+      <div class="scard">
+        <div class="shead">
+          <div class="snc">4</div>
+          <h3>ATS Analysis</h3>
+        </div>
+        <p>Rule-based ATS checker: presence of standard sections (Experience, Education, Skills, Contact), date
+          formatting, length check, absence of tables/graphics that confuse ATS parsers, keyword density,
+          machine-readability. Returns 0–100 score + issue list.</p><span class="cpill">lib/ats/ats-analyzer.ts</span>
+      </div>
+      <div class="scard">
+        <div class="shead">
+          <div class="snc">5</div>
+          <h3>Experience Heuristic</h3>
+        </div>
+        <p>Date range detection in work history (e.g., "Jan 2018–Mar 2022" = 4.2 years). Total estimated years compared
+          to JD requirements. Configurable baseline (default 70/100). Designed for easy enhancement with deeper NLP date
+          parsing.</p><span class="cpill">rank-candidates-progressive.ts:85</span>
+      </div>
+      <div class="scard">
+        <div class="shead">
+          <div class="snc">6</div>
+          <h3>Composite Score &amp; Ranking</h3>
+        </div>
+        <p>Weighted formula: Semantic(45%) + Skill(25%) + Experience(15%) + ATS(10%) + LLM(5%). Clamped to 0–100 →
+          letter grade. All candidates sorted descending by score. Quick non-AI feedback summary generated immediately
+          from matched/missing skills.</p><span class="cpill">lib/scoring/composite-scorer.ts</span>
+      </div>
+    </div>
+
+    <!-- DATA TABLE -->
+    <h2 style="margin-top:56px;font-size:1.7rem;">Data at Every Step</h2>
+    <table class="ttable" style="margin-top:20px;">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Step</th>
+          <th>Input</th>
+          <th>Output</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>0</td>
+          <td>User Upload</td>
+          <td>PDF/DOCX files (drag &amp; drop)</td>
+          <td>Base64 Data URIs + UUIDs in React state</td>
+        </tr>
+        <tr>
+          <td>1</td>
+          <td>Parse</td>
+          <td>Base64 URI + filename extension</td>
+          <td>Raw text, candidate name, email, word count</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>Embeddings</td>
+          <td>JD text + resume text strings</td>
+          <td>Two 768-dim vectors → cosine similarity → Semantic Score 0–100</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>Skill Match</td>
+          <td>JD skills[] + resume skills[]</td>
+          <td><code class="il">matchedSkills[]</code>, <code class="il">missingSkills[]</code>, skill score 0–100</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>ATS</td>
+          <td>Resume text + structure metadata</td>
+          <td>ATS score 0–100, list of specific formatting issues</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>Experience</td>
+          <td>Resume text (date patterns)</td>
+          <td>Estimated years, relevance score 0–100</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td>Composite</td>
+          <td>All 4 component scores + weights</td>
+          <td>Final score 0–100, letter grade, full breakdown object</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td>DB Save</td>
+          <td>Full RankedCandidate object</td>
+          <td>Firestore doc with <code class="il">feedbackStatus:'pending'</code></td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td>Prompt Build</td>
+          <td>JD (max 3000 chars) + Resume (max 3000 chars) + scores</td>
+          <td>Structured prompt string with JSON schema instructions</td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td>LLM Call</td>
+          <td>Prompt → Model Router → Best Available AI</td>
+          <td>JSON: <code class="il">strengths[]</code>, <code class="il">improvements[]</code>, <code
+              class="il">resumeAdditions[]</code></td>
+        </tr>
+        <tr>
+          <td>10</td>
+          <td>Display</td>
+          <td>Full RankedCandidate with detailedFeedback</td>
+          <td>Ranked table + score badge + feedback modal + email composer</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- 05 SCORING -->
+  <section id="scoring">
+    <div class="section-tag">05 — Scoring Algorithm</div>
+    <h2>The Scoring Formula Explained</h2>
+    <p class="lead">Every resume gets a transparent, multi-dimensional score. No black box — each component weight
+      reflects its actual real-world importance to job fit.</p>
+    <div class="score-box">
+      <h3>🏆 Weighted Composite Score Formula</h3>
+      <div class="codeblock"><span class="fn">FinalScore</span> = (<span class="val">Semantic</span> × <span
+          class="str">0.45</span>) + (<span class="val">Skill</span> × <span class="str">0.25</span>) + (<span
+          class="val">Experience</span> × <span class="str">0.15</span>) + (<span class="val">ATS</span> × <span
+          class="str">0.10</span>) + (<span class="val">LLM</span> × <span class="str">0.05</span>)</div>
+      <div style="margin-top:24px;">
+        <div class="wrow ws">
+          <div class="wlbl">🔢 Semantic Similarity</div>
+          <div class="wbar-wrap">
+            <div class="wbar">Cosine similarity of embedding vectors</div>
+          </div>
+          <div class="wpct">45%</div>
+        </div>
+        <div class="wrow wsk">
+          <div class="wlbl">🏷️ Skill Match</div>
+          <div class="wbar-wrap">
+            <div class="wbar">Required vs. detected skills</div>
+          </div>
+          <div class="wpct">25%</div>
+        </div>
+        <div class="wrow we">
+          <div class="wlbl">📅 Experience</div>
+          <div class="wbar-wrap">
+            <div class="wbar">Years-of-experience heuristic</div>
+          </div>
+          <div class="wpct">15%</div>
+        </div>
+        <div class="wrow wa">
+          <div class="wlbl">📄 ATS Formatting</div>
+          <div class="wbar-wrap">
+            <div class="wbar">Resume structure &amp; readability</div>
+          </div>
+          <div class="wpct">10%</div>
+        </div>
+        <div class="wrow wl">
+          <div class="wlbl">🤖 LLM Calibration</div>
+          <div class="wbar-wrap">
+            <div class="wbar">AI fine-tuning</div>
+          </div>
+          <div class="wpct">5%</div>
+        </div>
+      </div>
+      <h3 style="margin-top:28px;font-size:0.95rem;">Grade Scale</h3>
+      <div class="gtable">
+        <div class="gchip gex">
+          <div class="gv">85–100</div>
+          <div class="gl">🏆 Excellent</div>
+        </div>
+        <div class="gchip ggood">
+          <div class="gv">70–84</div>
+          <div class="gl">✅ Good</div>
+        </div>
+        <div class="gchip gfair">
+          <div class="gv">50–69</div>
+          <div class="gl">⚠️ Fair</div>
+        </div>
+        <div class="gchip gpoor">
+          <div class="gv">30–49</div>
+          <div class="gl">❌ Poor</div>
+        </div>
+        <div class="gchip" style="background:rgba(100,116,139,0.1);border:1px solid rgba(100,116,139,0.3);">
+          <div class="gv" style="color:var(--text4);">0–29</div>
+          <div class="gl">🚫 No Match</div>
+        </div>
+      </div>
+      <div style="margin-top:24px;padding:18px;background:var(--bg);border-radius:10px;border:1px solid var(--border);">
+        <p style="font-size:0.85rem;color:var(--text3);line-height:1.7;"><strong style="color:var(--text);">Why Semantic
+            at 45%?</strong> Keyword matching (Skill at 25%) catches what's explicitly written. But semantic embeddings
+          catch the <em>meaning</em>. A resume writing "designed fault-tolerant distributed systems" matches a JD
+          requiring "high-availability backend architecture" — even with zero keyword overlap. This is the core
+          innovation that defeats keyword-stuffing gaming and makes ranking genuinely fair.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- 06 MULTI-MODEL ORCHESTRATION -->
+  <section id="orchestration">
+    <div class="section-tag">06 — Multi-Model AI Orchestration</div>
+    <h2>How Multiple AI Models Work Together</h2>
+    <p class="lead">The system never relies on a single AI provider. A smart orchestration engine (<code
+        class="il">model-router.ts</code>) routes every AI call through a failover cascade — ensuring 99.9% uptime for
+      AI feedback regardless of any single provider's issues.</p>
+
+    <div class="orch-diagram">
+      <div class="flow-title">Multi-Model Orchestration Architecture</div>
+
+      <!-- HUB -->
+      <div style="text-align:center;margin-bottom:28px;">
+        <div class="orch-hub" style="display:inline-flex;">
+          <div class="hi">🎛️</div>
+          <div>Model Router<br /><span style="font-size:0.65rem;color:var(--text4);">model-router.ts</span></div>
+        </div>
+        <p
+          style="font-size:0.82rem;color:var(--text3);margin-top:12px;max-width:500px;margin-left:auto;margin-right:auto;">
+          The orchestrator tries each model in priority order. On success it returns. On any failure (rate limit,
+          downtime, bad response), it automatically tries the next one.</p>
+      </div>
+
+      <!-- MODEL CARDS -->
+      <div class="orch-models">
+        <div class="model-card primary">
+          <div class="mi">🌟</div>
+          <div class="model-badge mb-primary">Priority 1</div>
+          <div class="mn">Gemini 2.5 Flash</div>
+          <div class="ms">gemini-2.5-flash</div>
+          <div class="mp">Google's fastest model. JSON output mode + Zod schema injection for 100% structured responses.
+          </div>
+        </div>
+        <div class="model-card secondary">
+          <div class="mi">🤖</div>
+          <div class="model-badge mb-cloud">Priority 2</div>
+          <div class="mn">GPT-4o-mini</div>
+          <div class="ms">gpt-4o-mini</div>
+          <div class="mp">OpenAI's fast, cost-effective model. JSON mode enforced. Bearer token auth.</div>
+        </div>
+        <div class="model-card secondary">
+          <div class="mi">🧠</div>
+          <div class="model-badge mb-alt">Priority 3</div>
+          <div class="mn">Claude 3.5 Haiku</div>
+          <div class="ms">claude-3-5-haiku</div>
+          <div class="mp">Anthropic's fast model. Prompt-based JSON enforcement. Anthropic-version header.</div>
+        </div>
+        <div class="model-card fallback">
+          <div class="mi">🦾</div>
+          <div class="model-badge mb-fallback">Priority 4</div>
+          <div class="mn">xAI Grok Beta</div>
+          <div class="ms">grok-beta</div>
+          <div class="mp">xAI's Grok model via API. OpenAI-compatible interface. JSON object mode.</div>
+        </div>
+        <div class="model-card fallback">
+          <div class="mi">⚡</div>
+          <div class="model-badge mb-fallback">Priority 5</div>
+          <div class="mn">Groq LLaMA 3.3</div>
+          <div class="ms">llama-3.3-70b-versatile</div>
+          <div class="mp">Open-source LLaMA 3.3 70B on Groq's ultra-fast inference chips. Free tier available.</div>
+        </div>
+        <div class="model-card local-card">
+          <div class="mi">🖥️</div>
+          <div class="model-badge mb-local">Priority 6 (Local)</div>
+          <div class="mn">Ollama Local LLM</div>
+          <div class="ms">qwen2.5:7b-instruct</div>
+          <div class="mp">Runs entirely on your machine. Zero cloud cost. Maximum data privacy. Requires Ollama
+            installed.</div>
+        </div>
+      </div>
+
+      <!-- FAILOVER FLOW -->
+      <div style="margin-top:28px;">
+        <div
+          style="font-size:0.72rem;font-weight:700;color:var(--text4);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">
+          Automatic Failover Cascade</div>
+        <div class="failover">
+          <div class="fo-step active">
+            <div class="fo-icon">🌟</div>
+            <div class="fo-label" style="color:var(--primary-light);">Gemini</div>
+            <div class="fo-sub">Try first</div>
+          </div>
+          <div class="fo-arrow">
+            <div class="fa-label">FAIL?<br />→</div>
+          </div>
+          <div class="fo-step fb">
+            <div class="fo-icon">🤖</div>
+            <div class="fo-label" style="color:#fbbf24;">GPT</div>
+            <div class="fo-sub">Try next</div>
+          </div>
+          <div class="fo-arrow">
+            <div class="fa-label">FAIL?<br />→</div>
+          </div>
+          <div class="fo-step fb">
+            <div class="fo-icon">🧠</div>
+            <div class="fo-label" style="color:#fbbf24;">Claude</div>
+            <div class="fo-sub">Try next</div>
+          </div>
+          <div class="fo-arrow">
+            <div class="fa-label">FAIL?<br />→</div>
+          </div>
+          <div class="fo-step fb">
+            <div class="fo-icon">🦾</div>
+            <div class="fo-label" style="color:#fbbf24;">Grok</div>
+            <div class="fo-sub">Try next</div>
+          </div>
+          <div class="fo-arrow">
+            <div class="fa-label">FAIL?<br />→</div>
+          </div>
+          <div class="fo-step fb">
+            <div class="fo-icon">⚡</div>
+            <div class="fo-label" style="color:#fbbf24;">Groq</div>
+            <div class="fo-sub">Try next</div>
+          </div>
+          <div class="fo-arrow">
+            <div class="fa-label">FAIL?<br />→</div>
+          </div>
+          <div class="fo-step local">
+            <div class="fo-icon">🖥️</div>
+            <div class="fo-label" style="color:#34d399;">Ollama</div>
+            <div class="fo-sub">Local fallback</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TWO MODES -->
+    <h2 style="margin-top:48px;font-size:1.7rem;">Two Orchestration Modes</h2>
+    <div class="grid2" style="margin-top:20px;">
+      <div class="card blue">
+        <div class="card-top"></div>
+        <h3 style="margin-bottom:12px;">🔄 Auto-Fallback Mode</h3>
+        <p style="margin-bottom:14px;">The system tries all configured models in priority order. If Gemini is
+          rate-limited or down, it instantly falls back to GPT → Claude → Grok → Groq → Local. Recruiter sees a result
+          regardless — the system never says "AI unavailable."</p>
+        <div class="codeblock" style="font-size:0.72rem;"><span class="cm">// Auto mode: tries ALL enabled models in
+            cascade</span><br /><span class="kw">if</span> (isEnabled(<span class="str">'gemini'</span>))
+          modelsToTry.push(gemini);<br /><span class="kw">if</span> (isEnabled(<span class="str">'gpt'</span>))
+          modelsToTry.push(gpt);<br /><span class="kw">if</span> (isEnabled(<span class="str">'claude'</span>))
+          modelsToTry.push(claude);<br /><span class="cm">// ... continues until one succeeds</span></div>
+      </div>
+      <div class="card green">
+        <div class="card-top"></div>
+        <h3 style="margin-bottom:12px;">🎯 Manual Mode</h3>
+        <p style="margin-bottom:14px;">Recruiter explicitly selects their preferred model from the Profile → API
+          Configuration page. System uses only that model — no automatic failover. Useful when you want to control
+          exactly which AI analyzes your resumes.</p>
+        <div class="codeblock" style="font-size:0.72rem;"><span class="cm">// Manual mode: only the chosen
+            provider</span><br /><span class="kw">const</span> provider = config.activeModel; <span class="cm">// e.g.
+            'gemini'</span><br />modelsToTry.push({ provider, model, key });<br /><span class="cm">// No fallback —
+            manual choice respected</span></div>
+      </div>
+    </div>
+
+    <!-- ROBUST JSON REPAIR -->
+    <h2 style="margin-top:48px;font-size:1.7rem;">Robust JSON Repair Pipeline</h2>
+    <p style="color:var(--text3);margin-top:8px;margin-bottom:20px;">Different AI models return JSON in different
+      formats. The orchestrator runs a 4-stage repair pipeline to guarantee valid structured data from any model.</p>
+    <div class="grid3" style="gap:14px;">
+      <div class="card blue">
+        <div class="card-top"></div>
+        <div class="icon">🧹</div>
+        <h3>Stage 1: JSON Cleaning</h3>
+        <p>Strips markdown code blocks (<code class="il">```json ... ```</code>), extracts JSON from prose, escapes
+          unescaped control characters (newlines, tabs) inside string values.</p>
+      </div>
+      <div class="card purple">
+        <div class="card-top"></div>
+        <div class="icon">🔑</div>
+        <h3>Stage 2: Key-Based Extraction</h3>
+        <p>If standard parse fails, uses known schema keys (strengths, improvements, resumeAdditions) as anchors to
+          locate and extract values directly from raw text — even if surrounding JSON is malformed.</p>
+      </div>
+      <div class="card cyan">
+        <div class="card-top"></div>
+        <div class="icon">🔧</div>
+        <h3>Stage 3: Truncation Repair</h3>
+        <p>Detects unclosed strings, brackets, and braces. Appends missing closing characters to repair truncated
+          responses caused by token limit cutoffs.</p>
+      </div>
+      <div class="card green">
+        <div class="card-top"></div>
+        <div class="icon">🗺️</div>
+        <h3>Stage 4: Key Normalization</h3>
+        <p>Maps 40+ synonym key variants across models: <code class="il">weaknesses</code> → <code
+            class="il">improvements</code>, <code class="il">bulletPoints</code> → <code
+            class="il">resumeAdditions</code>, <code class="il">candidateStrengths</code> → <code
+            class="il">strengths</code>. Works with all 6 models.</p>
+      </div>
+      <div class="card amber">
+        <div class="card-top"></div>
+        <div class="icon">📦</div>
+        <h3>Stage 5: Nested Unwrapping</h3>
+        <p>Some models wrap their response in an extra object layer. The orchestrator detects single-key wrappers and
+          automatically unwraps the inner data before validation.</p>
+      </div>
+      <div class="card blue">
+        <div class="card-top"></div>
+        <div class="icon">✅</div>
+        <h3>Stage 6: Zod Validation</h3>
+        <p>Final step: Zod schema validates the cleaned, repaired, normalized JSON. On schema mismatch, falls back to
+          raw parsed object. On complete failure, tries the next model in cascade.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- 07 LOCAL LLM / OLLAMA -->
+  <section id="ollama">
+    <div class="section-tag">07 — Local LLM &amp; Privacy Mode</div>
+    <h2>Running AI Locally with Ollama</h2>
+    <p class="lead">For maximum data privacy, recruiters can run the entire AI pipeline locally using
+      <strong>Ollama</strong> — an open-source tool that runs LLMs directly on your machine. No internet required for AI
+      inference. Zero data sent anywhere.</p>
+
+    <div class="hq"><strong>Why Qwen 2.5 7B Instruct?</strong> It's specifically trained to follow structured
+      instructions and return valid JSON — exactly what resume screening requires. At 7 billion parameters it's powerful
+      enough for nuanced feedback yet lightweight enough to run on a standard laptop or workstation GPU without
+      specialized hardware.</div>
+
+    <!-- WHY QWEN -->
+    <div class="grid3" style="margin-top:24px;">
+      <div class="card green">
+        <div class="card-top"></div>
+        <div class="icon">🎯</div>
+        <h3>Instruction-Tuned by Design</h3>
+        <p>Qwen 2.5 7B Instruct is fine-tuned specifically to follow precise formatting instructions. When told "return
+          only valid JSON with keys strengths, improvements, resumeAdditions" — it reliably complies, unlike base models
+          that often hallucinate structure.</p>
+      </div>
+      <div class="card green">
+        <div class="card-top"></div>
+        <div class="icon">🏎️</div>
+        <h3>Optimal Size / Performance Ratio</h3>
+        <p>7B parameters = fast inference on consumer hardware (4–8GB VRAM). Generates typical feedback in 8–15 seconds
+          on a mid-range GPU. Smaller (3B) models sacrifice quality; larger (13B+) require enterprise GPUs. 7B is the
+          sweet spot.</p>
+      </div>
+      <div class="card green">
+        <div class="card-top"></div>
+        <div class="icon">🔏</div>
+        <h3>Complete Data Privacy</h3>
+        <p>When using Ollama, resume text is processed <em>entirely on your local machine</em>. The Ollama HTTP server
+          runs at <code class="il">localhost:11434</code>. The model-router calls it directly via LAN — no resume data
+          ever traverses the internet.</p>
+      </div>
+      <div class="card cyan">
+        <div class="card-top"></div>
+        <div class="icon">💰</div>
+        <h3>Zero Ongoing Cost</h3>
+        <p>Download once (~4.1GB for qwen2.5:7b-instruct), run forever. No per-call billing, no subscription fees, no
+          quota limits. Process 10,000 resumes for free after the initial download.</p>
+      </div>
+      <div class="card cyan">
+        <div class="card-top"></div>
+        <div class="icon">🌐</div>
+        <h3>Works Offline</h3>
+        <p>Once Ollama is running and the model is downloaded, Phase 2 AI feedback works with no internet connection.
+          Critical for organizations with strict network isolation policies or air-gapped environments.</p>
+      </div>
+      <div class="card cyan">
+        <div class="card-top"></div>
+        <div class="icon">🔧</div>
+        <h3>Fully Configurable</h3>
+        <p>The model name, Ollama server URL, and temperature are all configurable via the Profile → API Configuration
+          page. Swap from <code class="il">qwen2.5</code> to <code class="il">llama3.2</code> or <code
+            class="il">mistral</code> with a single field change.</p>
+      </div>
+    </div>
+
+    <!-- HOW IT CONNECTS -->
+    <h2 style="margin-top:48px;font-size:1.7rem;">How Ollama Connects to the System</h2>
+    <div class="codeblock">
+      <span class="cm">// In model-router.ts — 'local' provider case</span><br />
+      <span class="kw">case</span> <span class="str">'local'</span>:<br />
+      &nbsp;&nbsp;url = <span class="str">`${localBaseUrl}/api/chat`</span>; <span class="cm">// Default:
+        http://localhost:11434/api/chat</span><br />
+      &nbsp;&nbsp;body = {<br />
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="val">model</span>: config.localModel || <span class="str">'qwen2.5'</span>,
+      <span class="cm">// Configurable via UI</span><br />
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="val">messages</span>: [{ role: <span class="str">'user'</span>, content:
+      prompt }],<br />
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="val">stream</span>: <span class="str">false</span>, <span class="cm">// Wait
+        for full response</span><br />
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="val">options</span>: { temperature: <span class="str">0.2</span> } <span
+        class="cm">// Low temp for consistent JSON</span><br />
+      &nbsp;&nbsp;};<br />
+      &nbsp;&nbsp;<span class="cm">// Response: responseData.message.content → then JSON repair pipeline</span>
+    </div>
+
+    <!-- HARDWARE REQUIREMENTS -->
+    <h2 style="margin-top:48px;font-size:1.7rem;">Hardware Requirements for Local LLM</h2>
+    <p style="color:var(--text3);margin-top:8px;margin-bottom:0;">Choose the tier that matches your hardware. If you
+      don't have a GPU — use cloud models instead.</p>
+    <div class="hw-grid">
+      <div class="hw-card minimum">
+        <div class="hw-title">⚠️ Minimum (CPU-Only)</div>
+        <div class="hw-spec">
+          <div class="hw-row"><span class="hk">CPU</span><span class="hv">Modern x64 CPU</span></div>
+          <div class="hw-row"><span class="hk">RAM</span><span class="hv">16 GB RAM</span></div>
+          <div class="hw-row"><span class="hk">GPU</span><span class="hv">Not Required</span></div>
+          <div class="hw-row"><span class="hk">Storage</span><span class="hv">8 GB free</span></div>
+          <div class="hw-row"><span class="hk">Model</span><span class="hv">qwen2.5:3b</span></div>
+          <div class="hw-row"><span class="hk">Speed</span><span class="hv">~40–90s per resume</span></div>
+          <div class="hw-row"><span class="hk">Quality</span><span class="hv">Acceptable</span></div>
+        </div>
+      </div>
+      <div class="hw-card recommended">
+        <div class="hw-title">⭐ Recommended (Mid GPU)</div>
+        <div class="hw-spec">
+          <div class="hw-row"><span class="hk">CPU</span><span class="hv">Any modern CPU</span></div>
+          <div class="hw-row"><span class="hk">RAM</span><span class="hv">16 GB RAM</span></div>
+          <div class="hw-row"><span class="hk">GPU</span><span class="hv">RTX 3060/3070 (8GB VRAM)</span></div>
+          <div class="hw-row"><span class="hk">Storage</span><span class="hv">10 GB free</span></div>
+          <div class="hw-row"><span class="hk">Model</span><span class="hv">qwen2.5:7b-instruct</span></div>
+          <div class="hw-row"><span class="hk">Speed</span><span class="hv">~8–15s per resume</span></div>
+          <div class="hw-row"><span class="hk">Quality</span><span class="hv">Excellent</span></div>
+        </div>
+      </div>
+      <div class="hw-card optimal">
+        <div class="hw-title">🚀 Optimal (High-End GPU)</div>
+        <div class="hw-spec">
+          <div class="hw-row"><span class="hk">CPU</span><span class="hv">Any modern CPU</span></div>
+          <div class="hw-row"><span class="hk">RAM</span><span class="hv">32 GB RAM</span></div>
+          <div class="hw-row"><span class="hk">GPU</span><span class="hv">RTX 4080/4090 (16GB+ VRAM)</span></div>
+          <div class="hw-row"><span class="hk">Storage</span><span class="hv">20 GB free</span></div>
+          <div class="hw-row"><span class="hk">Model</span><span class="hv">qwen2.5:14b-instruct</span></div>
+          <div class="hw-row"><span class="hk">Speed</span><span class="hv">~3–6s per resume</span></div>
+          <div class="hw-row"><span class="hk">Quality</span><span class="hv">Outstanding</span></div>
+        </div>
+      </div>
+      <div class="hw-card cloud">
+        <div class="hw-title">☁️ No Hardware? Use Cloud Models</div>
+        <div class="hw-spec">
+          <div class="hw-row"><span class="hk">GPU</span><span class="hv">Not Needed</span></div>
+          <div class="hw-row"><span class="hk">Setup</span><span class="hv">Add API key in Profile</span></div>
+          <div class="hw-row"><span class="hk">Options</span><span class="hv">Gemini, GPT, Claude, Grok, Groq</span>
+          </div>
+          <div class="hw-row"><span class="hk">Cost</span><span class="hv">Free tiers available</span></div>
+          <div class="hw-row"><span class="hk">Speed</span><span class="hv">~3–8s per resume</span></div>
+          <div class="hw-row"><span class="hk">Privacy</span><span class="hv">Truncated text only</span></div>
+          <div class="hw-row"><span class="hk">Fallback</span><span class="hv">Auto-cascade across all</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETUP STEPS -->
+    <h2 style="margin-top:48px;font-size:1.7rem;">Ollama Setup (3 Commands)</h2>
+    <div class="codeblock">
+      <span class="cm"># 1. Install Ollama — download from https://ollama.com/download</span><br /><br />
+      <span class="cm"># 2. Pull the recommended model (downloads ~4.1GB, one time)</span><br />
+      <span class="fn">ollama</span> pull <span class="val">qwen2.5:7b-instruct</span><br /><br />
+      <span class="cm"># 3. Start Ollama server (allow Next.js browser to connect)</span><br />
+      <span class="kw">OLLAMA_ORIGINS</span>=<span class="str">"http://localhost:3000"</span> <span
+        class="fn">ollama</span> serve<br /><br />
+      <span class="cm"># 4. In the app: Profile → API Configuration → Enable Local LLM → Save</span><br />
+      <span class="cm"># That's it! The model-router will now include Ollama in its failover chain.</span>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- 08 ADVANCED EMBEDDINGS -->
+  <section id="embeddings">
+    <div class="section-tag">08 — Advanced Semantic Embeddings</div>
+    <h2>How Semantic Similarity Works</h2>
+    <p class="lead">Semantic embeddings are the core intelligence behind the Resume Ranker's 45% weighted score. They
+      allow the system to understand <em>meaning</em> rather than just match keywords — making it dramatically more
+      accurate than traditional ATS systems.</p>
+
+    <!-- CONCEPT FLOW -->
+    <div class="embed-diagram">
+      <div class="flow-title">Embedding Pipeline: Text → Vector → Similarity Score</div>
+      <div class="embed-flow">
+        <div class="embed-node jd">
+          <div class="en-icon">📄</div>
+          <div class="en-label">Job Description</div>
+          <div class="en-sub">Raw text string</div>
+        </div>
+        <div class="embed-arrow">→</div>
+        <div class="embed-node vector">
+          <div class="en-icon">🔢</div>
+          <div class="en-label">Gemini API</div>
+          <div class="en-sub">gemini-embedding-2<br />768-dim vector</div>
+        </div>
+        <div class="embed-arrow">→</div>
+        <div class="embed-node result">
+          <div class="en-icon">📐</div>
+          <div class="en-label">Cosine Similarity</div>
+          <div class="en-sub">dot(A,B) / (|A|×|B|)</div>
+        </div>
+        <div class="embed-arrow">→</div>
+        <div class="embed-node result">
+          <div class="en-icon">📊</div>
+          <div class="en-label">Sigmoid Normalize</div>
+          <div class="en-sub">tanh mapping → 0–100</div>
+        </div>
+      </div>
+      <div class="embed-flow" style="margin-top:8px;">
+        <div class="embed-node resume">
+          <div class="en-icon">📋</div>
+          <div class="en-label">Resume Text</div>
+          <div class="en-sub">Raw text string</div>
+        </div>
+        <div class="embed-arrow">→</div>
+        <div class="embed-node vector">
+          <div class="en-icon">🔢</div>
+          <div class="en-label">Gemini API</div>
+          <div class="en-sub">gemini-embedding-2<br />768-dim vector</div>
+        </div>
+        <div class="embed-arrow" style="opacity:0;">→</div>
+        <div style="width:170px;"></div>
+        <div class="embed-arrow" style="opacity:0;">→</div>
+      </div>
+
+      <div class="cosine-math">
+        <span class="cm">// Step 1: Generate 768-dimensional vectors (Gemini Primary)</span><br />
+        <span class="val">JD_vector</span> = [<span class="str">0.23, -0.41, 0.87, ... </span>] <span class="cm">// 768
+          numbers</span><br />
+        <span class="val">Resume_vector</span> = [<span class="str">0.19, -0.38, 0.82, ... </span>] <span class="cm">//
+          768 numbers</span><br /><br />
+        <span class="cm">// Step 2: Cosine Similarity (angle between vectors)</span><br />
+        <span class="fn">cosine</span>(A, B) = dot(A,B) / (|A| × |B|) <span class="cm">// Range: -1 to
+          +1</span><br /><br />
+        <span class="cm">// Step 3: Sigmoid-Tanh Normalization to 0–100</span><br />
+        <span class="fn">linear</span> = ((cosine + 1) / 2) × 100<br />
+        <span class="fn">adjusted</span> = 50 + 50 × <span class="kw">tanh</span>((cosine - 0.4) × 2) <span
+          class="cm">// High contrast for comparison</span><br />
+        <span class="fn">finalScore</span> = (linear + adjusted) / 2 <span class="cm">// 0–100 score</span>
+      </div>
+
+      <div style="margin-top:18px;padding:16px;background:var(--bg);border-radius:10px;border:1px solid var(--border);">
+        <p style="font-size:0.84rem;color:var(--text3);line-height:1.7;"><strong style="color:var(--text);">Why
+            sigmoid-tanh normalization?</strong> A raw cosine similarity of 0.85 and 0.90 would compress to very similar
+          scores on a linear scale. The tanh mapping creates high contrast in the 0.3–0.8 range where most real
+          candidate matches fall — making it easier to differentiate a "Good" from an "Excellent" match in the ranking
+          table.</p>
+      </div>
+    </div>
+
+    <!-- WHY BETTER THAN KEYWORD -->
+    <h2 style="margin-top:48px;font-size:1.7rem;">Semantic Embeddings vs Traditional Keyword Matching</h2>
+    <table class="vs-table" style="margin-top:20px;">
+      <thead>
+        <tr>
+          <th>Capability</th>
+          <th>Traditional ATS (Keyword)</th>
+          <th>Our Semantic Embeddings</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="font-weight:600;">Synonym Recognition</td>
+          <td><span class="cross">✕ "ML" ≠ "Machine Learning"</span></td>
+          <td><span class="tick">✓ Understands they mean the same thing</span></td>
+        </tr>
+        <tr>
+          <td style="font-weight:600;">Context Understanding</td>
+          <td><span class="cross">✕ Matches words, not meaning</span></td>
+          <td><span class="tick">✓ "Led backend team" matches "engineering leadership"</span></td>
+        </tr>
+        <tr>
+          <td style="font-weight:600;">Keyword Stuffing Resistance</td>
+          <td><span class="cross">✕ Easily gamed by copy-pasting JD</span></td>
+          <td><span class="tick">✓ Measures holistic semantic alignment</span></td>
+        </tr>
+        <tr>
+          <td style="font-weight:600;">Domain Transfer</td>
+          <td><span class="cross">✕ "REST APIs" ≠ "web services"</span></td>
+          <td><span class="tick">✓ Related technical concepts cluster together</span></td>
+        </tr>
+        <tr>
+          <td style="font-weight:600;">Paraphrase Detection</td>
+          <td><span class="cross">✕ "Python developer" ≠ "Pythonista"</span></td>
+          <td><span class="tick">✓ Paraphrases produce similar vectors</span></td>
+        </tr>
+        <tr>
+          <td style="font-weight:600;">Abbreviation Handling</td>
+          <td><span class="cross">✕ "AWS" ≠ "Amazon Web Services"</span></td>
+          <td><span class="tick">✓ Embedding model understands abbreviations</span></td>
+        </tr>
+        <tr>
+          <td style="font-weight:600;">Multi-language Support</td>
+          <td><span class="cross">✕ Language-specific regex needed</span></td>
+          <td><span class="tick">✓ Gemini embeddings support 100+ languages</span></td>
+        </tr>
+        <tr>
+          <td style="font-weight:600;">Implicit Skills</td>
+          <td><span class="cross">✕ Only what's explicitly listed</span></td>
+          <td><span class="tick">✓ "Built React dashboard" implies JS, HTML, CSS knowledge</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- DUAL MODEL STRATEGY -->
+    <h2 style="margin-top:48px;font-size:1.7rem;">Dual Embedding Strategy: Cloud + Local</h2>
+    <div class="grid2" style="margin-top:20px;">
+      <div class="card blue">
+        <div class="card-top"></div>
+        <h3 style="margin-bottom:10px;">🌐 Primary: Gemini Embedding API (768-dim)</h3>
+        <p style="margin-bottom:14px;">State-of-the-art cloud embeddings from Google. 768 dimensions give twice the
+          representational capacity vs local model. Used automatically when <code class="il">GOOGLE_API_KEY</code> is
+          set. Batches of 10 texts processed together for efficiency.</p>
+        <div class="tags"><span class="tag">768 Dimensions</span><span class="tag">Cloud Accuracy</span><span
+            class="tag">REST API</span><span class="tag">Auto-cached</span></div>
+      </div>
+      <div class="card green">
+        <div class="card-top"></div>
+        <h3 style="margin-bottom:10px;">🖥️ Fallback: all-MiniLM-L6-v2 ONNX (384-dim)</h3>
+        <p style="margin-bottom:14px;">Downloaded once (~23MB from HuggingFace) as an ONNX model. Runs entirely in
+          Node.js via <code class="il">@xenova/transformers</code>. Mean-pooling + normalization applied. Zero cloud
+          dependency. Works offline. Loads in ~2s once, then cached in memory for the session.</p>
+        <div class="tags"><span class="tag">384 Dimensions</span><span class="tag">Runs in Node.js</span><span
+            class="tag">ONNX Runtime</span><span class="tag">Offline-capable</span></div>
+      </div>
+    </div>
+
+    <div
+      style="margin-top:20px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;">
+      <h3 style="font-size:0.95rem;font-weight:700;margin-bottom:14px;">📦 In-Memory LRU Cache (200 entries)</h3>
+      <p style="font-size:0.84rem;color:var(--text3);line-height:1.7;">Every generated embedding is cached by the first
+        100 characters of its text. When processing 100 resumes against the same JD, the JD is embedded once and cached
+        — saving 99 redundant API calls. Cache is a JavaScript <code class="il">Map</code> with FIFO eviction when it
+        hits 200 entries. Cache hit returns in 0ms vs 200–800ms for a fresh Gemini API call.</p>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- 09 ARCHITECTURE -->
+  <section id="architecture">
+    <div class="section-tag">09 — System Architecture</div>
+    <h2>System Architecture Overview</h2>
+    <p class="lead">Three distinct zones — Browser, Next.js Server, Cloud — each with clear responsibility. Data flows
+      predictably between zones.</p>
+    <div
+      style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px;margin-top:20px;">
+      <div class="arch-zones">
+        <div class="az user">
+          <div class="az-title">💻 Browser / User Layer</div>
+          <div class="abox"><span class="dot"></span>React 18 UI (Next.js App Router)</div>
+          <div class="abox"><span class="dot"></span>File Upload → Base64 Data URIs</div>
+          <div class="abox"><span class="dot"></span>Firestore Real-Time Subscription</div>
+          <div class="abox"><span class="dot"></span>Ranked Results Table</div>
+          <div class="abox"><span class="dot"></span>Feedback Modal (AI Results)</div>
+          <div class="abox"><span class="dot"></span>Email Composer (Shortlist/Decline)</div>
+          <div class="abox"><span class="dot"></span>Session History Sheet</div>
+          <div class="abox"><span class="dot"></span>Profile → API Config UI</div>
+        </div>
+        <div class="az server">
+          <div class="az-title">⚡ Next.js Server (Node.js)</div>
+          <div class="abox"><span class="dot"></span>Server Action: performBulkScreeningFast()</div>
+          <div class="abox"><span class="dot"></span>parseDocument() → pdf-parse/mammoth</div>
+          <div class="abox"><span class="dot"></span>generateEmbedding() → Gemini/ONNX</div>
+          <div class="abox"><span class="dot"></span>calculateSkillMatchScore() → Regex</div>
+          <div class="abox"><span class="dot"></span>calculateATSScore() → Rules</div>
+          <div class="abox"><span class="dot"></span>calculateCompositeScore() → Weights</div>
+          <div class="abox"><span class="dot"></span>generateFeedbackOrchestrated() → Router</div>
+          <div class="abox"><span class="dot"></span>API Route: /api/send-email</div>
+        </div>
+        <div class="az cloud">
+          <div class="az-title">☁️ Cloud Services</div>
+          <div class="abox"><span class="dot"></span>Firebase Firestore (NoSQL DB)</div>
+          <div class="abox"><span class="dot"></span>Firebase Auth (Sessions)</div>
+          <div class="abox"><span class="dot"></span>Gemini 2.5 Flash (LLM Feedback)</div>
+          <div class="abox"><span class="dot"></span>Gemini Embedding API (768-dim)</div>
+          <div class="abox"><span class="dot"></span>OpenAI API (GPT-4o-mini fallback)</div>
+          <div class="abox"><span class="dot"></span>Anthropic API (Claude fallback)</div>
+          <div class="abox"><span class="dot"></span>xAI API (Grok fallback)</div>
+          <div class="abox"><span class="dot"></span>Groq API (LLaMA fallback)</div>
+        </div>
+      </div>
+      <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px;">
+        <div
+          style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:9px;padding:11px 16px;font-size:0.82rem;color:var(--text3);display:flex;align-items:center;gap:10px;">
+          <span
+            style="background:rgba(99,102,241,0.2);color:var(--primary-light);font-size:0.68rem;font-weight:700;border-radius:4px;padding:2px 8px;flex-shrink:0;">PHASE
+            1</span>Browser sends Base64 files → Server Action parses → embeds → skill-matches → ATS-checks → computes
+          weighted score → returns ranked list → UI displays instantly</div>
+        <div
+          style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:9px;padding:11px 16px;font-size:0.82rem;color:var(--text3);display:flex;align-items:center;gap:10px;">
+          <span
+            style="background:rgba(6,182,212,0.2);color:#22d3ee;font-size:0.68rem;font-weight:700;border-radius:4px;padding:2px 8px;flex-shrink:0;">DATABASE</span>Server
+          saves to Firestore with feedbackStatus:'pending' → Browser onSnapshot() listener fires → UI updates live when
+          any field changes</div>
+        <div
+          style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:9px;padding:11px 16px;font-size:0.82rem;color:var(--text3);display:flex;align-items:center;gap:10px;">
+          <span
+            style="background:rgba(139,92,246,0.2);color:#a78bfa;font-size:0.68rem;font-weight:700;border-radius:4px;padding:2px 8px;flex-shrink:0;">PHASE
+            2</span>Recruiter clicks candidate → Server Action builds prompt → Model Router tries Gemini → (fail?) GPT →
+          (fail?) Claude → ... → Zod validates → saves to Firestore → modal updates</div>
+        <div
+          style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:9px;padding:11px 16px;font-size:0.82rem;color:var(--text3);display:flex;align-items:center;gap:10px;">
+          <span
+            style="background:rgba(16,185,129,0.2);color:#34d399;font-size:0.68rem;font-weight:700;border-radius:4px;padding:2px 8px;flex-shrink:0;">EMAIL</span>Recruiter
+          selects candidates → clicks Email → compose modal opens → choose template (Shortlist/Decline) →
+          /api/send-email dispatches personalized HTML emails in parallel</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- 10 EMAIL SYSTEM -->
+  <section id="email">
+    <div class="section-tag">10 — Automated Email System</div>
+    <h2>Bulk Candidate Email Communication</h2>
+    <p class="lead">After ranking, recruiters can instantly send personalized email campaigns to shortlisted or declined
+      candidates — directly from the resume ranker UI with pre-built templates and dynamic personalization tokens.</p>
+
+    <div class="email-flow">
+      <div class="email-step">
+        <div class="es-icon">📊</div>
+        <h3>View Rankings</h3>
+        <p>Candidates ranked by score. Recruiter reviews results and selects who to contact.</p>
+      </div>
+      <div class="email-step">
+        <div class="es-icon">✅</div>
+        <h3>Select Candidates</h3>
+        <p>Mark candidates as shortlisted (score threshold or manual). Rest auto-grouped as declined.</p>
+      </div>
+      <div class="email-step">
+        <div class="es-icon">✉️</div>
+        <h3>Open Compose Modal</h3>
+        <p>Single-click opens the email composer. Mode: Single (one candidate) or Bulk (all at once).</p>
+      </div>
+      <div class="email-step">
+        <div class="es-icon">📝</div>
+        <h3>Choose Template</h3>
+        <p>Pre-built templates auto-populate subject and HTML body with personalization tokens.</p>
+      </div>
+      <div class="email-step">
+        <div class="es-icon">🔧</div>
+        <h3>Customize Content</h3>
+        <p>Edit subject, body, and toggle which groups to send to (shortlist, decline, or both).</p>
+      </div>
+      <div class="email-step">
+        <div class="es-icon">🚀</div>
+        <h3>Send in Parallel</h3>
+        <p>API route dispatches shortlist and decline batches simultaneously. Success count shown.</p>
+      </div>
+    </div>
+
+    <!-- TEMPLATES -->
+    <h2 style="margin-top:40px;font-size:1.5rem;">Built-in Email Templates</h2>
+    <div class="template-cards">
+      <div class="tcard shortlist">
+        <div class="tc-head">🎉 Shortlist / Acceptance Template</div>
+        <div class="tc-subject">Application Update: Shortlisted for {{jobTitle}}</div>
+        <div class="tc-body">Dear {{candidateName}}, We are pleased to inform you that your application for the
+          {{jobTitle}} position has been shortlisted! Our team was impressed by your experience. A recruiter will reach
+          out shortly with scheduling options.</div>
+      </div>
+      <div class="tcard decline">
+        <div class="tc-head">❌ Decline / Rejection Template</div>
+        <div class="tc-subject">Update on your application for {{jobTitle}}</div>
+        <div class="tc-body">Dear {{candidateName}}, Thank you for applying to {{jobTitle}}. After careful
+          consideration, we will not be moving forward at this time as we're proceeding with candidates whose skills
+          more closely align with our immediate requirements. We'll keep your profile for future opportunities.</div>
+      </div>
+      <div class="tcard default">
+        <div class="tc-head">📬 General Update Template</div>
+        <div class="tc-subject">Regarding your application for {{jobTitle}}</div>
+        <div class="tc-body">Dear {{candidateName}}, Thank you for your interest in the {{jobTitle}} position. We are
+          currently reviewing all applications and will be in touch regarding next steps. Best regards, The Hiring Team.
+        </div>
+      </div>
+    </div>
+
+    <!-- KEY EMAIL FEATURES -->
+    <div class="grid3" style="margin-top:28px;">
+      <div class="card blue">
+        <div class="card-top"></div>
+        <div class="icon">🪙</div>
+        <h3>Personalization Tokens</h3>
+        <p>Templates use <code class="il">{{candidateName}}</code> and <code class="il">{{jobTitle}}</code> tokens. On
+          send, each email is personalized individually — every candidate receives an email addressed to their name, not
+          a generic blast.</p>
+      </div>
+      <div class="card purple">
+        <div class="card-top"></div>
+        <div class="icon">📦</div>
+        <h3>Bulk Parallel Dispatch</h3>
+        <p>Shortlist emails and decline emails are sent simultaneously using <code class="il">Promise.all()</code>. A
+          batch of 50 shortlisted + 150 declined candidates sends all 200 emails in a single parallel operation.</p>
+      </div>
+      <div class="card cyan">
+        <div class="card-top"></div>
+        <div class="icon">🔀</div>
+        <h3>Single &amp; Bulk Modes</h3>
+        <p><strong>Single mode:</strong> Email one candidate directly from their row. <strong>Bulk mode:</strong> Email
+          all shortlisted AND all declined in one click. Toggle either group on/off with checkboxes.</p>
+      </div>
+      <div class="card green">
+        <div class="card-top"></div>
+        <div class="icon">📋</div>
+        <h3>Template Switcher</h3>
+        <p>Three pre-built templates (Shortlist, Decline, Default) can be loaded with one click. Subject and body
+          auto-populate. All templates are fully editable before sending.</p>
+      </div>
+      <div class="card amber">
+        <div class="card-top"></div>
+        <div class="icon">📧</div>
+        <h3>HTML Email Body</h3>
+        <p>Email body is rendered as HTML. Templates use proper HTML tags (<code class="il">&lt;p&gt;</code>, <code
+            class="il">&lt;strong&gt;</code>) for rich formatting. The API route sends via server-side email service
+          ensuring deliverability.</p>
+      </div>
+      <div class="card blue">
+        <div class="card-top"></div>
+        <div class="icon">✅</div>
+        <h3>Validation &amp; Status</h3>
+        <p>Recipients with no email address are filtered out before dispatch. Success count and failure count both shown
+          in toast notification. Modal closes automatically on successful bulk send.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- 11 UNIQUE FEATURES -->
+  <section id="features">
+    <div class="section-tag">11 — Unique Features</div>
+    <h2>What Makes This System Unique</h2>
+    <p class="lead">Every feature below is a deliberate design decision — making screening faster, smarter, fairer, more
+      private, and more useful than anything else available.</p>
+    <div class="grid3">
+      <div class="card blue">
+        <div class="card-top"></div>
+        <div class="feat-icon fi-blue">⚡</div>
+        <h3>Progressive Enhancement</h3>
+        <p>Instant deterministic results first, AI feedback asynchronously on-demand. Recruiters see ranked results in
+          seconds — never wait for LLM to screen their pile.</p>
+        <div class="tags"><span class="tag">Instant UX</span><span class="tag">Non-blocking</span></div>
+      </div>
+      <div class="card purple">
+        <div class="card-top"></div>
+        <div class="feat-icon fi-purple">🎛️</div>
+        <h3>6-Model AI Orchestration</h3>
+        <p>Automatic failover across Gemini → GPT → Claude → Grok → Groq → Local Ollama. Manual mode for specific model
+          control. The AI layer is never the bottleneck.</p>
+        <div class="tags"><span class="tag">6 Models</span><span class="tag">Auto Failover</span></div>
+      </div>
+      <div class="card cyan">
+        <div class="card-top"></div>
+        <div class="feat-icon fi-cyan">🖥️</div>
+        <h3>Local LLM Privacy Mode</h3>
+        <p>Run Qwen 2.5 7B locally via Ollama. Zero data sent to cloud. Works offline. No ongoing cost. Perfect for
+          organizations with strict data privacy requirements.</p>
+        <div class="tags"><span class="tag">Ollama</span><span class="tag">Zero Cloud</span></div>
+      </div>
+      <div class="card green">
+        <div class="card-top"></div>
+        <div class="feat-icon fi-green">🔢</div>
+        <h3>Semantic Understanding</h3>
+        <p>768-dim transformer embeddings with tanh normalization. Understands synonyms, paraphrases, abbreviations, and
+          implicit skills — defeating keyword-stuffing entirely.</p>
+        <div class="tags"><span class="tag">768-dim</span><span class="tag">Anti-Gaming</span></div>
+      </div>
+      <div class="card amber">
+        <div class="card-top"></div>
+        <div class="feat-icon fi-amber">🛡️</div>
+        <h3>Guaranteed Structured AI Output</h3>
+        <p>4-stage JSON repair pipeline handles all 6 models' quirks. Zod validates the final result. 40+ key synonym
+          mappings ensure data lands in the right field regardless of which model responded.</p>
+        <div class="tags"><span class="tag">Zod</span><span class="tag">4-stage Repair</span></div>
+      </div>
+      <div class="card blue">
+        <div class="card-top"></div>
+        <div class="feat-icon fi-blue">🚀</div>
+        <h3>Parallel Batch Processing</h3>
+        <p>Resumes processed in batches of 4 using Promise.allSettled(). 100 resumes = 25 parallel rounds instead of 100
+          sequential steps. 4× throughput improvement.</p>
+        <div class="tags"><span class="tag">Batch 4</span><span class="tag">4× Throughput</span></div>
+      </div>
+      <div class="card purple">
+        <div class="card-top"></div>
+        <div class="feat-icon fi-purple">📡</div>
+        <h3>Real-Time Database Updates</h3>
+        <p>Firestore onSnapshot() listener. When AI feedback saves to DB, browser updates instantly — no polling, no
+          refresh. Phase 2 results appear live as they complete.</p>
+        <div class="tags"><span class="tag">onSnapshot</span><span class="tag">No Polling</span></div>
+      </div>
+      <div class="card cyan">
+        <div class="card-top"></div>
+        <div class="feat-icon fi-cyan">✉️</div>
+        <h3>Automated Email Campaigns</h3>
+        <p>Bulk personalized emails to shortlisted and declined candidates. 3 built-in templates, {{token}}
+          personalization, parallel dispatch, single and bulk modes.</p>
+        <div class="tags"><span class="tag">Templates</span><span class="tag">Bulk Send</span></div>
+      </div>
+      <div class="card green">
+        <div class="card-top"></div>
+        <div class="feat-icon fi-green">🔄</div>
+        <h3>Auto-Retry with Backoff</h3>
+        <p>All external API calls include 3-attempt retry with 1.5s → 3.75s → 9.4s exponential backoff. Rate limits and
+          server errors handled transparently.</p>
+        <div class="tags"><span class="tag">3 Retries</span><span class="tag">Exp. Backoff</span></div>
+      </div>
+      <div class="card amber">
+        <div class="card-top"></div>
+        <div class="feat-icon fi-amber">📊</div>
+        <h3>Explainable Scores</h3>
+        <p>Every score breaks down into 5 components + matched/missing skills list. Recruiter can see exactly why a
+          candidate ranked 78 vs 82 — complete auditability.</p>
+        <div class="tags"><span class="tag">Transparent</span><span class="tag">Auditable</span></div>
+      </div>
+      <div class="card blue">
+        <div class="card-top"></div>
+        <div class="feat-icon fi-blue">💾</div>
+        <h3>Embedded Fallback Model</h3>
+        <p>all-MiniLM-L6-v2 ONNX downloaded once, runs in Node.js. Phase 1 embeddings work offline with no API keys.
+          Never a dependency on cloud services for core ranking.</p>
+        <div class="tags"><span class="tag">ONNX</span><span class="tag">Offline-Ready</span></div>
+      </div>
+      <div class="card purple">
+        <div class="card-top"></div>
+        <div class="feat-icon fi-purple">🗂️</div>
+        <h3>Session History &amp; Filter</h3>
+        <p>All screening sessions stored in Firestore, accessible from the History panel. Filter candidates by score
+          range (0–100 slider) and skill keyword search across any session.</p>
+        <div class="tags"><span class="tag">Persistent</span><span class="tag">Filterable</span></div>
+      </div>
+      <div class="card cyan">
+        <div class="card-top"></div>
+        <div class="feat-icon fi-cyan">🌐</div>
+        <h3>Global Multilingual Analysis</h3>
+        <p>Built-in language detection automatically maps foreign resume text, translating and normalizing skills/titles to English canonical values. Works seamlessly across French, German, Spanish, Hindi, Chinese, Arabic, and more.</p>
+        <div class="tags"><span class="tag">100+ Languages</span><span class="tag">Cross-lingual</span><span class="tag">Auto-detection</span></div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- 12 PRIVACY -->
+  <section id="privacy">
+    <div class="section-tag">12 — Privacy &amp; Security</div>
+    <h2>Privacy-First vs Traditional Tools</h2>
+    <p class="lead">Traditional AI recruitment tools send every resume to third-party servers. Our architecture keeps
+      sensitive data local wherever possible and gives recruiters full control.</p>
+    <div class="priv-split">
+      <div class="priv-card priv-bad">
+        <h3>✕ Traditional Cloud-Only AI Recruiters</h3>
+        <ul class="plist">
+          <li>Every resume uploaded to vendor's cloud servers</li>
+          <li>Processed on OpenAI / Azure / unknown infrastructure</li>
+          <li>Unknown data retention and model training policies</li>
+          <li>High GDPR compliance risk with candidate PII</li>
+          <li>Per-call billing — expensive at 500+ resumes</li>
+          <li>Single point of failure — API down = zero screening</li>
+          <li>No control over model changes or output format</li>
+          <li>Vendor can theoretically access all candidate data</li>
+        </ul>
+      </div>
+      <div class="priv-card priv-good">
+        <h3>✓ Our AI Recruiter Approach</h3>
+        <ul class="plist">
+          <li>Phase 1 runs 100% on your own Next.js server</li>
+          <li>Local Ollama mode: zero data sent anywhere</li>
+          <li>Resume data scoped to authenticated user in Firestore</li>
+          <li>GDPR-friendly: no third-party processing by default</li>
+          <li>Phase 2 sends only truncated text (max 3000 chars)</li>
+          <li>Firestore security rules: per-user strict isolation</li>
+          <li>ONNX fallback: works offline if all cloud APIs fail</li>
+          <li>Recruiter explicitly controls when &amp; which AI runs</li>
+        </ul>
+      </div>
+    </div>
+    <div
+      style="margin-top:24px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;">
+      <h3 style="font-size:0.95rem;font-weight:700;margin-bottom:14px;">🛡️ Firestore Security Rules — Complete User
+        Isolation</h3>
+      <div class="codeblock">
+        <span class="cm">// Every document locked to the authenticated user's UID</span><br />
+        <span class="kw">match</span> /jobScreeningResults/<span class="val">{docId}</span> {<br />
+        &nbsp;&nbsp;<span class="kw">allow</span> read, write: <span class="kw">if</span> <span
+          class="fn">request.auth</span> != null<br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&amp;&amp; resource.data.userId == <span class="val">request.auth.uid</span>;<br />
+        }<br />
+        <span class="cm">// Result: Recruiter A can NEVER access Recruiter B's data — enforced at DB level, not just app
+          level</span>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- 13 SUMMARY -->
+  <section id="summary">
+    <div class="section-tag">13 — Summary</div>
+    <h2>Key Takeaways</h2>
+    <p class="lead">Everything important about the AI Recruiter — Resume Ranker in one place.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin-top:28px;">
+      <div
+        style="background:linear-gradient(135deg,rgba(99,102,241,0.12),rgba(139,92,246,0.08));border:1px solid rgba(99,102,241,0.3);border-radius:13px;padding:22px;">
+        <div style="font-size:1.6rem;margin-bottom:8px;">🎯</div>
+        <h3 style="font-size:0.9rem;font-weight:700;margin-bottom:6px;">Problem Solved</h3>
+        <p style="font-size:0.82rem;color:var(--text3);line-height:1.6;">Slow, biased, expensive manual screening.
+          Automated with transparent AI scoring — 2–4s per resume vs hours manually.</p>
+      </div>
+      <div
+        style="background:linear-gradient(135deg,rgba(16,185,129,0.1),rgba(6,182,212,0.07));border:1px solid rgba(16,185,129,0.3);border-radius:13px;padding:22px;">
+        <div style="font-size:1.6rem;margin-bottom:8px;">🏗️</div>
+        <h3 style="font-size:0.9rem;font-weight:700;margin-bottom:6px;">Architecture Innovation</h3>
+        <p style="font-size:0.82rem;color:var(--text3);line-height:1.6;">Two-Phase Progressive Enhancement + 6-Model
+          Orchestration with auto failover. Always available, always fast.</p>
+      </div>
+      <div
+        style="background:linear-gradient(135deg,rgba(245,158,11,0.1),rgba(239,68,68,0.07));border:1px solid rgba(245,158,11,0.3);border-radius:13px;padding:22px;">
+        <div style="font-size:1.6rem;margin-bottom:8px;">🔢</div>
+        <h3 style="font-size:0.9rem;font-weight:700;margin-bottom:6px;">Smart Scoring</h3>
+        <p style="font-size:0.82rem;color:var(--text3);line-height:1.6;">Semantic (45%) + Skill (25%) + Experience (15%)
+          + ATS (10%) + LLM (5%). 768-dim embeddings with tanh normalization.</p>
+      </div>
+      <div
+        style="background:linear-gradient(135deg,rgba(6,182,212,0.1),rgba(99,102,241,0.07));border:1px solid rgba(6,182,212,0.3);border-radius:13px;padding:22px;">
+        <div style="font-size:1.6rem;margin-bottom:8px;">🔐</div>
+        <h3 style="font-size:0.9rem;font-weight:700;margin-bottom:6px;">Privacy Options</h3>
+        <p style="font-size:0.82rem;color:var(--text3);line-height:1.6;">Cloud APIs for convenience; Ollama+Qwen2.5 for
+          maximum privacy. Phase 1 never sends data externally regardless.</p>
+      </div>
+      <div
+        style="background:linear-gradient(135deg,rgba(139,92,246,0.1),rgba(99,102,241,0.07));border:1px solid rgba(139,92,246,0.3);border-radius:13px;padding:22px;">
+        <div style="font-size:1.6rem;margin-bottom:8px;">🛠️</div>
+        <h3 style="font-size:0.9rem;font-weight:700;margin-bottom:6px;">Tech Stack</h3>
+        <p style="font-size:0.82rem;color:var(--text3);line-height:1.6;">Next.js 15 · React 18 · TypeScript · Firebase ·
+          Gemini 2.5 Flash · ONNX Transformers · Zod · Tailwind · ShadCN</p>
+      </div>
+      <div
+        style="background:linear-gradient(135deg,rgba(239,68,68,0.08),rgba(245,158,11,0.06));border:1px solid rgba(239,68,68,0.25);border-radius:13px;padding:22px;">
+        <div style="font-size:1.6rem;margin-bottom:8px;">✉️</div>
+        <h3 style="font-size:0.9rem;font-weight:700;margin-bottom:6px;">Email System</h3>
+        <p style="font-size:0.82rem;color:var(--text3);line-height:1.6;">3 pre-built templates, personalization tokens,
+          parallel bulk send to shortlisted + declined candidates in one click.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+  <footer>
+    <div class="ft">AI Recruiter — Resume Ranker</div>
+    <p>University Project Presentation · Next.js 15 · Firebase · Gemini 2.5 Flash · Ollama · ONNX Semantic Embeddings
+    </p>
+    <p style="margin-top:4px;">2026 · Multi-Model Orchestration · Privacy-First · Transparent Scoring · Automated Email
+    </p>
+  </footer>
+
+  <script>
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', e => {
+        e.preventDefault();
+        const t = document.querySelector(a.getAttribute('href'));
+        if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) { e.target.style.opacity = '1'; e.target.style.transform = 'translateY(0)'; }
+      });
+    }, { threshold: 0.08 });
+    document.querySelectorAll('.card, .scard, .email-step, .hw-card, .model-card, .fo-step').forEach(el => {
+      el.style.opacity = '0'; el.style.transform = 'translateY(18px)';
+      el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+      obs.observe(el);
+    });
+  </script>
+</body>
+
+</html>
