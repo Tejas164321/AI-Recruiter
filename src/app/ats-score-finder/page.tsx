@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 // UI Components
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,18 +19,35 @@ import { BarChartBig, Loader2, ScanSearch, BrainCircuit, ServerOff, ListFilter, 
 import { useToast } from "@/hooks/use-toast";
 import { useLoading } from "@/contexts/loading-context";
 import { useAuth } from "@/contexts/auth-context";
-// AI Flows and Types (HYBRID - Local LLM)
-import { calculateAtsScore, type CalculateAtsScoreInput, type CalculateAtsScoreOutput } from "@/ai/flows/calculate-ats-score-hybrid";
+// AI Flows and Types — Two-Phase Progressive Enhancement
+import {
+  calculateAtsScoreBase,
+  calculateAtsScoreFeedbackOnly,
+  type CalculateAtsScoreInput,
+  type AtsBaseContext,
+} from "@/ai/flows/calculate-ats-score-hybrid";
 import type { ResumeFile, AtsScoreResult } from "@/lib/types";
-import { type ApiConfig, getUserApiConfig, DEFAULT_API_CONFIG } from "@/services/user-config";
+import { type ApiConfig, getUserApiConfig, DEFAULT_API_CONFIG, validateApiConfig } from "@/services/user-config";
 // Firebase Services
-import { saveMultipleAtsScoreResults, getAtsScoreResults, deleteAtsScoreResult, deleteAllAtsScoreResults } from "@/services/firestoreService";
+import {
+  saveAtsScoreResult,
+  getAtsScoreResults,
+  deleteAtsScoreResult,
+  deleteAllAtsScoreResults,
+  updateAtsScoreFeedback,
+} from "@/services/firestoreService";
 import { db as firestoreDb } from "@/lib/firebase/config";
 
 // Constants
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 const MAX_FILES_ATS = 10;
 type SortOption = 'score-desc' | 'score-asc' | 'date-desc';
+
+/** Detect errors thrown when the user has no AI API key configured in their profile. */
+function isNoApiConfigError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return msg.includes('No AI model is configured') || msg.includes('API Configuration') || msg.includes('is not configured') || msg.includes('API key missing');
+}
 
 /**
  * ATS Score Finder Page Component.
@@ -43,6 +61,7 @@ export default function AtsScoreFinderPage() {
   const { currentUser } = useAuth();
   // Toast notifications hook
   const { toast } = useToast();
+  const router = useRouter();
 
   // State for managing uploaded resume files for the current session
   const [uploadedResumeFiles, setUploadedResumeFiles] = useState<ResumeFile[]>([]);
@@ -163,7 +182,15 @@ export default function AtsScoreFinderPage() {
     }
   }, [toast, currentUser?.uid]);
 
-  // Callback to trigger the AI analysis of uploaded resumes
+  // ─── Two-Phase ATS Analysis ────────────────────────────────────────────────
+  //
+  // Phase 1 (FAST, concurrent): Deterministic score + save to Firestore.
+  //   → Table appears immediately with feedbackStatus='pending' (spinner button).
+  //
+  // Phase 2 (BACKGROUND, per-resume): LLM feedback generated one by one.
+  //   → When each finishes, Firestore doc is patched and local state updated.
+  //   → The spinner button flips to a clickable green "Insights" button.
+  // ────────────────────────────────────────────────────────────────────────────
   const handleAnalyzeResumes = useCallback(async () => {
     if (!currentUser?.uid || !isFirestoreAvailable) {
       toast({ title: "Operation Unavailable", description: "Cannot analyze resumes. Please log in and ensure database is connected.", variant: "destructive" });
@@ -174,51 +201,132 @@ export default function AtsScoreFinderPage() {
       return;
     }
 
-    setIsProcessingAts(true);
-    const aiResultsToSave: Array<Omit<AtsScoreResult, 'id' | 'userId' | 'createdAt'>> = [];
-
-    // Process each uploaded resume file concurrently
-    const processingPromises = uploadedResumeFiles.map(async (resumeFile) => {
-      try {
-        const input: CalculateAtsScoreInput = { resumeDataUri: resumeFile.dataUri, originalResumeName: resumeFile.name };
-        const output: CalculateAtsScoreOutput = await calculateAtsScore(input, apiConfig);
-
-        // Prepare the result for saving to Firestore
-        aiResultsToSave.push({
-          resumeId: resumeFile.id,
-          resumeName: resumeFile.name,
-          candidateName: output.candidateName,
-          atsScore: output.atsScore,
-          atsFeedback: output.atsFeedback,
-          resumeDataUri: resumeFile.dataUri,
-        });
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "Unknown error during ATS analysis.";
-        console.error(`Failed to process ${resumeFile.name}: ${errorMessage}`);
-        toast({ title: `Analysis Failed for ${resumeFile.name}`, description: errorMessage.substring(0, 100), variant: "destructive" });
-      }
-    });
-
-    await Promise.all(processingPromises);
-
-    // Save the successfully processed results to Firestore
-    if (aiResultsToSave.length > 0) {
-      try {
-        const savedDbResults = await saveMultipleAtsScoreResults(aiResultsToSave);
-        // Add new results to the top of the existing list
-        setAtsResults(prevResults => [...savedDbResults, ...prevResults]);
-        toast({ title: "ATS Analysis Complete", description: `${savedDbResults.length} of ${uploadedResumeFiles.length} resumes processed and saved.` });
-      } catch (dbError) {
-        const message = dbError instanceof Error ? dbError.message : String(dbError);
-        toast({ title: "Failed to Save Results", description: `Could not save to database: ${message.substring(0, 100)}`, variant: "destructive" });
-      }
-    } else if (uploadedResumeFiles.length > 0) {
-      toast({ title: "ATS Analysis Failed", description: "No resumes could be processed successfully.", variant: "destructive" });
+    const validationError = validateApiConfig(apiConfig);
+    if (validationError) {
+      toast({
+        title: "⚙️ API Key Not Configured",
+        description: validationError,
+        variant: "destructive",
+        action: (
+          <button
+            onClick={() => router.push('/profile')}
+            className="mt-1 text-xs underline font-semibold whitespace-nowrap"
+          >
+            Go to Profile →
+          </button>
+        ),
+      } as any);
+      return;
     }
 
-    // Reset state after processing
+    setIsProcessingAts(true);
+
+    // ── PHASE 1: Deterministic scoring (concurrent, fast) ──────────────────
+    type Phase1Result = {
+      resumeFile: ResumeFile;
+      atsScore: number;
+      candidateName?: string;
+      baseContext: AtsBaseContext;
+      savedResult: AtsScoreResult;
+    };
+
+    const phase1Results: Phase1Result[] = [];
+
+    await Promise.all(
+      uploadedResumeFiles.map(async (resumeFile) => {
+        try {
+          const input: CalculateAtsScoreInput = { resumeDataUri: resumeFile.dataUri, originalResumeName: resumeFile.name };
+          const { atsScore, candidateName, baseContext } = await calculateAtsScoreBase(input);
+
+          // Save Phase 1 result immediately — feedbackStatus='pending' shows spinner
+          const savedResult = await saveAtsScoreResult({
+            resumeId: resumeFile.id,
+            resumeName: resumeFile.name,
+            candidateName,
+            atsScore,
+            atsFeedback: baseContext.fallbackFeedback, // deterministic fallback for now
+            resumeDataUri: resumeFile.dataUri,
+            feedbackStatus: 'pending',
+          });
+
+          phase1Results.push({ resumeFile, atsScore, candidateName, baseContext, savedResult });
+
+          // Show each result in the table as soon as it's saved
+          setAtsResults(prev => [savedResult, ...prev.filter(r => r.id !== savedResult.id)]);
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : "Unknown error during ATS analysis.";
+          console.error(`[Phase 1] Failed for ${resumeFile.name}:`, errorMessage);
+          toast({ title: `Score Failed: ${resumeFile.name}`, description: errorMessage.substring(0, 120), variant: "destructive" });
+        }
+      })
+    );
+
+    if (phase1Results.length === 0) {
+      toast({ title: "ATS Analysis Failed", description: "No resumes could be processed.", variant: "destructive" });
+      setIsProcessingAts(false);
+      setUploadedResumeFiles([]);
+      return;
+    }
+
+    // Show table immediately and stop the main loading indicator
     setIsProcessingAts(false);
     setUploadedResumeFiles([]);
+    toast({
+      title: "⚡ Scores Ready!",
+      description: `${phase1Results.length} resume${phase1Results.length > 1 ? 's' : ''} scored. AI feedback is generating in the background…`,
+    });
+
+    // ── PHASE 2: AI feedback generation (background, sequential) ──────────
+    // Update each saved doc in Firestore once AI finishes; local state follows.
+    (async () => {
+      // Mark all as 'generating' at once for the spinner UI
+      setAtsResults(prev =>
+        prev.map(r => {
+          const match = phase1Results.find(p => p.savedResult.id === r.id);
+          return match ? { ...r, feedbackStatus: 'generating' as const } : r;
+        })
+      );
+
+      // Process highest scores first (best candidates get feedback soonest)
+      const sorted = [...phase1Results].sort((a, b) => b.atsScore - a.atsScore);
+
+      for (const { savedResult, baseContext, resumeFile } of sorted) {
+        try {
+          const aiFeedback = await calculateAtsScoreFeedbackOnly(baseContext, apiConfig);
+
+          // Patch Firestore
+          await updateAtsScoreFeedback(savedResult.id, {
+            atsFeedback: aiFeedback,
+            feedbackStatus: 'complete',
+            feedbackGeneratedAt: new Date().toISOString(),
+          });
+
+          // Update local state so the button flips immediately
+          setAtsResults(prev =>
+            prev.map(r =>
+              r.id === savedResult.id
+                ? { ...r, atsFeedback: aiFeedback, feedbackStatus: 'complete' }
+                : r
+            )
+          );
+          console.log(`✅ [Phase 2] AI feedback saved for ${resumeFile.name}`);
+        } catch (err) {
+          console.error(`[Phase 2] Feedback failed for ${resumeFile.name}:`, err);
+          // On LLM failure, mark as failed (fallback text is already saved)
+          await updateAtsScoreFeedback(savedResult.id, {
+            atsFeedback: baseContext.fallbackFeedback,
+            feedbackStatus: 'failed',
+          }).catch(() => {});
+          setAtsResults(prev =>
+            prev.map(r =>
+              r.id === savedResult.id ? { ...r, feedbackStatus: 'failed' as const } : r
+            )
+          );
+        }
+      }
+
+      console.log("✅ [Phase 2] All AI feedback complete.");
+    })();
   }, [uploadedResumeFiles, toast, currentUser?.uid, isFirestoreAvailable, apiConfig]);
 
   // Handler to open the feedback modal

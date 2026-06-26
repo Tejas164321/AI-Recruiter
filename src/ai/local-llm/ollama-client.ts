@@ -13,11 +13,9 @@
 
 import { z, ZodSchema } from 'zod';
 
-// ============================================
-// Configuration
-// ============================================
-
-const GEMINI_API_KEY = process.env.GOOGLE_API_KEY;
+// NOTE: API keys are managed through the app's Profile → API Configuration page.
+// The ollama-client is used for the rank-candidates hybrid pipeline's qualitative analysis.
+// When no key is available, it gracefully falls back to deterministic analysis.
 const GEMINI_MODEL = 'gemini-2.5-flash';
 
 // ============================================
@@ -40,7 +38,7 @@ export type LLMGenerateResult<T> = {
 // Schema Helper: Convert Zod to Gemini Schema
 // ============================================
 
-function convertZodToGeminiSchema(schema: any): any {
+export function convertZodToGeminiSchema(schema: any): any {
     if (!schema || !schema._def) return undefined;
 
     const def = schema._def;
@@ -54,7 +52,12 @@ function convertZodToGeminiSchema(schema: any): any {
             const propSchema = convertZodToGeminiSchema(value);
             if (propSchema) {
                 properties[key] = propSchema;
-                required.push(key);
+                
+                // Only mark as required if it's not a ZodOptional property
+                const isOptional = (value as any)?._def?.typeName === 'ZodOptional';
+                if (!isOptional) {
+                    required.push(key);
+                }
             }
         }
         
@@ -116,7 +119,7 @@ export class OllamaClient {
         primaryModel?: string;
         fallbackModel?: string;
     }) {
-        this.apiKey = GEMINI_API_KEY || '';
+        this.apiKey = process.env.GOOGLE_API_KEY || '';
         this.model = GEMINI_MODEL;
     }
 
@@ -154,13 +157,13 @@ export class OllamaClient {
         const startTime = Date.now();
         const systemInstruction = options?.system;
         const temperature = options?.temperature ?? 0.3;
-        const maxTokens = Math.max(options?.maxTokens ?? 4000, 4000);
+        const maxTokens = options?.maxTokens ?? 2000;
 
         if (!this.apiKey) {
-            console.error('[Gemini Client] GOOGLE_API_KEY is not configured in environment.');
+            console.warn('[Gemini Client] No API key configured. Please set a Gemini API key in Profile → API Configuration.');
             return {
                 success: false,
-                error: 'GOOGLE_API_KEY is not configured in .env file',
+                error: 'No AI model is configured. Please go to Profile → API Configuration and add a Gemini API key to use this feature.',
                 modelAttempted: this.model,
             };
         }
@@ -209,13 +212,13 @@ export class OllamaClient {
         const startTime = Date.now();
         const systemInstruction = options?.system;
         const temperature = options?.temperature ?? 0.2;
-        const maxTokens = Math.max(options?.maxTokens ?? 4000, 4000);
+        const maxTokens = options?.maxTokens ?? 2000;
 
         if (!this.apiKey) {
-            console.error('[Gemini Client] GOOGLE_API_KEY is not configured in environment.');
+            console.warn('[Gemini Client] No API key configured. Please set a Gemini API key in Profile → API Configuration.');
             return {
                 success: false,
-                error: 'GOOGLE_API_KEY is not configured in .env file',
+                error: 'No AI model is configured. Please go to Profile → API Configuration and add a Gemini API key to use this feature.',
                 modelAttempted: this.model,
             };
         }
@@ -292,7 +295,28 @@ export class OllamaClient {
             generationConfig: {
                 temperature,
                 maxOutputTokens: maxTokens,
-            }
+                thinkingConfig: {
+                    thinkingBudget: 0
+                }
+            },
+            safetySettings: [
+                {
+                    category: "HARM_CATEGORY_HARASSMENT",
+                    threshold: "BLOCK_NONE"
+                },
+                {
+                    category: "HARM_CATEGORY_HATE_SPEECH",
+                    threshold: "BLOCK_NONE"
+                },
+                {
+                    category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                    threshold: "BLOCK_NONE"
+                },
+                {
+                    category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+                    threshold: "BLOCK_NONE"
+                }
+            ]
         };
 
         if (systemInstruction) {

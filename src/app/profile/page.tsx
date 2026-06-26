@@ -33,17 +33,19 @@ export default function ProfilePage() {
     const [showGpt, setShowGpt] = useState(false);
     const [showClaude, setShowClaude] = useState(false);
     const [showGrok, setShowGrok] = useState(false);
+    const [showGroq, setShowGroq] = useState(false);
     const [showLocalInstructions, setShowLocalInstructions] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleModelToggle = (provider: 'gemini' | 'claude' | 'gpt' | 'grok' | 'local', checked: boolean) => {
+    const handleModelToggle = (provider: 'gemini' | 'claude' | 'gpt' | 'grok' | 'groq' | 'local', checked: boolean) => {
         setApiConfig(prev => {
             const nextEnabled = {
                 gemini: prev.enabledModels?.gemini ?? (prev.activeModel === 'gemini' || !!prev.keys?.gemini),
                 gpt: prev.enabledModels?.gpt ?? (prev.activeModel === 'gpt' || !!prev.keys?.gpt),
                 claude: prev.enabledModels?.claude ?? (prev.activeModel === 'claude' || !!prev.keys?.claude),
                 grok: prev.enabledModels?.grok ?? (prev.activeModel === 'grok' || !!prev.keys?.grok),
+                groq: prev.enabledModels?.groq ?? (prev.activeModel === 'groq' || !!prev.keys?.groq),
                 local: prev.enabledModels?.local ?? (prev.activeModel === 'local' || !!prev.enableLocal),
             };
 
@@ -81,6 +83,7 @@ export default function ProfilePage() {
                 gpt: prev.enabledModels?.gpt ?? (prev.activeModel === 'gpt' || !!prev.keys?.gpt),
                 claude: prev.enabledModels?.claude ?? (prev.activeModel === 'claude' || !!prev.keys?.claude),
                 grok: prev.enabledModels?.grok ?? (prev.activeModel === 'grok' || !!prev.keys?.grok),
+                groq: prev.enabledModels?.groq ?? (prev.activeModel === 'groq' || !!prev.keys?.groq),
                 local: prev.enabledModels?.local ?? (prev.activeModel === 'local' || !!prev.enableLocal),
             };
             let activeModel = prev.activeModel;
@@ -668,6 +671,48 @@ export default function ProfilePage() {
                                                                 className="absolute right-0 bottom-1.5 text-muted-foreground hover:text-foreground"
                                                             >
                                                                 {showGrok ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Groq */}
+                                            <div className="border border-foreground/10 rounded-sm p-4 bg-muted/10 space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={!!apiConfig.enabledModels?.groq}
+                                                            onChange={(e) => handleModelToggle('groq', e.target.checked)}
+                                                            className="w-4 h-4 rounded text-primary focus:ring-0 border-foreground/30 cursor-pointer"
+                                                        />
+                                                        <span className="font-headline font-bold text-sm tracking-wide uppercase">Groq Cloud (High-Speed LPU)</span>
+                                                    </div>
+                                                    <span className={`text-[10px] font-mono px-2 py-0.5 border rounded-sm ${apiConfig.enabledModels?.groq ? 'bg-green-500/10 text-green-700 border-green-500/20' : 'bg-foreground/5 text-muted-foreground border-foreground/10'}`}>
+                                                        {apiConfig.enabledModels?.groq ? 'ACTIVE' : 'OFF'}
+                                                    </span>
+                                                </div>
+                                                {apiConfig.enabledModels?.groq && (
+                                                    <div className="space-y-2 group pt-2 border-t border-dashed border-foreground/10">
+                                                        <Label className="font-mono text-[10px] uppercase text-muted-foreground">Groq API Key</Label>
+                                                        <div className="relative">
+                                                            <Input
+                                                                type={showGroq ? "text" : "password"}
+                                                                value={apiConfig.keys.groq || ""}
+                                                                onChange={(e) => setApiConfig(prev => ({
+                                                                    ...prev,
+                                                                    keys: { ...prev.keys, groq: e.target.value }
+                                                                }))}
+                                                                className="border-0 border-b border-foreground focus-visible:ring-0 focus-visible:border-b-2 rounded-none px-0 bg-transparent font-mono text-xs py-1 pr-8 h-auto"
+                                                                placeholder="gsk_..."
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setShowGroq(!showGroq)}
+                                                                className="absolute right-0 bottom-1.5 text-muted-foreground hover:text-foreground"
+                                                            >
+                                                                {showGroq ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                                                             </button>
                                                         </div>
                                                     </div>

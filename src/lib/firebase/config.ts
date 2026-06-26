@@ -2,7 +2,7 @@
 // src/lib/firebase/config.ts
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
 import { getAuth, connectAuthEmulator, type Auth } from "firebase/auth";
-import { getFirestore, connectFirestoreEmulator, type Firestore } from "firebase/firestore";
+import { initializeFirestore, connectFirestoreEmulator, type Firestore } from "firebase/firestore";
 
 /**
  * This configuration object reads Firebase credentials from environment variables.
@@ -55,7 +55,7 @@ if (criticalConfigPresent) {
   // If app initialization was successful, initialize other Firebase services.
   if (app) {
     try { auth = getAuth(app); } catch (e) { console.error("Auth init error", e); }
-    try { db = getFirestore(app); } catch (e) { console.error("Firestore init error", e); }
+    try { db = initializeFirestore(app, { ignoreUndefinedProperties: true }); } catch (e) { console.error("Firestore init error", e); }
     
     // Check if the app should use local Firebase emulators.
     const USE_EMULATORS = process.env.NEXT_PUBLIC_USE_EMULATORS === 'true';

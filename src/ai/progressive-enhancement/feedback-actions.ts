@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { DetailedAIFeedback } from '@/lib/types';
 import { generateFeedbackOrchestrated } from '@/ai/orchestration/model-router';
 import type { ApiConfig } from '@/services/user-config';
+import { cleanDocumentTextForPrompt } from '@/ai/local-llm/prompt-templates';
 
 // ============================================
 // Types
@@ -28,15 +29,18 @@ export interface FeedbackGenerationContext {
 // ============================================
 
 const DetailedAIFeedbackSchema = z.object({
-    summary: z.string(),
-    matchedSkills: z.array(z.string()),
-    matchedExperience: z.string(),
-    missingSkills: z.array(z.string()),
-    improvements: z.array(z.string()),
-    scoreImpact: z.string(),
-    concerns: z.array(z.string()),
     strengths: z.array(z.string()),
-    scoreExplanation: z.string(),
+    improvements: z.array(z.string()),
+    resumeAdditions: z.array(z.string()),
+    
+    // Optional secondary fields
+    summary: z.string().optional(),
+    matchedSkills: z.array(z.string()).optional(),
+    matchedExperience: z.string().optional(),
+    missingSkills: z.array(z.string()).optional(),
+    scoreImpact: z.string().optional(),
+    concerns: z.array(z.string()).optional(),
+    scoreExplanation: z.string().optional(),
 });
 
 // ============================================
@@ -44,43 +48,44 @@ const DetailedAIFeedbackSchema = z.object({
 // ============================================
 
 function createDetailedFeedbackPrompt(context: FeedbackGenerationContext): string {
-    return `You are a Senior Technical Recruiter with 15 years of experience. Write a personal, constructive feedback email to this candidate.
+    const cleanJd = cleanDocumentTextForPrompt(context.jdText).substring(0, 3000);
+    const cleanResume = cleanDocumentTextForPrompt(context.resumeText).substring(0, 3000);
+
+    return `You are a Senior Technical Recruiter evaluating a candidate's resume against a job description.
 
 JOB DESCRIPTION:
-${context.jdText.substring(0, 2000)}
+${cleanJd}
 
 RESUME:
-${context.resumeText.substring(0, 2000)}
+${cleanResume}
 
-SCORING CONTEXT (For your reference only, do not mention these numbers explicitly):
-- Overall Match: ${context.scores.final}/100
-- Skill Match: ${context.scores.skill}/100
-- ATS Score: ${context.atsResult.atsScore}/100
+SCORING CONTEXT (For reference, do not print):
+- Match: ${context.scores.final}/100
+- Skill: ${context.scores.skill}/100
+- ATS: ${context.atsResult.atsScore}/100
 
 INSTRUCTIONS:
-1.  **Tone**: Professional, conversational, and direct. Write like a human speaking to another human. Avoid robotic phrases like "Based on the analysis" or "The candidate displays".
-2.  **Structure**:
-    *   **Summary**: A 2-3 sentence "elevator pitch" about the candidate.
-    *   **Strengths**: Highlight 3 specific things they do well and WHY it matters for this role.
-    *   **Weaknesses (Improvements)**: brutally honest but constructive feedback on missing skills or experience gaps.
-    *   **Action Plan**: What exactly should they learn or change to get this job?
+1. Return your analysis ONLY as a valid JSON object.
+2. The JSON object must contain EXACTLY the following three keys. Do not change, rename, or omit them, and do not use headers as keys:
+   * "strengths": An array of exactly 2 strings. Briefly state what the candidate does well and why it fits.
+   * "improvements": An array of exactly 2 strings. State key weaknesses/gaps and what specifically they must learn or improve.
+   * "resumeAdditions": An array of exactly 2 strings. Write exact ready-to-copy resume bullet points they should add to their resume to perfectly match.
+3. Keep descriptions and bullet points short, concise, and focused.
 
-OUTPUT FORMAT (JSON):
+OUTPUT SCHEMA (JSON):
 {
-  "summary": "Direct, human summary of the candidate's fit.",
-  "matchedSkills": ["Skill 1 (Context: why it matters)", "Skill 2 ..."],
-  "matchedExperience": "Conversational assessment of their experience level.",
-  "missingSkills": ["Critical missing skill 1", "Critical missing skill 2"],
-  "missingExperience": "Clear explanation of any experience gaps.",
-  "improvements": [
-    "Weakness 1: Explanation and how to fix it",
-    "Weakness 2: Explanation and how to fix it",
-    "Weakness 3: Explanation and how to fix it"
+  "strengths": [
+    "Highlight of candidate strength 1",
+    "Highlight of candidate strength 2"
   ],
-  "scoreImpact": "If you fix X and Y, your profile would be much stronger.",
-  "concerns": ["Major red flag 1", "Major red flag 2"],
-  "strengths": ["Strength 1: Why it is impressive", "Strength 2: Why it is impressive"],
-  "scoreExplanation": "Professional justification for the rating."
+  "improvements": [
+    "Specific gap 1 and actionable step to address it",
+    "Specific gap 2 and actionable step to address it"
+  ],
+  "resumeAdditions": [
+    "Ready-to-copy bullet point 1 for their resume",
+    "Ready-to-copy bullet point 2 for their resume"
+  ]
 }`;
 }
 
@@ -99,7 +104,7 @@ export async function generateDetailedFeedback(
             DetailedAIFeedbackSchema,
             {
                 temperature: 0.3,
-                maxTokens: 800, // Detailed feedback
+                maxTokens: 800, // Detailed feedback (optimized output token count)
             },
             apiConfig
         );

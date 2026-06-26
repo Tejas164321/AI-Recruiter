@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 // Icons
-import { ArrowUpDown, MessageSquareText, Mail, Tags, Hash, AlertTriangle } from "lucide-react";
+import { ArrowUpDown, MessageSquareText, Mail, Tags, Hash, AlertTriangle, Loader2, Sparkles } from "lucide-react";
 // Types
 import type { RankedCandidate } from "@/lib/types";
 
@@ -55,7 +55,7 @@ export function CandidateTableWithActions({ candidates, onViewFeedback, onEmailC
     if (score > 50) return <Badge className="bg-yellow-500 text-black hover:bg-yellow-500/90">{score}/100</Badge>;
     return <Badge variant="destructive">{score}/100</Badge>;
   };
-  
+
   const CandidateEmail = ({ candidate }: { candidate: RankedCandidate }) => {
     if (candidate.email) {
       return <span className="text-sm text-muted-foreground truncate" title={candidate.email}>{candidate.email}</span>;
@@ -77,6 +77,71 @@ export function CandidateTableWithActions({ candidates, onViewFeedback, onEmailC
     );
   };
 
+  /**
+   * Renders the Feedback button with progressive status indicators:
+   * - pending / generating → pulsing spinner, disabled
+   * - complete             → green sparkle, clickable
+   * - default / failed     → normal button, clickable
+   */
+  const FeedbackButton = ({ candidate, compact = false }: { candidate: RankedCandidate; compact?: boolean }) => {
+    const status = candidate.feedbackStatus;
+    const isGenerating = status === 'pending' || status === 'generating';
+    const isReady = status === 'complete';
+
+    if (isGenerating) {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled
+                  className={`${compact ? "w-full" : ""} opacity-75 cursor-not-allowed`}
+                >
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin text-primary" />
+                  <span className="text-xs">Analyzing…</span>
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>AI is generating detailed feedback for this candidate…</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+
+    if (isReady) {
+      return (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onViewFeedback(candidate)}
+          className={`${compact ? "w-full" : ""} border-green-500/60 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 hover:border-green-500 transition-all duration-300 relative overflow-hidden group`}
+          title="AI feedback ready — click to view"
+        >
+          {/* Subtle shimmer sweep on hover */}
+          <span className="absolute inset-0 bg-gradient-to-r from-transparent via-green-400/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+          <Sparkles className="w-4 h-4 mr-2 text-green-500" />
+          Feedback
+        </Button>
+      );
+    }
+
+    // Default / failed / old records without status
+    return (
+      <Button
+        variant={compact ? "outline" : "ghost"}
+        size="sm"
+        onClick={() => onViewFeedback(candidate)}
+        className={`${compact ? "w-full" : "hover:text-primary"}`}
+      >
+        <MessageSquareText className="w-4 h-4 mr-2" />Feedback
+      </Button>
+    );
+  };
 
   if (candidates.length === 0) {
     return <p className="text-center text-muted-foreground py-8">No candidates to display for this filter combination.</p>;
@@ -112,7 +177,7 @@ export function CandidateTableWithActions({ candidates, onViewFeedback, onEmailC
             </CardContent>
             <CardFooter className="flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => onEmailCandidate(candidate)} disabled={!candidate.email}><Mail className="w-4 h-4 mr-2" />Email</Button>
-              <Button variant="outline" size="sm" onClick={() => onViewFeedback(candidate)}><MessageSquareText className="w-4 h-4 mr-2" />Feedback</Button>
+              <FeedbackButton candidate={candidate} compact />
             </CardFooter>
           </Card>
         ))}
@@ -133,7 +198,7 @@ export function CandidateTableWithActions({ candidates, onViewFeedback, onEmailC
           </TableHeader>
           <TableBody>
             {sortedCandidates.map((candidate, index) => (
-              <TableRow key={candidate.id} className="hover:bg-muted/50">
+              <TableRow key={candidate.id} className="hover:bg-muted/50 transition-colors">
                 <TableCell className="font-medium text-center">{index + 1}</TableCell>
                 <TableCell className="font-medium">{candidate.name}</TableCell>
                 <TableCell><CandidateEmail candidate={candidate} /></TableCell>
@@ -147,7 +212,7 @@ export function CandidateTableWithActions({ candidates, onViewFeedback, onEmailC
                 <TableCell className="text-right">
                     <div className="flex items-center justify-end space-x-1">
                         <Button variant="ghost" size="sm" onClick={() => onEmailCandidate(candidate)} className="hover:text-primary" disabled={!candidate.email}><Mail className="w-4 h-4 mr-2" />Email</Button>
-                        <Button variant="ghost" size="sm" onClick={() => onViewFeedback(candidate)} className="hover:text-primary"><MessageSquareText className="w-4 h-4 mr-2" />Feedback</Button>
+                        <FeedbackButton candidate={candidate} />
                     </div>
                 </TableCell>
               </TableRow>

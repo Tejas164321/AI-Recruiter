@@ -3,6 +3,7 @@
 
 import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 // UI Components
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,7 +32,7 @@ import {
 } from "@/ai/progressive-enhancement/feedback-service";
 import { extractJobRoles as extractJobRolesAI, type ExtractJobRolesInput as ExtractJobRolesAIInput, type ExtractJobRolesOutput as ExtractJobRolesAIOutput } from "@/ai/flows/extract-job-roles-hybrid";
 import type { ResumeFile, RankedCandidate, Filters, JobScreeningResult, ExtractedJobRole, ProcessingProgress, PerformBulkScreeningInput, PerformBulkScreeningOutput } from "@/lib/types";
-import { type ApiConfig, getUserApiConfig, DEFAULT_API_CONFIG } from "@/services/user-config";
+import { type ApiConfig, getUserApiConfig, DEFAULT_API_CONFIG, validateApiConfig } from "@/services/user-config";
 // Firebase Services
 import {
   saveJobScreeningResult,
@@ -55,6 +56,7 @@ export default function ResumeRankerPage() {
   const { setIsPageLoading } = useLoading();
   const { currentUser } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
 
   const [extractedJobRoles, setExtractedJobRoles] = useState<ExtractJobRolesAIOutput>([]);
   const [uploadedResumeFiles, setUploadedResumeFiles] = useState<ResumeFile[]>([]);
@@ -191,6 +193,24 @@ export default function ResumeRankerPage() {
       return;
     }
 
+    const validationError = validateApiConfig(apiConfig);
+    if (validationError) {
+      toast({
+        title: "⚙️ API Key Not Configured",
+        description: validationError,
+        variant: "destructive",
+        action: (
+          <button
+            onClick={() => router.push('/profile')}
+            className="mt-1 text-xs underline font-semibold whitespace-nowrap"
+          >
+            Go to Profile →
+          </button>
+        ),
+      } as any);
+      return;
+    }
+
     setIsLoadingScreening(true);
     // Phase 1: Fast Screening
     setScreeningProgress({
@@ -212,7 +232,47 @@ export default function ResumeRankerPage() {
       const { results: outputFromAI, feedbackContexts } = await performBulkScreeningFast(input);
 
       if (outputFromAI.length > 0 && outputFromAI[0]) {
-        const resultToSave: Omit<JobScreeningResult, 'id' | 'userId' | 'createdAt'> = outputFromAI[0];
+        const rawResult = outputFromAI[0];
+
+        // De-duplicate candidates by name + email to prevent redundant AI processing
+        // while allowing different candidates with common placeholder emails to pass.
+        const seenKeys = new Set<string>();
+        const uniqueCandidates: RankedCandidate[] = [];
+        
+        // Sort by score descending to keep the highest scoring candidate if duplicates exist
+        const sortedCandidatesForDeduplication = [...rawResult.candidates].sort((a, b) => b.score - a.score);
+
+        for (const candidate of sortedCandidatesForDeduplication) {
+          const emailKey = candidate.email?.toLowerCase().trim() || "";
+          const nameKey = candidate.name?.toLowerCase().replace(/[^a-z0-9]/g, '') || "";
+          const compositeKey = `${nameKey}_${emailKey}`;
+
+          if (emailKey && nameKey) {
+            if (!seenKeys.has(compositeKey)) {
+              seenKeys.add(compositeKey);
+              uniqueCandidates.push(candidate);
+            } else {
+              console.log(`⚠️ Deduplicated candidate ${candidate.name} with email ${candidate.email}`);
+            }
+          } else {
+            uniqueCandidates.push(candidate);
+          }
+        }
+
+        uniqueCandidates.sort((a, b) => b.score - a.score);
+
+        const resultToSave: Omit<JobScreeningResult, 'id' | 'userId' | 'createdAt'> = {
+          ...rawResult,
+          candidates: uniqueCandidates,
+        };
+
+        const numDeduplicated = rawResult.candidates.length - uniqueCandidates.length;
+        if (numDeduplicated > 0) {
+          toast({
+            title: "ℹ️ Duplicate Resumes Filtered",
+            description: `Filtered out ${numDeduplicated} duplicate candidate(s) by email address to prevent redundant AI analysis.`,
+          });
+        }
 
         // Save initial results to Firestore
         // Note: resumes are sanitized (data URIs removed) in firestoreService

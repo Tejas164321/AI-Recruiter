@@ -4,7 +4,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export interface ApiConfig {
   mode: 'auto' | 'manual';
-  activeModel: 'gemini' | 'claude' | 'gpt' | 'grok' | 'local';
+  activeModel: 'gemini' | 'claude' | 'gpt' | 'grok' | 'groq' | 'local';
   enableLocal: boolean;
   localUrl: string;
   localModel: string;
@@ -13,12 +13,14 @@ export interface ApiConfig {
     claude?: string;
     gpt?: string;
     grok?: string;
+    groq?: string;
   };
   enabledModels?: {
     gemini?: boolean;
     gpt?: boolean;
     claude?: boolean;
     grok?: boolean;
+    groq?: boolean;
     local?: boolean;
   };
 }
@@ -34,12 +36,14 @@ export const DEFAULT_API_CONFIG: ApiConfig = {
     claude: '',
     gpt: '',
     grok: '',
+    groq: '',
   },
   enabledModels: {
     gemini: true,
     gpt: false,
     claude: false,
     grok: false,
+    groq: false,
     local: false,
   }
 };
@@ -106,12 +110,14 @@ export const getUserApiConfig = async (userId: string): Promise<ApiConfig> => {
           claude: data.keys?.claude || '',
           gpt: data.keys?.gpt || '',
           grok: data.keys?.grok || '',
+          groq: data.keys?.groq || '',
         },
         enabledModels: {
           gemini: data.enabledModels?.gemini ?? (data.activeModel === 'gemini' || !!data.keys?.gemini),
           gpt: data.enabledModels?.gpt ?? (data.activeModel === 'gpt' || !!data.keys?.gpt),
           claude: data.enabledModels?.claude ?? (data.activeModel === 'claude' || !!data.keys?.claude),
           grok: data.enabledModels?.grok ?? (data.activeModel === 'grok' || !!data.keys?.grok),
+          groq: data.enabledModels?.groq ?? (data.activeModel === 'groq' || !!data.keys?.groq),
           local: data.enabledModels?.local ?? (data.activeModel === 'local' || !!data.enableLocal),
         }
       };
@@ -126,4 +132,40 @@ export const getUserApiConfig = async (userId: string): Promise<ApiConfig> => {
     console.error("Error loading user API config:", error);
     return cachedConfig || DEFAULT_API_CONFIG;
   }
+};
+
+/**
+ * Validates the API configuration.
+ * Returns an error message if invalid, or null if valid.
+ */
+export const validateApiConfig = (config: ApiConfig): string | null => {
+  if (config.mode === 'manual') {
+    const provider = config.activeModel;
+    if (provider !== 'local') {
+      const key = config.keys?.[provider];
+      if (!key || !key.trim()) {
+        const friendlyName = {
+          gemini: 'Google Gemini',
+          gpt: 'OpenAI GPT',
+          claude: 'Anthropic Claude',
+          grok: 'xAI Grok',
+          groq: 'Groq Cloud'
+        }[provider] || provider;
+        return `The API key for ${friendlyName} is not configured. Please go to your Profile → API Configuration to add the key.`;
+      }
+    }
+  } else {
+    // Auto Mode: check if at least one enabled model has a key, or local is enabled
+    const hasGemini = config.enabledModels?.gemini && config.keys?.gemini?.trim();
+    const hasGpt = config.enabledModels?.gpt && config.keys?.gpt?.trim();
+    const hasClaude = config.enabledModels?.claude && config.keys?.claude?.trim();
+    const hasGrok = config.enabledModels?.grok && config.keys?.grok?.trim();
+    const hasGroq = config.enabledModels?.groq && config.keys?.groq?.trim();
+    const hasLocal = config.enabledModels?.local || config.enableLocal;
+
+    if (!hasGemini && !hasGpt && !hasClaude && !hasGrok && !hasGroq && !hasLocal) {
+      return "No AI models are configured with valid API keys. Please go to your Profile → API Configuration to enable at least one model and add its API key.";
+    }
+  }
+  return null;
 };

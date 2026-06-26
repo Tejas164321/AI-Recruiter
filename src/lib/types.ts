@@ -69,19 +69,20 @@ export interface RankedCandidate {
 export interface DetailedAIFeedback {
   summary: string; // Overall assessment (e.g., "Strong match for Senior Developer")
 
-  matchedSkills: string[]; // Skills found in resume
-  matchedExperience: string; // Experience level match explanation
+  matchedSkills?: string[]; // Skills found in resume
+  matchedExperience?: string; // Experience level match explanation
 
-  missingSkills: string[]; // Skills mentioned in JD but not in resume
+  missingSkills?: string[]; // Skills mentioned in JD but not in resume
   missingExperience?: string; // Experience gaps
 
   improvements: string[]; // Specific actionable improvements
   scoreImpact?: string; // How improvements could affect score
 
-  concerns: string[]; // Red flags or concerns
+  concerns?: string[]; // Red flags or concerns
   strengths: string[]; // Candidate's key strengths
 
-  scoreExplanation: string; // Why this score was given
+  scoreExplanation?: string; // Why this score was given
+  resumeAdditions?: string[]; // Suggested bullet points to copy-paste into resume
 }
 
 /**
@@ -134,6 +135,10 @@ export interface AtsScoreResult {
   resumeDataUri: string; // The data URI of the resume, stored for context.
   userId: string; // The ID of the user who owns this result.
   createdAt: Timestamp; // The timestamp of when the analysis was performed.
+
+  // Progressive Enhancement Fields
+  feedbackStatus?: 'pending' | 'generating' | 'complete' | 'failed'; // Status of AI feedback generation
+  feedbackGeneratedAt?: string; // ISO string of when AI feedback was generated
 }
 
 /**

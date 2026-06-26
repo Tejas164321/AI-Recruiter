@@ -4,15 +4,16 @@ import { NextResponse } from 'next/server';
 /**
  * Health check endpoint to verify environment configuration
  * GET /api/health
+ * Note: AI API keys are user-specific and managed through Profile → API Configuration.
  */
 export async function GET() {
     const healthStatus = {
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV,
         checks: {
-            googleApiKey: {
-                configured: !!process.env.GOOGLE_API_KEY,
-                length: process.env.GOOGLE_API_KEY?.length || 0,
+            aiApiKeys: {
+                note: 'Managed per-user via Profile → API Configuration (not stored in .env)',
+                configured: 'user-managed',
             },
             firebase: {
                 apiKey: !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -24,16 +25,14 @@ export async function GET() {
         status: 'ok',
     };
 
-    // Determine overall status
-    const allChecks = [
-        healthStatus.checks.googleApiKey.configured,
+    // Determine overall status based on Firebase only
+    const firebaseChecks = [
         healthStatus.checks.firebase.apiKey,
-        healthStatus.checks.firebase.authDomain,
         healthStatus.checks.firebase.projectId,
         healthStatus.checks.firebase.appId,
     ];
 
-    if (!allChecks.every(Boolean)) {
+    if (!firebaseChecks.every(Boolean)) {
         healthStatus.status = 'degraded';
     }
 

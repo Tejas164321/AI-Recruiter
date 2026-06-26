@@ -34,6 +34,9 @@ function createFallbackDetailedFeedback(context: FeedbackGenerationContext): Det
         concerns: scores.ats < 70 ? ['Poor ATS formatting detected'] : [],
         strengths: skillMatch.matchedSkills.slice(0, 3),
         scoreExplanation: `Score based on ${skillMatch.matchedSkills.length} matched skills, ${context.atsResult.atsScore}/100 ATS compatibility, and ${scores.semantic}/100 semantic similarity.`,
+        resumeAdditions: skillMatch.missingSkills.length > 0
+            ? skillMatch.missingSkills.slice(0, 2).map((skill: string) => `Demonstrated hands-on expertise in developing robust features using ${skill} in production environments.`)
+            : ['Collaborated with cross-functional teams to align project deliverables with organizational requirements.'],
     };
 }
 

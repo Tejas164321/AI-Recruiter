@@ -9,13 +9,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 // Icons
-import { ShieldCheck, FileText, User } from "lucide-react";
+import { ShieldCheck, FileText, User, Loader2, Sparkles } from "lucide-react";
 // Types
 import type { AtsScoreResult } from "@/lib/types";
 
-/**
- * Props for the AtsFeedbackModal component.
- */
 interface AtsFeedbackModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -23,24 +20,22 @@ interface AtsFeedbackModalProps {
 }
 
 /**
- * A modal dialog to display detailed ATS (Applicant Tracking System) feedback for a single resume.
- * @param {AtsFeedbackModalProps} props - The component props.
+ * A modal dialog to display detailed ATS feedback for a single resume.
+ * Supports progressive enhancement — shows a loading state while AI is generating feedback,
+ * and displays the actual AI feedback once it's ready.
  */
 export function AtsFeedbackModal({ isOpen, onClose, result }: AtsFeedbackModalProps) {
-  // Do not render the modal if there is no result data or it's not open.
   if (!result) return null;
 
-  /**
-   * Determines the color and style of the ATS score badge based on the score.
-   * @param {number} score - The ATS score (0-100).
-   * @returns {JSX.Element} A styled Badge component.
-   */
+  const isGenerating = result.feedbackStatus === 'pending' || result.feedbackStatus === 'generating';
+  const isAiReady = result.feedbackStatus === 'complete';
+
   const getAtsScoreBadge = (score: number) => {
-    let badgeClass = "bg-green-600 text-white"; // Default: Good score
-    if (score < 40) badgeClass = "bg-red-600 text-white"; // Low score
-    else if (score < 60) badgeClass = "bg-orange-500 text-white"; // Medium-low score
-    else if (score < 80) badgeClass = "bg-yellow-500 text-black"; // Medium score
-    
+    let badgeClass = "bg-green-600 text-white";
+    if (score < 40) badgeClass = "bg-red-600 text-white";
+    else if (score < 60) badgeClass = "bg-orange-500 text-white";
+    else if (score < 80) badgeClass = "bg-yellow-500 text-black";
+
     return <Badge className={`${badgeClass} text-base px-3 py-1`}><ShieldCheck className="w-4 h-4 mr-1.5" /> {score}/100</Badge>;
   };
 
@@ -51,13 +46,11 @@ export function AtsFeedbackModal({ isOpen, onClose, result }: AtsFeedbackModalPr
           <DialogTitle className="font-headline text-2xl text-primary flex items-center">
             <ShieldCheck className="w-6 h-6 mr-2" /> ATS Insights
           </DialogTitle>
-          {/* Detailed information about the resume being viewed */}
           <div className="text-sm text-muted-foreground space-y-1 pt-1">
             <div className="flex items-center">
-                <FileText className="w-4 h-4 mr-2 text-muted-foreground" /> 
+                <FileText className="w-4 h-4 mr-2 text-muted-foreground" />
                 Resume: <span className="font-medium text-foreground ml-1">{result.resumeName}</span>
             </div>
-            {/* Conditionally render candidate name if it was extracted */}
             {result.candidateName && (
                 <div className="flex items-center">
                     <User className="w-4 h-4 mr-2 text-muted-foreground" />
@@ -68,21 +61,46 @@ export function AtsFeedbackModal({ isOpen, onClose, result }: AtsFeedbackModalPr
         </DialogHeader>
         <ScrollArea className="max-h-[65vh] pr-4">
           <div className="grid gap-6 py-4">
-            {/* ATS Score Section */}
+            {/* ATS Score */}
             <div>
               <h4 className="font-semibold text-foreground mb-2">ATS Compatibility Score</h4>
               {getAtsScoreBadge(result.atsScore)}
             </div>
             <Separator />
+
             {/* AI Feedback Section */}
             <div>
-              <h4 className="font-semibold text-foreground mb-2">AI Generated Feedback & Suggestions</h4>
-              <div className="p-4 bg-muted/50 rounded-md border border-border">
-                {/* whitespace-pre-wrap preserves line breaks from the AI's response */}
-                <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-                  {result.atsFeedback}
-                </p>
-              </div>
+              <h4 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+                {isAiReady
+                  ? <><Sparkles className="w-4 h-4 text-green-500" /> AI Generated Feedback</>
+                  : <>AI Generated Feedback &amp; Suggestions</>
+                }
+              </h4>
+
+              {isGenerating ? (
+                /* Loading state while AI generates in background */
+                <div className="p-6 bg-muted/30 rounded-md border border-border/50 flex flex-col items-center justify-center gap-3 min-h-[120px]">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary/60" />
+                  <p className="text-sm text-muted-foreground text-center">
+                    AI is analyzing this resume in the background…
+                  </p>
+                  <p className="text-xs text-muted-foreground/60 text-center">
+                    Close and re-open once the ✨ button appears for full AI insights.
+                  </p>
+                </div>
+              ) : (
+                <div className="p-4 bg-muted/50 rounded-md border border-border">
+                  <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                    {result.atsFeedback}
+                  </p>
+                  {isAiReady && (
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-3 pt-3 border-t border-border/40 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" /> AI-generated analysis
+                      {result.feedbackGeneratedAt && ` · ${new Date(result.feedbackGeneratedAt).toLocaleTimeString()}`}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </ScrollArea>

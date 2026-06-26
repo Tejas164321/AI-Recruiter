@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useRouter } from "next/navigation";
 // UI Components
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +25,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { generateJDInterviewQuestions, type GenerateJDInterviewQuestionsInput, type GenerateJDInterviewQuestionsOutput } from "@/ai/flows/generate-jd-interview-questions-hybrid";
 import { extractJobRoles as extractJobRolesAI, type ExtractJobRolesInput as ExtractJobRolesAIInput, type ExtractJobRolesOutput as ExtractJobRolesAIOutput } from "@/ai/flows/extract-job-roles-hybrid";
 import type { InterviewQuestionsSet } from "@/lib/types";
-import { type ApiConfig, getUserApiConfig, DEFAULT_API_CONFIG } from "@/services/user-config";
+import { type ApiConfig, getUserApiConfig, DEFAULT_API_CONFIG, validateApiConfig } from "@/services/user-config";
 // Firebase Services
 import { saveInterviewQuestionSet, getInterviewQuestionSets, deleteInterviewQuestionSet } from "@/services/firestoreService";
 import { db as firestoreDb } from "@/lib/firebase/config";
@@ -34,6 +35,12 @@ import jsPDF from 'jspdf';
 
 // Constants
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+
+/** Detect errors thrown when the user has no AI API key configured in their profile. */
+function isNoApiConfigError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return msg.includes('No AI model is configured') || msg.includes('API Configuration') || msg.includes('is not configured') || msg.includes('API key missing');
+}
 
 // Animation variants for cards
 const cardHoverVariants = {
@@ -72,6 +79,7 @@ export default function InterviewQuestionGeneratorPage() {
   const { setIsPageLoading } = useLoading();
   const { currentUser } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
 
   // State for saved question sets fetched from Firestore
   const [savedSets, setSavedSets] = useState<InterviewQuestionsSet[]>([]);
@@ -286,6 +294,25 @@ export default function InterviewQuestionGeneratorPage() {
       return;
     }
 
+    const validationError = validateApiConfig(apiConfig);
+    if (validationError) {
+      setError(validationError);
+      toast({
+        title: "⚙️ API Key Not Configured",
+        description: validationError,
+        variant: "destructive",
+        action: (
+          <button
+            onClick={() => router.push('/profile')}
+            className="mt-1 text-xs underline font-semibold whitespace-nowrap"
+          >
+            Go to Profile →
+          </button>
+        ),
+      } as any);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -331,8 +358,25 @@ export default function InterviewQuestionGeneratorPage() {
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
-      setError(`Failed to generate questions: ${errorMessage.substring(0, 100)}`);
-      toast({ title: "Generation Failed", description: errorMessage.substring(0, 100), variant: "destructive" });
+      if (isNoApiConfigError(err)) {
+        setError("No AI model is configured. Please go to your Profile → API Configuration and add an API key to generate interview questions.");
+        toast({
+          title: "⚙️ API Key Not Configured",
+          description: "No AI model is set up. Please go to your Profile → API Configuration to add an API key.",
+          variant: "destructive",
+          action: (
+            <button
+              onClick={() => router.push('/profile')}
+              className="mt-1 text-xs underline font-semibold whitespace-nowrap"
+            >
+              Go to Profile →
+            </button>
+          ),
+        } as any);
+      } else {
+        setError(`Failed to generate questions: ${errorMessage.substring(0, 120)}`);
+        toast({ title: "Generation Failed", description: errorMessage.substring(0, 120), variant: "destructive" });
+      }
     } finally {
       setIsLoading(false);
     }

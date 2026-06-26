@@ -25,6 +25,38 @@ if (!db) {
   console.warn("Firestore service (db) is not available. Firestore operations will fail.");
 }
 
+/**
+ * Recursively removes all undefined properties from an object or array.
+ * This is a safeguard to prevent Firestore from throwing "Unsupported field value: undefined" errors.
+ */
+export const sanitizeFirestoreData = <T>(obj: T): T => {
+  if (obj === undefined) return null as any;
+  if (obj === null) return null as any;
+  if (Array.isArray(obj)) {
+    return obj.map(sanitizeFirestoreData) as any;
+  }
+  if (typeof obj === 'object') {
+    // Check if it's a plain object (not a FieldValue, Timestamp, Date, etc.)
+    const proto = Object.getPrototypeOf(obj);
+    const isPlain = proto === null || proto === Object.prototype;
+    if (!isPlain) {
+      return obj;
+    }
+
+    const sanitized: any = {};
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        const val = obj[key];
+        if (val !== undefined) {
+          sanitized[key] = sanitizeFirestoreData(val);
+        }
+      }
+    }
+    return sanitized;
+  }
+  return obj;
+};
+
 // --- JobScreeningResult Functions ---
 
 /**
@@ -94,11 +126,11 @@ export const saveJobScreeningResult = async (resultData: Omit<JobScreeningResult
   };
 
   // 4. Add the new screening result document.
-  const docRef = await addDoc(collection(db, "jobScreeningResults"), {
+  const docRef = await addDoc(collection(db, "jobScreeningResults"), sanitizeFirestoreData({
     ...sanitizedResultData,
     userId,
     createdAt: serverTimestamp(), // Use server timestamp for consistency.
-  });
+  }));
 
   console.log(`✅ Saved job screening result (${resultData.candidates.length} candidates, document size reduced by removing data URIs)`);
 
@@ -143,7 +175,7 @@ export const updateCandidateFeedback = async (
     return c;
   });
 
-  await setDoc(docRef, { candidates: updatedCandidates }, { merge: true });
+  await setDoc(docRef, sanitizeFirestoreData({ candidates: updatedCandidates }), { merge: true });
 };
 
 /**
@@ -216,11 +248,11 @@ export const deleteAllJobScreeningResults = async (): Promise<void> => {
 export const saveAtsScoreResult = async (resultData: Omit<AtsScoreResult, 'id' | 'userId' | 'createdAt'>): Promise<AtsScoreResult> => {
   if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
   const userId = auth.currentUser.uid;
-  const docRef = await addDoc(collection(db, "atsScoreResults"), {
+  const docRef = await addDoc(collection(db, "atsScoreResults"), sanitizeFirestoreData({
     ...resultData,
     userId,
     createdAt: serverTimestamp(),
-  });
+  }));
   return { ...resultData, id: docRef.id, userId, createdAt: Timestamp.now() } as AtsScoreResult;
 };
 
@@ -234,7 +266,7 @@ export const saveMultipleAtsScoreResults = async (resultsData: Array<Omit<AtsSco
   const userId = auth.currentUser.uid;
   const savedResults: AtsScoreResult[] = [];
   for (const result of resultsData) {
-    const docRef = await addDoc(collection(db, "atsScoreResults"), { ...result, userId, createdAt: serverTimestamp() });
+    const docRef = await addDoc(collection(db, "atsScoreResults"), sanitizeFirestoreData({ ...result, userId, createdAt: serverTimestamp() }));
     savedResults.push({ ...result, id: docRef.id, userId, createdAt: Timestamp.now() } as AtsScoreResult);
   }
   return savedResults;
@@ -263,6 +295,24 @@ export const deleteAtsScoreResult = async (resultId: string): Promise<void> => {
   if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
   const docRef = doc(db, "atsScoreResults", resultId);
   await deleteDoc(docRef);
+};
+
+/**
+ * Updates only the AI feedback fields of an ATS score result.
+ * Used for progressive enhancement — Phase 1 saves the document,
+ * Phase 2 calls this once the AI feedback is ready.
+ */
+export const updateAtsScoreFeedback = async (
+  resultId: string,
+  updates: {
+    atsFeedback: string;
+    feedbackStatus: 'pending' | 'generating' | 'complete' | 'failed';
+    feedbackGeneratedAt?: string;
+  }
+): Promise<void> => {
+  if (!db) throw new Error("Firestore not available");
+  const docRef = doc(db, "atsScoreResults", resultId);
+  await setDoc(docRef, sanitizeFirestoreData(updates), { merge: true });
 };
 
 /**
@@ -312,11 +362,11 @@ export const saveInterviewQuestionSet = async (setData: Omit<InterviewQuestionsS
   if (!db || !auth?.currentUser) throw new Error("Firestore or Auth not available/User not logged in.");
   const userId = auth.currentUser.uid;
 
-  const docRef = await addDoc(collection(db, "interviewQuestionSets"), {
+  const docRef = await addDoc(collection(db, "interviewQuestionSets"), sanitizeFirestoreData({
     ...setData,
     userId,
     createdAt: serverTimestamp(),
-  });
+  }));
 
   return { ...setData, id: docRef.id, userId, createdAt: Timestamp.now() } as InterviewQuestionsSet;
 };

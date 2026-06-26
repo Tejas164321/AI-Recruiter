@@ -68,13 +68,16 @@ export function createQualitativeAnalysisPrompt(params: {
     matchedSkills: string[];
     missingSkills: string[];
 }): string {
+    const cleanJd = cleanDocumentTextForPrompt(params.jdText).substring(0, 2000);
+    const cleanResume = cleanDocumentTextForPrompt(params.resumeText).substring(0, 3000);
+
     return `You are an expert technical recruiter analyzing a candidate for a job opening.
 
 **Job Description:**
-${params.jdText.substring(0, 1500)}
+${cleanJd}
 
 **Candidate Resume:**
-${params.resumeText.substring(0, 2000)}
+${cleanResume}
 
 **Deterministic Scores (Already Calculated):**
 - Final Score: ${params.scores.final}/100
@@ -90,14 +93,14 @@ Your task is to provide qualitative feedback that EXPLAINS these scores (DO NOT 
 
 Return a JSON object with:
 {
-  "summary": "A 2-3 sentence overview of the candidate's fit",
-  "strengths": ["strength 1", "strength 2", "strength 3"],
-  "weaknesses": ["gap 1", "gap 2"],
-  "experienceRelevance": "One sentence on experience relevance",
-  "scoreExplanation": "Explain why the candidate received a ${params.scores.final}/100 score based on the metrics above"
+  "summary": "A 2-sentence concise summary of candidate fit",
+  "strengths": ["top strength 1", "top strength 2"],
+  "weaknesses": ["key gap 1"],
+  "experienceRelevance": "One concise sentence on experience relevance",
+  "scoreExplanation": "Explain why the candidate received a ${params.scores.final}/100 score"
 }
 
-Be concise, professional, and specific. Reference actual skills and experiences from the resume.`;
+Be extremely concise, professional, and specific. Keep descriptions short and avoid fluff.`;
 }
 
 /**
@@ -111,32 +114,34 @@ export function createATSFeedbackPrompt(params: {
     sectionsFound: string[];
     layoutType: 'single-column' | 'multi-column' | 'complex';
 }): string {
+    const cleanResume = cleanDocumentTextForPrompt(params.resumeText).substring(0, 3000);
+
     return `You are an ATS (Applicant Tracking System) expert. Analyze this resume for ATS compatibility.
 
 **Resume:**
-${params.resumeText.substring(0, 2000)}
+${cleanResume}
 
 **Deterministic ATS Score:** ${params.atsScore}/100
 **Sections Detected:** ${params.sectionsFound.join(', ')}
 **Layout Type:** ${params.layoutType}
 
-Your task is to provide DETAILED feedback explaining the ATS score and actionable improvements.
+Your task is to provide feedback explaining the ATS score and actionable improvements.
 
 Return a JSON object with:
 {
-  "detailedFeedback": "3-5 sentences explaining what works and what doesn't for ATS",
-  "specificImprovements": ["improvement 1", "improvement 2", "improvement 3"],
-  "strengths": ["strength 1", "strength 2"]
+  "detailedFeedback": "2 concise sentences explaining what works and what doesn't for ATS",
+  "specificImprovements": ["improvement 1", "improvement 2"],
+  "strengths": ["strength 1"]
 }
 
 Focus on:
 - Section presence and naming
 - Font and formatting choices
-- Keyword usage (general, not job-specific)
+- Keyword usage
 - Layout simplicity
 - Machine readability
 
-Be specific and actionable.`;
+Be brief, specific, and actionable. Keep explanations short.`;
 }
 
 /**
@@ -149,10 +154,12 @@ export function createMultilingualNormalizationPrompt(params: {
     resumeText: string;
     detectedLanguage: string;
 }): string {
+    const cleanResume = cleanDocumentTextForPrompt(params.resumeText).substring(0, 3000);
+
     return `You are analyzing a resume written in ${params.detectedLanguage}.
 
 **Resume:**
-${params.resumeText.substring(0, 2000)}
+${cleanResume}
 
 Your task is to extract and NORMALIZE key information to English for internal analysis.
 
@@ -160,7 +167,7 @@ Return a JSON object with:
 {
   "detectedLanguage": "${params.detectedLanguage}",
   "jobTitle": "Most recent job title (translated to English)",
-  "skillsExtracted": ["skill1", "skill2", "skill3"],
+  "skillsExtracted": ["skill1", "skill2"],
   "yearsOfExperience": <number or null>
 }
 
@@ -169,7 +176,7 @@ Extract:
 - Technical skills (use English canonical names, e.g., "React.js", "Python")
 - Total years of professional experience mentioned
 
-Keep company names in original language.`;
+Be extremely concise. Keep company names in original language.`;
 }
 
 /**
@@ -205,6 +212,29 @@ export function truncateText(text: string, maxChars: number): string {
 export function sanitizeForPrompt(text: string): string {
     // Remove excessive whitespace
     return text.replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Cleans and compresses document text for use in prompt templates.
+ * Removes redundant whitespaces, filters empty lines, and truncates excessive spacing,
+ * preserving structural line breaks to save 30-50% on token counts.
+ */
+export function cleanDocumentTextForPrompt(text: string): string {
+    if (!text) return '';
+    return text
+        // Replace multiple tabs or spaces with a single space
+        .replace(/[ \t]+/g, ' ')
+        // Replace 3 or more consecutive newlines with exactly 2 to preserve paragraphs
+        .replace(/\n{3,}/g, '\n\n')
+        // Trim each line, filter out consecutive empty lines
+        .split('\n')
+        .map(line => line.trim())
+        .filter((line, index, arr) => {
+            if (line.length > 0) return true;
+            return index > 0 && arr[index - 1].length > 0;
+        })
+        .join('\n')
+        .trim();
 }
 
 /**
