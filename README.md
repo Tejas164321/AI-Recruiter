@@ -234,7 +234,7 @@ Visit `http://localhost:3000` to access the platform.
 We welcome contributions! Specifically, we are looking for:
 -   **Prompt Engineering**: Improving the "Senior Recruiter" persona in `feedback-service.ts`.
 -   **Algorithm Tuning**: Enhancing the semantic matching logic in `rank-candidates-progressive.ts`.
--   **Model Experiments**: Testing alternative Ollama models (e.g. `llama3`, `mistral`) via the `OLLAMA_PRIMARY_MODEL` env var.
+-   **Model Experiments**: Testing alternative Ollama models (e.g. `llama3`, `mistral`) via the `OLLAMA_PRIMARY_MODEL` env var...
 
 ---
 
