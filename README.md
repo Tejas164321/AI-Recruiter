@@ -4,7 +4,7 @@
 
 ![AI Recruiter Hero](./public/hero-hologram.png)
 
-## 📝 Overview
+## 📝 Overview.
 
 **AI Recruiter** is a production-grade, privacy-first recruitment platform designed to revolutionize how talent is screened. Unlike traditional cloud-only solutions, AI Recruiter employs a novel **Hybrid Architecture** that combines the speed of server-side deterministic scoring with the depth of **Local LLM Intelligence (Ollama)**.
 
