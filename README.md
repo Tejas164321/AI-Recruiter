@@ -1,4 +1,4 @@
-# AI Recruiter.
+# AI Recruiter
 
 **The Next-Generation Hybrid Recruitment Platform**
 
