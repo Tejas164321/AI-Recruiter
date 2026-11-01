@@ -1,166 +1,157 @@
-# AI Recruiter...
+<div align="center">
 
-**The Next-Generation Hybrid Recruitment Platform**
+# AI Recruiter
 
-![AI Recruiter Hero](./public/hero-hologram.png)
+**Screen hundreds of resumes in seconds, with AI feedback that never leaves your machine.**
 
-## 📝 Overview
+![Next.js](https://img.shields.io/badge/Next.js-15-000000?logo=nextdotjs&logoColor=white)
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
+![Firebase](https://img.shields.io/badge/Firebase-Auth%20%2B%20Firestore-FFCA28?logo=firebase&logoColor=black)
+![Ollama](https://img.shields.io/badge/Ollama-Local%20LLM-1F1F1F)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-**AI Recruiter** is a production-grade, privacy-first recruitment platform designed to revolutionize how talent is screened. Unlike traditional cloud-only solutions, AI Recruiter employs a novel **Hybrid Architecture** that combines the speed of server-side deterministic scoring with the depth of **Local LLM Intelligence (Ollama)**.
+<img src="./public/hero-hologram.png" alt="AI Recruiter dashboard" width="800" />
 
-This approach ensures **Zero-Latency Screening** while providing rich, human-like qualitative feedback without sending sensitive candidate data to external third-party AI APIs for deep analysis.
-
----
-
-## ✨ Key Features
-
-### 🧠 Hybrid Intelligence Engine
--   **Phase 1: Fast Ranking (Server-Side)**: The Next.js server parses resumes, computes semantic embeddings, matches skills, runs ATS analysis, and produces a composite score — all without any cloud AI calls. Results appear in seconds.
--   **Phase 2: Cognitive Analysis (Client-Side Local LLM)**: The browser connects directly to a locally running **`qwen2.5:7b-instruct`** model via **Ollama** to act as a "Senior Recruiter," generating nuanced, structured JSON feedback on candidate soft skills and potential red flags. No data leaves your machine.
-
-### 🎨 Premium User Experience
--   **Glassmorphism UI**: A stunning, modern interface built with **ShadCN UI** and **Tailwind CSS**.
--   **Professional Dark Mode**: Carefully calibrated "Neutral Zinc" palette for deep contrast and reduced eye strain.
--   **Reactive Dashboard**: Real-time progress tracking, interactive charts, and seamless drag-and-drop uploads.
-
-### 🛠️ Powerful Toolset
--   **Resume Ranker**: Bulk-screen hundreds of resumes against a Job Description with instant ranking and streamed AI feedback.
--   **ATS Score Finder**: Deep-dive analysis of individual resumes against specific job descriptions.
--   **Interview Question Generator**: Context-aware question generation tailored to the specific gaps found in a candidate's profile.
--   **Secure Data Handling**: Powered by **Firebase Auth** and **Firestore** with strict security rules—your data belongs to you.
+</div>
 
 ---
 
-## 🏗️ Architecture Diagram
+## Overview
 
-The system uses a **Progressive Enhancement** pattern — instant deterministic results first, rich AI feedback second.
+AI Recruiter is a privacy-first recruitment platform. It ranks candidates against a job description using fast, deterministic scoring on the server, then generates recruiter-style written feedback with a **local LLM (Ollama)** running on your own machine.
+
+Resume text is never sent to a third-party AI API.
+
+| | Phase 1: Fast Ranking | Phase 2: AI Feedback |
+|---|---|---|
+| **Runs on** | Next.js server | Your browser + local Ollama |
+| **Speed** | ~2–4 s per resume | Streams in after ranking |
+| **Output** | Score (0–100), grade, skill match, ATS report | Soft-skill notes, red flags, structured JSON |
+| **Cloud AI calls** | None | None |
+
+---
+
+## Features
+
+- **Resume Ranker**: Bulk-screen resumes against a job description and get an instant ranked list.
+- **ATS Score Finder**: Analyze a single resume against a specific job description.
+- **Interview Question Generator**: Generate questions based on the gaps found in a candidate's profile.
+- **Local AI Feedback**: Senior-recruiter style analysis powered by `qwen2.5:7b-instruct`.
+- **Modern UI**: ShadCN UI, Tailwind CSS, dark mode, drag-and-drop uploads, live progress.
+- **Secure Storage**: Firebase Auth and Firestore with per-user security rules.
+
+---
+
+## How It Works
+
+The app uses **progressive enhancement**: you get ranked results first, and richer AI feedback fills in afterwards.
 
 ```mermaid
-flowchart TD
-    subgraph Client [💻 User Environment]
-        Browser["Modern Browser"]
-        LocalAI["🦙 Local LLM\n(Ollama · qwen2.5:7b-instruct)"]
+flowchart LR
+    R([Recruiter]) --> UI
+
+    subgraph Browser
+        UI[Next.js UI]
+        LLM[Ollama<br/>qwen2.5:7b-instruct]
     end
 
-    subgraph Server [⚡ Next.js Server Actions]
-        Parse["1. Parse Document\n(PDF/DOCX)"]
-        Embed["2. Semantic Embeddings\n(all-MiniLM-L6-v2)"]
-        Skills["3. Skill Matching\n(Deterministic)"]
-        ATS["4. ATS Analysis\n(Rule-Based)"]
-        Exp["5. Experience Heuristic"]
-        Score["6. Composite Score\n(Weighted)"]
+    subgraph Server[Next.js Server]
+        ENG[Scoring Engine<br/>Phase 1]
     end
 
-    subgraph Cloud [☁️ Cloud Infrastructure]
-        DB[("🔥 Firestore")]
-        Auth["🛡️ Firebase Auth"]
+    subgraph Firebase
+        DB[(Firestore)]
+        AUTH[Auth]
     end
 
-    User[👩‍💼 Recruiter] -->|Upload JD & Resumes| Browser
-
-    %% Phase 1: Fast Screening
-    Browser -->|Phase 1 · fast-screen| Parse
-    Parse --> Embed --> Skills --> ATS --> Exp --> Score
-    Score -->|Save initial rankings| DB
-
-    %% Phase 2: Deep Analysis
-    Browser -.->|Real-time subscription| DB
-    Browser -->|Phase 2 · generate feedback| LocalAI
-    LocalAI -->|Structured JSON feedback| Browser
-    Browser -->|Authenticated write| DB
-
-    classDef client fill:#e0f2fe,stroke:#38bdf8,stroke-width:2px;
-    classDef server fill:#f0fdf4,stroke:#22c55e,stroke-width:2px;
-    classDef cloud fill:#f3e8ff,stroke:#a855f7,stroke-width:2px;
-
-    class Browser,LocalAI client;
-    class Parse,Embed,Skills,ATS,Exp,Score server;
-    class DB,Auth cloud;
+    UI -->|1. Upload JD + resumes| ENG
+    ENG -->|2. Save rankings| DB
+    DB -->|3. Live updates| UI
+    UI -->|4. Send prompt| LLM
+    LLM -->|5. JSON feedback| UI
+    UI -->|6. Save feedback| DB
+    AUTH -.->|Secures access| DB
 ```
 
-### Phase 1 — Fast Ranking (Server-Side, ~2–4 s/resume)
+### Phase 1: Scoring Pipeline
 
-| Step | What happens |
+Each resume goes through six deterministic steps on the server.
+
+```mermaid
+flowchart LR
+    A[1. Parse<br/>PDF / DOCX] --> B[2. Embed<br/>MiniLM-L6-v2]
+    B --> C[3. Skill<br/>Match]
+    C --> D[4. ATS<br/>Check]
+    D --> E[5. Experience<br/>Score]
+    E --> F[6. Composite<br/>Score]
+```
+
+| Step | Description |
 |------|-------------|
-| **1. Parse** | Extracts raw text from PDF (via `pdf-parse`) or DOCX (via `mammoth`) |
-| **2. Embed** | Generates 384-dim semantic embeddings with `all-MiniLM-L6-v2` via `@xenova/transformers` (runs in Node.js, no cloud) |
-| **3. Skill Match** | Regex-based extraction and scoring of required vs. present skills |
-| **4. ATS Analysis** | Rule-based check of formatting, sections, and machine-readability |
-| **5. Experience** | Heuristic years-of-experience relevance score |
-| **6. Composite Score** | Weighted combination → single 0–100 score with letter grade |
+| **Parse** | Extracts text from PDF (`pdf-parse`) or DOCX (`mammoth`). |
+| **Embed** | Creates 384-dim semantic embeddings with `all-MiniLM-L6-v2`, running locally in Node.js. |
+| **Skill Match** | Compares required skills against skills found in the resume. |
+| **ATS Check** | Rule-based check of formatting, sections, and machine-readability. |
+| **Experience** | Heuristic score for years of relevant experience. |
+| **Composite** | Weighted combination into a single 0–100 score with a letter grade. |
 
-### Phase 2 — AI Feedback (Client-Side Ollama)
+### Phase 2: AI Feedback
 
-The browser calls `http://localhost:11434` directly, so:
-- Heavy LLM inference stays off the server (zero cloud cost).
-- Sensitive resume text never leaves your local network.
-- Feedback is saved back to Firestore through the authenticated client session.
+The browser calls Ollama directly at `http://localhost:11434`. Inference stays off the server, resume text stays on your network, and results are saved to Firestore through your authenticated session.
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
-| **Frontend** | [Next.js 15](https://nextjs.org/) (App Router, Turbopack), React 18, [ShadCN UI](https://ui.shadcn.com/) |
-| **Styling** | [Tailwind CSS](https://tailwindcss.com/) (Custom Zinc Theme), [Framer Motion](https://www.framer.com/motion/) |
-| **Semantic Embeddings** | [`@xenova/transformers`](https://github.com/xenova/transformers.js) — `all-MiniLM-L6-v2` (384-dim, runs locally in Node.js) |
-| **Local LLM** | [Ollama](https://ollama.com/) — model: **`qwen2.5:7b-instruct`** (primary & fallback) |
-| **Document Parsing** | `pdf-parse` (PDF), `mammoth` (DOCX) |
-| **Backend** | [Next.js Server Actions](https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions) (50 MB body limit) |
-| **Database** | [Firebase Firestore](https://firebase.google.com/docs/firestore) |
-| **Auth** | [Firebase Authentication](https://firebase.google.com/docs/auth) |
+|-------|------------|
+| Framework | Next.js 15 (App Router, Turbopack), React 18 |
+| UI | ShadCN UI, Tailwind CSS, Framer Motion |
+| Embeddings | `@xenova/transformers` with `all-MiniLM-L6-v2` |
+| Local LLM | Ollama with `qwen2.5:7b-instruct` |
+| Parsing | `pdf-parse`, `mammoth` |
+| Backend | Next.js Server Actions (50 MB body limit) |
+| Database & Auth | Firebase Firestore, Firebase Authentication |
 
 ---
 
-## 🚀 Getting Started
-
-Follow these instructions to set up the **Hybrid AI** environment on your local machine.
+## Quick Start
 
 ### Prerequisites
 
--   **Node.js 18+** installed.
--   **Ollama** installed and running. ([Download](https://ollama.com/download))
--   **Firebase Project** created.
+- Node.js 18 or later
+- [Ollama](https://ollama.com/download) installed
+- A Firebase project (Auth and Firestore enabled)
 
-### 1. Setup Local AI (Ollama)
-
-The Phase 2 feedback engine runs entirely on your machine via Ollama.
+### 1. Set up Ollama
 
 ```bash
-# 1. Install Ollama from https://ollama.com/download
-
-# 2. Pull the instruction-tuned Qwen 2.5 model
+# Download the model
 ollama pull qwen2.5:7b-instruct
 
-# 3. Start the Ollama server with browser CORS allowed
-#    (required so the Next.js client-side code can reach localhost:11434)
+# Start Ollama with browser access allowed
 OLLAMA_ORIGINS="http://localhost:3000" ollama serve
 ```
 
-> **Tip — low-VRAM machines:** The model is optimised to run with a 1 024-token context window. On a 4 GB GPU (e.g. RTX 3050) it typically fits in VRAM. If you hit an out-of-memory error, the client automatically retries with the same model at a reduced context. You can override the model via the `OLLAMA_PRIMARY_MODEL` env var (see below).
+> **Low-VRAM GPUs (e.g. 4 GB):** The model runs with a 1,024-token context. If an out-of-memory error occurs, the client retries automatically with a smaller context.
 
-### 2. Clone the Repository
+### 2. Install the project
 
 ```bash
 git clone https://github.com/your-username/ai-recruiter.git
 cd ai-recruiter
-```
-
-### 3. Install Dependencies
-
-```bash
 npm install
 ```
 
-> The first time the app starts it will download the `all-MiniLM-L6-v2` ONNX model weights (~23 MB) from Hugging Face into a local cache. This only happens once.
+The first run downloads the embedding model (~23 MB) from Hugging Face. This happens once and is cached.
 
-### 4. Configure Environment
+### 3. Configure environment variables
 
-Create a `.env.local` file in the root directory:
+Create a `.env.local` file in the project root:
 
 ```bash
-# ── Firebase Configuration ──────────────────────────────────────────
+# Firebase
 NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
@@ -168,75 +159,85 @@ NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 
-# ── Feature Flags ────────────────────────────────────────────────────
+# Features
 NEXT_PUBLIC_USE_EMULATORS=false
 NEXT_PUBLIC_ENABLE_LOCAL_LLM=true
-
-# ── Ollama (optional overrides) ──────────────────────────────────────
-# OLLAMA_BASE_URL=http://localhost:11434       # default
-# OLLAMA_PRIMARY_MODEL=qwen2.5:7b-instruct    # default
-# OLLAMA_FALLBACK_MODEL=qwen2.5:7b-instruct   # default (used on OOM)
-
-# ── Performance ──────────────────────────────────────────────────────
-# NEXT_PUBLIC_ENABLE_FAST_MODE=false          # set true to skip LLM (Phase 1 only)
 ```
 
-### 5. Run the Application
+### 4. Run
 
 ```bash
 npm run dev
 ```
 
-Visit `http://localhost:3000` to access the platform.
+Open [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## 📂 Project Structure
+## Configuration
+
+All of these are optional.
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server address |
+| `OLLAMA_PRIMARY_MODEL` | `qwen2.5:7b-instruct` | Model used for feedback |
+| `OLLAMA_FALLBACK_MODEL` | `qwen2.5:7b-instruct` | Model used after an out-of-memory error |
+| `NEXT_PUBLIC_ENABLE_FAST_MODE` | `false` | Set to `true` to skip the LLM and run Phase 1 only |
+
+---
+
+## Project Structure
 
 ```
-/src
-├── app/                        # Next.js App Router (pages & layouts)
-│   ├── resume-ranker/          # Bulk resume screening
-│   ├── ats-score-finder/       # Single-resume ATS analysis
-│   ├── interview-question-generator/
-│   └── dashboard/
+src/
+├── app/                      # Pages: resume-ranker, ats-score-finder,
+│                             #        interview-question-generator, dashboard
 ├── ai/
-│   ├── embeddings/
-│   │   └── embedding-service.ts    # Semantic similarity (all-MiniLM-L6-v2)
-│   ├── flows/
-│   │   ├── rank-candidates-progressive.ts  # Phase 1 fast ranking (server)
-│   │   ├── rank-candidates-hybrid.ts       # Full hybrid pipeline (server)
-│   │   ├── extract-job-roles-hybrid.ts
-│   │   ├── calculate-ats-score-hybrid.ts
-│   │   └── generate-jd-interview-questions-hybrid.ts
-│   ├── local-llm/
-│   │   ├── ollama-client.ts        # Ollama HTTP client (OOM fallback, timeout)
-│   │   └── prompt-templates.ts     # Zod-validated JSON prompt templates
+│   ├── embeddings/           # Semantic similarity (all-MiniLM-L6-v2)
+│   ├── flows/                # Server-side ranking and scoring flows
+│   ├── local-llm/            # Ollama client and prompt templates
 │   └── progressive-enhancement/
-│       └── feedback-service.ts     # Phase 2 client-side Ollama feedback
-├── components/                 # Reusable UI (ShadCN + custom)
-├── contexts/                   # React contexts (Auth, Loading)
-├── hooks/                      # Custom React hooks
+│                             # Phase 2 client-side feedback service
+├── components/               # Reusable UI components
+├── contexts/                 # Auth and loading contexts
+├── hooks/                    # Custom React hooks
 ├── lib/
-│   ├── ats/                    # ATS rule-based analyser
-│   ├── skills/                 # Skill extraction & matching
-│   ├── scoring/                # Composite weighted scorer
-│   ├── processing/             # Document parser (PDF + DOCX)
-│   └── types.ts                # Shared TypeScript types
+│   ├── ats/                  # ATS rule-based analyzer
+│   ├── skills/               # Skill extraction and matching
+│   ├── scoring/              # Weighted composite scorer
+│   ├── processing/           # PDF and DOCX parsing
+│   └── types.ts              # Shared types
 └── services/
-    └── firestoreService.ts     # Firestore CRUD & real-time subscriptions
+    └── firestoreService.ts   # Firestore CRUD and live subscriptions
 ```
 
 ---
 
-## 🤝 Contributing
+## Troubleshooting
 
-We welcome contributions! Specifically, we are looking for:
--   **Prompt Engineering**: Improving the "Senior Recruiter" persona in `feedback-service.ts`.
--   **Algorithm Tuning**: Enhancing the semantic matching logic in `rank-candidates-progressive.ts`.
--   **Model Experiments**: Testing alternative Ollama models (e.g. `llama3`, `mistral`) via the `OLLAMA_PRIMARY_MODEL` env var.
+| Problem | Fix |
+|---------|-----|
+| AI feedback never appears | Make sure Ollama is running and started with `OLLAMA_ORIGINS="http://localhost:3000"`. |
+| Out-of-memory errors | Use a smaller model through `OLLAMA_PRIMARY_MODEL`, or set `NEXT_PUBLIC_ENABLE_FAST_MODE=true`. |
+| Slow first run | The embedding model is downloading. It is cached afterwards. |
 
 ---
 
-### License
-MIT
+## Contributing
+
+Contributions are welcome, especially in these areas:
+
+- **Prompt engineering**: improve the recruiter persona in `feedback-service.ts`.
+- **Matching quality**: tune the semantic matching in `rank-candidates-progressive.ts`.
+- **Model testing**: try other Ollama models such as `llama3` or `mistral`.
+
+1. Fork the repository
+2. Create a branch: `git checkout -b feature/your-feature`
+3. Commit your changes and open a pull request
+
+---
+
+## License
+
+Released under the [MIT License](./LICENSE).
