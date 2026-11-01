@@ -11,7 +11,7 @@
 ![Ollama](https://img.shields.io/badge/Ollama-Local%20LLM-1F1F1F)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-<img src="./public/hero-hologram.png" alt="AI Recruiter dashboard" width="800" />
+<img src="./public/ai-recruiter-banner-image" alt="AI Recruiter dashboard" width="800" />
 
 </div>
 
