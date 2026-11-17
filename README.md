@@ -240,4 +240,4 @@ Contributions are welcome, especially in these areas:
 
 ## License
 
-Released under the [MIT License](./LICENSE).
+Released under the [MIT License](./LICENSE)...
