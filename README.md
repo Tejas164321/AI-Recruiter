@@ -234,7 +234,7 @@ Contributions are welcome, especially in these areas:
 
 1. Fork the repository
 2. Create a branch: `git checkout -b feature/your-feature`
-3. Commit your changes and open a pull request
+3. Commit your changes and open a pull request.
 
 ---
 
